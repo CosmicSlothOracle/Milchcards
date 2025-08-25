@@ -131,13 +131,8 @@ export const EFFECT_REGISTRY: Record<string, (state: GameState, player: Player, 
 
 // Main function to trigger card effects via registry
 export function triggerCardEffect(state: GameState, player: Player, card: Card): void {
-  // Try to get effect key from card first
-  let effectKey = card.effectKey;
-
-  // Fallback to legacy name mapping
-  if (!effectKey && card.name) {
-    effectKey = LEGACY_NAME_TO_KEY[card.name];
-  }
+  // Try to get effect key from legacy name mapping
+  const effectKey = LEGACY_NAME_TO_KEY[card.name];
 
   if (!effectKey) {
     console.warn(`No effect key found for card: ${card.name}`);

@@ -58,12 +58,15 @@ export class GameEngine {
   // Determine which lane a card should go to based on its type
   private determineCardLane(card: Card): 'innen' | 'aussen' | 'sofort' {
     switch (card.kind) {
-      case 'pub':
+      case 'spec':
+        // Check if it's a Sofort-Initiative
+        const specialCard = card as any;
+        if (specialCard.type && specialCard.type.toLowerCase().includes('sofort-initiative')) {
+          return 'sofort';
+        }
         return 'innen';
       case 'pol':
         return 'aussen';
-      case 'init':
-        return 'sofort';
       default:
         console.warn(`Unknown card kind: ${card.kind}, defaulting to 'innen'`);
         return 'innen';
