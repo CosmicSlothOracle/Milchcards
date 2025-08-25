@@ -1,109 +1,92 @@
-# Politicard - Vollstaendiges Ruleset
+# Politicard – Complete Ruleset (current baseline)
 
 ## Gameziel und Grundprinzip
 
-**Ziel des Games:**
-Du bist ein politischer Strategist und versuchst, mehr Influence zu gewinnen als dein Gegner. Du gewinnst eine Round, wenn du am Ende mehr Influence in deiner Regierungsreihe hast. Du gewinnst das Game, wenn du zuerst 2 Roundn gewinnst (Best-of-3).
+**Goal:**
+Win rounds by having more influence in your government row at round end. Win the game by winning 2 rounds (best‑of‑3).
 
-**Grundprinzip:**
+**Basics:**
 
-- Du spielst Government Cards fuer Influence
-- Du spielst Public Cards fuer Unterstuetzung
-- Du spielst Initiatives fuer Aktionen
-- Du setzt Interventions als Fallen
+- Play Government cards for influence
+- Play Public cards for support
+- Play Initiatives for immediate or ongoing effects
+- Set Interventions (traps) that trigger on conditions
 
 ---
 
 ## Gameablauf - Schritt fuer Schritt
 
-### **1. Gamevorbereitung**
+### 1) Setup
 
-- Jeder Gameer hat ein 25-Karten-Deck (108 HP Budget)
-- Jeder zieht 5 Karten zu Beginn
-- Hand Limit: 10 Karten
+- 25-card deck per player (108 HP budget)
+- Draw 5 cards to start
+- Hand limit: 8 cards (engine constant HAND_LIMIT)
 
-### **2. Roundnablauf**
+### 2) Round structure
 
-Eine Round laeuft so ab:
+Turns alternate until both players consecutively pass. Then influence is compared and the round ends; clear the board and begin a new round.
 
-1. **Gameer A macht einen Zug** (2 Action Points)
-2. **Gameer B macht einen Zug** (2 Action Points)
-3. **Beide passen nacheinander** → Round endet
-4. **Influence wird verglichen** → Gewinner der Round
-5. **Gamefeld wird geleert** → Neue Round beginnt
+### 3) Your turn
 
-### **3. Was kannst du in einem Zug machen?**
+- Start-of-turn AP reset: you always start with 2 AP.
+- Every card play costs 1 AP by default.
+- There is no per-turn action cap; you may play as long as you have AP and legal targets/slots.
 
-Du hast 2 Action Points zu Beginn jedes Zuges. Du kannst maximal 2 Kartenaktionen machen:
+Legal actions (each costs 1 AP unless otherwise stated):
 
-**Moegliche Aktionen (je 1 Action Points (AP)):**
+- Play a Government card to the government row (max 5)
+- Play a Public card to the public row (max 5)
+- Play an Instant initiative
+- Place an Ongoing initiative into the appropriate special slot (government/public)
+- Set an Intervention (trap) face down
+- Pass (0 AP)
 
-- Government Cards ausspielen (maximal 5 in der Reihe)
-- Public Cards ausspielen (maximal 5 in der Reihe)
-- Initiative (Sofort) spielen
-- Initiative (Dauerhaft) in Spezial-Slot legen
-- Intervention verdeckt setzen
-- Passen (kostet 0 Action Points)
+### 4) Resolution order and queue
 
-### **4. Reihenfolge der Aufloesung**
+All effects go through a centralized event queue. Order:
 
-Wenn mehrere Effecte gleichzeitig ausloesen:
+1. Interventions (traps)
+2. Instant initiatives
+3. Passive/ongoing effects
+4. Active abilities
 
-1. **Interventions** (Fallenkarten zuerst)
-2. **Initiatives** (Sofort-Effecte)
-3. **Passive Effecte** (laufende Effecte von Karten)
-4. **Aktive Effecte** (Effecte, die du aktiv ausloest)
+Reference: `src/utils/queue.ts`.
 
 ---
 
-## Kartentypen im Detail
+## Card types in detail
 
-### **Government Cards**
+### Government cards
 
-- **Was:** Politiker und Staatschefs
-- **Wo:** Regierungsreihe (maximal 5 Karten)
-- **Ziel:** Influence gewinnen
-- **Example:** Vladimir Putin (Power 10) = 10 Influence
+- Politicians and heads of state; go to the government row (max 5); contribute influence as printed + buffs/debuffs.
 
-### **Public Cards**
+### Public cards
 
-- **Was:** Personen aus Medien, Wirtschaft, Wissenschaft
-- **Wo:** Oeffentlichkeitsreihe (maximal 5 Karten)
-- **Ziel:** Unterstuetzung fuer deine Aktionen
-- **Example:** Elon Musk zieht 1 Karte beim Ausspielen
+- Media/business/civil society figures; go to the public row (max 5); provide support effects. Implemented examples: Mark Zuckerberg (+1 AP once per round after initiative), Ai Weiwei (+1 card and +1 AP when you activate an instant initiative), Jennifer Doudna/Anthony Fauci (+1 initiative influence bonus), Noam Chomsky (−1 initiative influence for the opponent).
 
-### **Initiatives (Instant)**
+### Initiatives (Instant)
 
-- **Was:** Einmalige politische Aktionen
-- **Effect:** Wirken sofort und sind dann weg
-- **Example:** "Partei-Offensive" deaktiviert eine gegnerische Government Cards
+- One-shot political actions; played for 1 AP and placed in the instant slot (board[player].sofort[0]). They remain there until activated by the player (click or press 'A'), then resolved via the queue and discarded. Examples include deactivation and targeted adjustments.
 
-### **Initiatives (Ongoing)**
+### Initiatives (Ongoing)
 
-- **Was:** Laufende politische Effecte
-- **Wo:** Spezial-Slots (1 fuer Regierung, 1 fuer Oeffentlichkeit)
-- **Effect:** Bleiben auf dem Gamefeld und wirken laufend
-- **Example:** "Wirtschaftlicher Druck" gibt +1 Influence bei jedem Oligarchen
+- Ongoing effects placed into government/public special slots; implemented examples: “Koalitionszwang” (Tier 2 +1 government influence), “Napoleon Komplex” (Tier 1 +1), “Zivilgesellschaft” (+1 if you have a Movement public card), “Milchglas Transparenz” (+1 if no NGO/Movement on your public row).
 
-### **Interventions**
+### Interventions
 
-- **Was:** Verdeckte Fallenkarten
-- **Effect:** Loesen automatisch aus bei bestimmten Bedingungen
-- **Example:** "Fake News-Kampagne" deaktiviert Medienkarten
+- Face-down traps that automatically trigger on conditions; deactivation and other effects are resolved through the queue.
 
 ---
 
-## Schluesselwoerter verstehen
+## Keywords
 
-### **Leadership**
+### Leadership
 
-- **Effect:** Deine erste Initiative pro Round kostet 0 Action Points
-- **Example:** Justin Trudeau hat Leadership → erste Initiative ist kostenlos
+- Concept tag; no passive AP discount in current baseline. Concrete active abilities may exist per card in future updates.
 
-### **Diplomat**
+### Diplomat
 
-- **Effect:** Einmal pro Zug kannst du 1 Influence zwischen zwei deiner Government Cards verschieben
-- **Example:** Joschka Fischer kann Influence von schwacher auf starke Karte verschieben
+- Concept tag; influence transfer is a rules concept. Concrete implementations should use the central queue and active ability system.
 
 ### **Oligarch**
 
@@ -127,118 +110,76 @@ Wenn mehrere Effecte gleichzeitig ausloesen:
 
 ---
 
-## Gamezustaende
+## Game states
 
-### **Schutz**
+### Shield – Schutz
 
-- **Was:** Eine Karte ist vor dem naechsten negativen Effect geschuetzt
-- **Effect:** Der naechste negative Effect wird verhindert, dann ist der Schutz weg
-- **Example:** Eine Karte mit Schutz ueberlebt eine "Partei-Offensive"
+- Prevent the next negative effect once; then consume the shield.
 
-### **Deaktiviert**
+### Deactivated – Deaktiviert
 
-- **Was:** Eine Karte liegt noch, aber ihre aktiven Effecte sind aus
-- **Effect:** Die Karte gibt noch Influence, aber ihre Spezialeffekte funktionieren nicht
-- **Dauer:** Bis zum Roundnende
-- **Example:** Eine deaktivierte Government Cards gibt noch Influence, aber ihr Leadership-Effect funktioniert nicht
+- Card remains in play, active effects are off until round end.
 
 ---
 
-## Deckbuilding - Wie baue ich ein gutes Deck?
+## Deckbuilding – building a good deck
 
 ### **Grundregeln**
 
-- **Deckgroeße:** 25 Karten
-- **Budget:** 108 HP fuer alle Karten zusammen
-- **Hand Limit:** 10 Karten
+- **Deck size:** 25 cards
+- **Budget:** 108 HP total
+- **Hand limit:** 8 cards
 
-### **Costklassen**
+### Cost tiers
 
-- **Klein:** 1 HP (billige Karten)
-- **Mittel:** 2 HP (normale Karten)
-- **Groß:** 3-4 HP (teure, maechtige Karten)
+- Small: 1 HP; Medium: 2 HP; Large: 3–4 HP
 
-### **Deckbuilding-Strategien**
+### Deckbuilding strategies
 
-#### **Tempo-Strategie**
+#### Tempo
 
-- **Ziel:** Viele Aktionen in wenigen Zuegen
-- **Karten:** Leadership-Government Cards + Plattform-Public Cards
-- **Example:** Justin Trudeau + Mark Zuckerberg + "Verzoegerungsverfahren"
+- Goal: maximize actions via initiative chains and AP regeneration.
+- Cards: Tech public cards (e.g., Mark Zuckerberg), instant initiatives, Ai Weiwei.
 
-#### **Kontroll-Strategie**
+#### Control
 
-- **Ziel:** Gegnerische Aktionen blockieren
-- **Karten:** Interventions + "Oppositionsblockade" + "Partei-Offensive"
-- **Example:** "Fake News-Kampagne" + "Oppositionsblockade"
+- Goal: disrupt opponent via interventions and deactivation.
 
-#### **Influence-Strategie**
+#### Influence
 
-- **Ziel:** Schneller Aufbau von Influence
-- **Karten:** Initiatives (Ongoing) + Oligarchen + Government Cards
-- **Example:** "Wirtschaftlicher Druck" + Elon Musk + Vladimir Putin
+- Goal: steady influence growth via ongoing initiatives (e.g., Koalitionszwang, Napoleon Komplex, Zivilgesellschaft, Milchglas Transparenz).
 
 ---
 
-## Detaillierte Examplezuege
+## Example turns (aligned with current engine)
 
-### **Example 1: Tempo + Kontrolle**
+### Example 1: Tech tempo
 
-**Gameer A - Zug 1 (2 Action Points):**
+Player A – Turn 1 (2 AP):
 
-1. Gamet Mark Zuckerberg (Plattform) fuer 1 AP
-2. Gamet Justin Trudeau (Leadership) fuer 1 AP
-3. Aktionenlimit erreicht
+1. Play Mark Zuckerberg (1 AP)
+2. Play an instant initiative (1 AP) → initiative resolves; once per round, Mark gives +1 AP → A can continue if AP > 0
 
-**Gameer B - Zug 1 (2 Action Points):**
+Player B – Turn 1 (2 AP):
 
-1. Setzt "Fake News-Kampagne" verdeckt fuer 1 AP
-2. Gamet Oprah Winfrey (Medien) fuer 1 AP
-3. "Fake News-Kampagne" loest aus → Oprah Winfrey ist deaktiviert
+1. Set a trap (1 AP)
+2. Play a public or government card (1 AP)
 
-**Gameer A - Zug 2 (2 Action Points):**
+### Example 2: Trap interaction
 
-1. Gamet "Partei-Offensive" fuer 0 AP (dank Leadership)
-2. Gamet "Verzoegerungsverfahren" fuer 1 AP → +1 AP
-3. Mark Zuckerberg gibt +1 AP zurueck (einmal pro Round)
-4. Setzt "Parlament geschlossen" fuer 1 AP
-5. 1 AP uebrig → passt
+Player B sets traps; when A meets their conditions, they trigger first in the queue and resolve before A’s initiative effects.
 
-**Gameer B - Zug 2 (2 Action Points):**
+### Example 3: Ongoing auras
 
-1. Gamet Government Cards fuer 1 AP
-2. "Parlament geschlossen" loest aus → B kann keine weiteren Government Cards spielen
-
-### **Example 2: Gegenangriff ueber Interventionskette**
-
-**Gameer B setzt vor:**
-
-- "Strategische Enthuellung" (1 AP)
-- "Massenproteste" (1 AP)
-
-**Gameer A spielt:**
-
-- Zweite Government Cards in der Round
-- "Massenproteste" loest aus → beide Government Cards -1 Influence
-- A hat mehr als 2 Government Cards
-- "Strategische Enthuellung" loest aus → eine Government Cards zurueck auf Hand
-
-### **Example 3: Dauerhafte Auren**
-
-**Gameer A:**
-
-1. Legt "Koalitionszwang" in Regierungs-Slot (1 AP)
-2. Gamet Luiz Inácio Lula da Silva (Leadership)
-3. Greta Thunberg (Bewegung) liegt bereits
-4. Lula bekommt +2 Influence (Bewegung + "Koalitionszwang")
+Player A places “Koalitionszwang” (government slot). Tier 2 government cards now get +1 influence while it remains. “Napoleon Komplex” similarly affects Tier 1. “Zivilgesellschaft” adds +1 if a Movement public card is present. “Milchglas Transparenz” adds +1 if there is no NGO/Movement on A’s public row.
 
 ---
 
-## Rechenbeispiele
+## Calculations
 
-### **Influenceberechnung**
+### Influence
 
-**Formel:** Influence = Power + alle Boni - alle Mali
+Formula: influence = base + buffs − debuffs (temporary buffs/debuffs are tracked per card each round).
 
 **Example 1:**
 
@@ -253,15 +194,14 @@ Wenn mehrere Effecte gleichzeitig ausloesen:
 - "Massenproteste" (-1)
 - **Gesamt:** 8 - 1 = 7 Influence
 
-### **Action Points (AP)-Berechnung**
+### Action Points (AP)
 
-**Example:**
+Example:
 
-- Du hast 2 AP
-- Gamest Government Cards (-1 AP)
-- Leadership macht Initiative kostenlos (0 AP)
-- Plattform gibt +1 AP zurueck
-- **Ergebnis:** 2 AP uebrig fuer weitere Aktionen
+- Start with 2 AP
+- Play an instant initiative (−1 AP)
+- Mark Zuckerberg triggers once per round after an initiative (+1 AP)
+- Ai Weiwei active on your public row (+1 card and +1 AP when you activate an instant initiative)
 
 ---
 
@@ -291,28 +231,28 @@ Wenn mehrere Effecte gleichzeitig ausloesen:
 
 ---
 
-## Haeufige Fragen
+## FAQ
 
-### **Was passiert bei Gleichstand?**
+### What happens on a tie?
 
-Bei Gleichstand gewinnt der Gameer, der zuerst gepasst hat.
+If influence ties at round end, the player who passed first wins the round.
 
-### **Kann ich mehr als 2 Kartenaktionen pro Zug machen?**
+### Can I make more than 2 plays per turn?
 
-Nein, maximal 2 Kartenaktionen pro Zug, auch wenn du mehr AP hast.
+Yes. There is no hard cap; plays are limited only by your AP and legal targets.
 
-### **Was passiert, wenn mein Deck leer ist?**
+### What if my deck is empty?
 
-Du ziehst keine Karten mehr, aber kannst weiter spielen.
+You stop drawing but can keep playing.
 
-### **Kann ich eine Karte aus der Hand abwerfen?**
+### Can I discard from hand?
 
-Nur wenn ein Effect es erlaubt (z.B. Oprah Winfrey).
+Only when an effect allows it.
 
-### **Was passiert mit deaktivierten Karten am Roundnende?**
+### What happens to deactivated cards at round end?
 
-Sie werden normal abgelegt, der Deaktivierungs-Effect endet.
+Deactivation ends; cards are handled per the normal cleanup rules.
 
-### **Kann ich eine Initiative (Dauerhaft) ersetzen?**
+### Can I replace an ongoing initiative?
 
-Ja, eine neue Initiative (Dauerhaft) ersetzt die alte im gleichen Slot.
+Yes. Playing a new ongoing initiative in a slot replaces the existing one.

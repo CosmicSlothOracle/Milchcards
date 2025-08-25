@@ -96,7 +96,7 @@ export function maybeApplyAiWeiweiInstantBonus(
 
   // +1 AP (mit Cap bei 4)
   const before = state.actionPoints[player];
-  state.actionPoints[player] = Math.min(4, before + 1);
+  state.actionPoints[player] = before + 1;
 
   if (before !== state.actionPoints[player]) {
     log(`🔥 Ai Weiwei: +1 AP (${before}→${state.actionPoints[player]})`);

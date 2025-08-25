@@ -157,7 +157,7 @@ Diese Datei beschreibt die Nutzeroberflaeche (UI) normativ und regelkonform. Beg
 
 - **Government Cards:** Automatisch in `aussen` (Regierung) oder `innen` (Oeffentlichkeit)
 - **Dauerhaft-Initiatives:** In entsprechende permanente Slots
-- **Sofort-Initiatives:** In Instant-Slot
+- **Instant-Initiatives:** In Instant-Slot
 - **Interventions:** In Interventions-Strip
 
 #### Technische Spezifikation:

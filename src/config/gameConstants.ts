@@ -4,9 +4,9 @@
  */
 
 // AP-System
-export const AP_START = 2;
-export const AP_CAP = 4;
-export const ACTIONS_PER_TURN = 2;
+export const AP_START = 2; // Real game starts with 2 AP per player
+export const AP_CAP = Number.MAX_SAFE_INTEGER; // Unlimited AP cap in simplified system
+export const ACTIONS_PER_TURN = Number.MAX_SAFE_INTEGER; // No action limit per turn
 
 // Initiative-System
 export const MAX_DISCOUNT = 2;

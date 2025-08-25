@@ -20,11 +20,9 @@ Entferne oder adaptiere alte Engine-Queues.
 
 Alle Effekte werden als Events enqueued und nur dort aufgelöst.
 
-AP-Kalkulation:
+AP-Baseline:
 
-Nur getNetApCost(state, player, card) berechnet Kosten/Refunds.
-
-Nur in useGameActions.playCard werden Discount/Refund konsumiert (siehe §6).
+Jede gespielte Karte kostet 1 AP (Baseline). AP-Effekte fügen AP via ADD_AP-Events hinzu; es gibt keine Obergrenze. Historische Discounts/Refunds werden nur noch über Events abgebildet (siehe §6, Legacy/Planned).
 
 Influence:
 
@@ -41,11 +39,12 @@ export type EffectEvent =
 | { type: 'ADD_AP'; player: Player; amount: number }
 | { type: 'DRAW_CARDS'; player: Player; amount: number }
 | { type: 'DISCARD_RANDOM_FROM_HAND'; player: Player; amount: number }
-| { type: 'ADJUST_INFLUENCE'; player: Player; amount: number; reason?: string }
+| { type: 'DEACTIVATE_RANDOM_HAND'; player: Player; amount: number }
 | { type: 'SET_DISCOUNT'; player: Player; amount: number } // +amount auf Discount-Pool
 | { type: 'REFUND_NEXT_INITIATIVE'; player: Player; amount: number } // +amount auf Refund-Pool
 | { type: 'GRANT_SHIELD'; targetUid: UID } // one-time shield
 | { type: 'DEACTIVATE_CARD'; targetUid: UID }
+| { type: 'BUFF_STRONGEST_GOV'; player: Player; amount: number } // Alias: ADJUST_INFLUENCE
 | { type: 'INITIATIVE_ACTIVATED'; player: Player };
 
 Regeln:
@@ -76,13 +75,11 @@ Konsum AP-Mechaniken: Nur hier (siehe §6).
 
 Post-Play Hooks: runden-/zugbezogene Flags setzen, Mark-Zuckerberg once-per-round etc.
 
-Auto-Turnwechsel (falls Aktionenlimit erreicht und keine 0-AP Züge möglich).
-
-Sofort-Initiativen:
+Instant-Initiativen:
 
 Spiel legt Karte in board[player].sofort[0].
 
-Aktivierung via activateInstantInitiative → Schritte 6–7–8 analog (und danach in den Ablagestapel).
+Aktivierung via activateInstantInitiative (UI-Klick oder Taste 'A') → Schritte 6–7–8 analog (und danach in den Ablagestapel).
 
 4. Start-of-Turn
 
@@ -90,17 +87,25 @@ Implementierung in utils/startOfTurnHooks.ts:
 
 Reset turn-scoped:
 
-effectFlags[player].markZuckerbergUsed = false
+- effectFlags[player].markZuckerbergUsed = false
+- effectFlags[player].initiativeDiscount = 0
+- effectFlags[player].initiativeRefund = 0
+- effectFlags[player].govRefundAvailable = false
 
-govRefundAvailable wird gemäß vorhandener Movement/Greta-Logik gesetzt.
+Cluster-3 Auren (temporäre Auren für Instant-Initiativen):
+
+- initiativeInfluenceBonus: +1 pro Jennifer Doudna/Anthony Fauci (0..2)
+- initiativeInfluencePenaltyForOpponent: +1 wenn Noam Chomsky liegt
+- initiativeOnPlayDraw1Ap1: true wenn Ai Weiwei liegt
+
+Bewegung-Refund:
+
+- govRefundAvailable = true wenn Greta Thunberg/Malala Yousafzai liegt
 
 Clamp/Caps:
 
-initiativeDiscount = clamp(initiativeDiscount, 0, 2)
-
-initiativeRefund = clamp(initiativeRefund, 0, 2)
-
-Auren recompute: recomputeAuraFlags(state) nach Flags-Reset.
+- initiativeDiscount = clamp(initiativeDiscount, 0, 2)
+- initiativeRefund = clamp(initiativeRefund, 0, 2)
 
 5. Flags (EffectFlags)
 
@@ -130,7 +135,7 @@ Entferne nach Migration alle ungenutzten Legacy-Flags. Bis dahin nicht neu verwe
 
 Strikt in useGameActions.playCard NACH Queue-Resolve:
 
-Falls Initiative (inkl. Sofort):
+Falls Initiative (inkl. Instant):
 
 Wenn initiativeRefund > 0 ⇒ initiativeRefund -= 1.
 
@@ -207,7 +212,7 @@ MUSS implementieren:
 
 LOG → in state.log.
 
-ADD_AP → clamp [0..4].
+ADD_AP → ohne Obergrenze: after = Math.max(0, before + amount).
 
 DRAW_CARDS → Deck→Hand, solange verfügbar.
 
@@ -241,7 +246,7 @@ Pflichtverwendung in cards.ts.
 
 12. Tags & Metadaten
 
-Karten tragen tag (z. B. NGO, Plattform, Medien, Intelligenz, Wirtschaft, Infrastruktur).
+Karten tragen tag (z. B. NGO, Tech [vormals Plattform], Medien, Opinion Leader [vormals Intelligenz], Wirtschaft, Infrastruktur).
 
 Für Kategorien-Boni nutze zentrale Struktur:
 
@@ -257,15 +262,15 @@ Auslösung: checkTrapsOnOpponentPlay unmittelbar nach Board-Platzierung des Gegn
 
 Effekte: legen ausschließlich Events in die Queue. Auflösung wieder über Resolver.
 
-14. Permanente / Sofort-Initiativen
+14. Permanente / Instant-Initiativen
 
 Permanente: werden in permanentSlots[player].government|public platziert; Effekte via Events, anhaltende Auren via Recompute.
 
-Sofort: auf board[player].sofort[0], Aktivierung über UI/Aktion → INITIATIVE_ACTIVATED + zugehörige Events, danach in Ablage.
+Instant: auf board[player].sofort[0], Aktivierung über UI-Klick oder Taste 'A' → INITIATIVE_ACTIVATED + zugehörige Events, danach in Ablage.
 
 15. Balancing-Limits
 
-AP-Cap: 4.
+AP: keine Obergrenze (Start pro Zug: 2 AP).
 
 Discount-Pool: max 2.
 
@@ -333,7 +338,27 @@ Legacy-Flags deprecaten und in EffectFlags entfernen, sobald ungenutzt.
 
 Einmalige Direkt-Mutationen (historisch) in Events überführen.
 
-20. Beispiele (kurz)
+20. Implementation Status
+
+Current Implementation:
+
+- ✅ Event queue system with resolveQueue
+- ✅ AP baseline: 1 AP per card play, unlimited AP cap
+- ✅ Initiative activation: 0 AP cost
+- ✅ Cluster-3 auras (Doudna/Fauci/Chomsky/Ai Weiwei)
+- ✅ Platform bonus (Mark Zuckerberg once-per-round)
+- ✅ Movement refund (Greta/Malala)
+- ✅ Putin double intervention ability
+- ✅ Leadership/Diplomat tags (no effects yet)
+
+Planned Features:
+
+- 🔄 Leadership keyword: First initiative per round costs 0 AP
+- 🔄 Diplomat keyword: Influence transfer between government cards
+- 🔄 Government card abilities (Erdoğan AP penalty, Xi NGO disable, etc.)
+- 🔄 Discount/Refund system for initiatives (currently disabled)
+
+21. Beispiele (kurz)
 
 Zhang Yiming (Medien-Rabatt):
 
@@ -349,7 +374,7 @@ Spin Doctor (stärkste Regierung +1):
 
 case 'Spin Doctor':
 const t = getStrongestGovernmentCard(state, player);
-if (t) q.push({ type:'ADJUST_INFLUENCE', player, amount: +1, reason:'Spin Doctor' });
+if (t) q.push({ type:'BUFF_STRONGEST_GOV', player, amount: +1 });
 q.push({ type:'LOG', msg:'Spin Doctor: stärkste Regierung +1 I' });
 break;
 

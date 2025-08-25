@@ -1,10 +1,22 @@
-# Public Cards - Personen aus Medien, Wirtschaft und Wissenschaft
+# Public Cards – Personen aus Medien, Wirtschaft und Wissenschaft
 
 **Was sind Public Cards?**
-Public Cards sind Personen aus Medien, Wirtschaft, Wissenschaft und Aktivismus, die deine politischen Aktionen unterstuetzen. Du spielst sie in die Oeffentlichkeitsreihe (maximal 3 Karten). Sie geben dir Boni wie kostenlose Aktionen, Kartenziehen oder Action Points (AP)-Rueckerstattung.
+Public Cards sind Personen aus Medien, Wirtschaft, Wissenschaft und Aktivismus, die deine politischen Aktionen unterstuetzen. Du spielst sie in die Oeffentlichkeitsreihe (maximal 5 Karten). Sie geben dir Boni wie Kartenziehen oder Action Points (AP)-Rueckerstattung via Events. AP-Baseline: Jede Karte kostet 1 AP; Start jedes Zuges mit 2 AP; keine Obergrenze.
 
-**Wie funktionieren die Unterkategorien?**
-Jede Public Cards gehoert zu einer oder mehreren Unterkategorien. Diese bestimmen, wie die Karte mit anderen Karten zusammenarbeitet:
+**Kategorien (aktuelle Terminologie):**
+
+- Oligarch (German: Oligarch)
+- Tech (German: Tech; vormals „Plattform“)
+- NGO (German: NGO; vormals „NGO/Think-Tank“)
+- Medien (German: Medien)
+- Opinion Leader (German: Meinungsmacher; vormals „Intelligenz“)
+- Bewegung (German: Bewegung)
+
+Hinweis Implementierungsstand:
+
+- Tech: Mark Zuckerberg gibt einmal pro Runde nach einer aktivierten Initiative +1 AP (Queue-Event ADD_AP). Implementiert.
+- Opinion Leader / Bewegung: Initiativen-Auren (z. B. Doudna/Fauci +1, Chomsky −1 Opponent) sowie Ai Weiwei (+1 Karte und +1 AP) sind implementiert.
+- Historische Rabatte/Refunds (kostenlose Initiative etc.) sind entfernt und ggf. als zukünftige Events gekennzeichnet.
 
 ---
 
@@ -12,8 +24,8 @@ Jede Public Cards gehoert zu einer oder mehreren Unterkategorien. Diese bestimme
 
 ### **Elon Musk**
 
-- **Unterkategorien:** Oligarch, Plattform
-- **Effekt im Game:** Ziehe 1 Karte. Deine erste Initiative pro Round kostet 1 Action Points (AP) weniger.
+- **Unterkategorien:** Oligarch, Tech
+- **Effekt im Game:** Ziehe 1 Karte beim Ausspielen. (Historische Initiative-Rabatte wurden entfernt.)
 - **Synergie:** Kartenziehen + Initiative-Rabatt = Tempo
 - **Deckbuildingkosten:** 8 HP
 - **Persoenliche Informationen:**
@@ -26,8 +38,8 @@ Jede Public Cards gehoert zu einer oder mehreren Unterkategorien. Diese bestimme
 
 ### **Bill Gates**
 
-- **Unterkategorien:** Oligarch, NGO/Think-Tank
-- **Effekt im Game:** Ziehe 1 Karte. Deine naechste Initiative kostet 1 Action Points (AP) weniger.
+- **Unterkategorien:** Oligarch, NGO
+- **Effekt im Game:** Ziehe 1 Karte beim Ausspielen. (Historischer -1 AP Discount entfällt in Baseline.)
 - **Synergie:** Kombinierter Support fuer Gesundheitsdecks
 - **Deckbuildingkosten:** 7 HP
 - **Persoenliche Informationen:**
@@ -40,8 +52,8 @@ Jede Public Cards gehoert zu einer oder mehreren Unterkategorien. Diese bestimme
 
 ### **Mark Zuckerberg**
 
-- **Unterkategorien:** Plattform
-- **Effekt im Game:** Nach einer Initiative: +1 Action Points (AP) zurueck (einmal pro Round).
+- **Unterkategorien:** Tech
+- **Effekt im Game:** Nach Aktivierung einer Instant-Initiative: +1 AP (einmal pro Runde). Implementiert via Queue.
 - **Synergie:** Klassischer Plattform-Support fuer Tempo
 - **Deckbuildingkosten:** 5 HP
 - **Persoenliche Informationen:**
@@ -68,7 +80,7 @@ Jede Public Cards gehoert zu einer oder mehreren Unterkategorien. Diese bestimme
 
 ### **Sam Altman**
 
-- **Unterkategorien:** Intelligenz, Plattform
+- **Unterkategorien:** Opinion Leader, Tech
 - **Effekt im Game:** Bei einer KI-bezogenen Initiative: ziehe 1 Karte + 1 Action Points (AP) zurueck.
 - **Synergie:** KI-Tempo-Support fuer Technologie-Decks
 - **Deckbuildingkosten:** 6 HP
@@ -82,7 +94,7 @@ Jede Public Cards gehoert zu einer oder mehreren Unterkategorien. Diese bestimme
 
 ### **George Soros**
 
-- **Unterkategorien:** Oligarch, NGO/Think-Tank
+- **Unterkategorien:** Oligarch, NGO
 - **Effekt im Game:** +1 Action Points (AP) wenn der Gegner eine autoritaere Government Cards hat.
 - **Synergie:** Anti-Autokratie-Synergie gegen autoritaere Gegner
 - **Deckbuildingkosten:** 7 HP
@@ -97,7 +109,7 @@ Jede Public Cards gehoert zu einer oder mehreren Unterkategorien. Diese bestimme
 ### **Greta Thunberg**
 
 - **Unterkategorien:** Bewegung
-- **Effekt im Game:** Deine erste Government Cards pro Round kostet 0 Action Points (einmal pro Round).
+- **Effekt im Game:** Keine pauschale Gratis-Regierungs-Karte mehr. Synergien über laufende Initiativen (z. B. „Zivilgesellschaft“) und thematische Kombinationen.
 - **Synergie:** Bewegungstempo fuer schnellen Regierungsaufbau
 - **Deckbuildingkosten:** 4 HP
 - **Persoenliche Informationen:**
@@ -110,7 +122,7 @@ Jede Public Cards gehoert zu einer oder mehreren Unterkategorien. Diese bestimme
 
 ### **Jack Ma**
 
-- **Unterkategorien:** Plattform, Oligarch
+- **Unterkategorien:** Tech, Oligarch
 - **Effect im Game:** Nach einer Initiative: Ziehe 1 Karte + optional -1 HP auf gegnerische Regierungs-Plattform.
 - **Synergie:** Plattform-Gegenkontrolle
 - **Deckbuildingkosten:** 7 HP
@@ -124,7 +136,7 @@ Jede Public Cards gehoert zu einer oder mehreren Unterkategorien. Diese bestimme
 
 ### **Jennifer Doudna**
 
-- **Unterkategorien:** Intelligenz
+- **Unterkategorien:** Opinion Leader
 - **Effect im Game:** Deine Initiatives mit "Wissenschaft" erhalten +1 Effect.
 - **Synergie:** Biotech-Deck-Support fuer Wissenschafts-Strategien
 - **Deckbuildingkosten:** 4 HP
@@ -152,7 +164,7 @@ Jede Public Cards gehoert zu einer oder mehreren Unterkategorien. Diese bestimme
 
 ### **Noam Chomsky**
 
-- **Unterkategorien:** Intelligenz
+- **Unterkategorien:** Opinion Leader
 - **Effect im Game:** Gegner erhalten -1 Effect bei "Militaer"-Initiatives.
 - **Synergie:** Anti-Imperialismus gegen Militaerstrategien
 - **Deckbuildingkosten:** 5 HP
@@ -180,7 +192,7 @@ Jede Public Cards gehoert zu einer oder mehreren Unterkategorien. Diese bestimme
 
 ### **Tim Cook**
 
-- **Unterkategorien:** Plattform
+- **Unterkategorien:** Tech
 - **Effect im Game:** Deine dauerhaften Initiatives kosten 1 HP weniger (nur beim Deckbuilding).
 - **Synergie:** Techoptimierer fuer dauerhafte Strategien
 - **Deckbuildingkosten:** 5 HP
@@ -236,7 +248,7 @@ Jede Public Cards gehoert zu einer oder mehreren Unterkategorien. Diese bestimme
 
 ### **Zhang Yiming (TikTok)**
 
-- **Unterkategorien:** Oligarch
+- **Unterkategorien:** Tech, Oligarch
 - **Effect im Game:** Ziehe 1 Karte. Bei Medien auf dem Feld: -1 Action Points (AP) auf deine naechste Initiative.
 - **Synergie:** Algorithmus-Synergie
 - **Deckbuildingkosten:** 6 HP

@@ -43,7 +43,7 @@
 
 ### **Initiatives (Instant)**
 
-- **What is it?** Einmalige Aktionen, die sofort wirken und dann weg sind.
+- **What is it?** Einmalige Aktionen, die für 1 AP gespielt werden und in den Instant-Slot gelegt werden. Sie bleiben dort bis aktiviert (durch Klick oder Taste 'A'), dann lösen sie ihren Effekt aus und werden abgelegt.
 - **Example:** "Partei-Offensive" - deaktiviert eine gegnerische Government Cards bis Roundnende.
 
 ### **Initiatives (Ongoing)**
@@ -202,7 +202,7 @@
 ### **Reihenfolge der Aufloesung**
 
 1. **Interventions** (Fallenkarten loesen zuerst aus)
-2. **Initiatives** (Sofort-Effecte)
+2. **Initiatives** (Instant-Effects)
 3. **Passive Effecte** (laufende Effecte von Karten)
 4. **Aktive Effecte** (Effecte, die du aktiv ausloest)
 

@@ -1,0 +1,51 @@
+Test ID,Test Name,Status,Execution Time (ms),Setup Time (ms),Action Time (ms),Validation Time (ms),Differences Count,Steps Count,Timestamp
+elon_musk_draw_validation,"Elon Musk - Draw Validation with Seeded Deck",FAILED,1005.00,0.00,1005.00,0.00,2,1,2025-08-24T20:55:06.766Z
+elon_musk_empty_deck,"Elon Musk - Empty Deck Scenario",FAILED,1047.00,0.00,1047.00,0.00,2,1,2025-08-24T20:55:08.315Z
+ap_cap_testing,"AP Cap Testing - Proper Baseline",FAILED,1001.00,0.00,1001.00,0.00,1,1,2025-08-24T20:55:09.828Z
+ap_cap_below_limit,"AP Cap Below Limit",FAILED,1015.00,1.00,1014.00,0.00,1,1,2025-08-24T20:55:11.355Z
+erdogan_deterministic_discard,"Erdogan - Deterministic Random Discard",FAILED,1013.00,0.00,1013.00,0.00,2,1,2025-08-24T20:55:12.872Z
+oprah_deterministic_deactivate,"Oprah - Deterministic Deactivation",FAILED,1004.00,0.00,1004.00,0.00,3,1,2025-08-24T20:55:14.378Z
+mark_zuckerberg_refund_validation,"Mark Zuckerberg - Refund Pool Validation",FAILED,1013.00,0.00,1013.00,0.00,2,1,2025-08-24T20:55:15.901Z
+zhang_yiming_discount_validation,"Zhang Yiming - Discount Validation",FAILED,1004.00,0.00,1004.00,0.00,2,1,2025-08-24T20:55:17.412Z
+vladimir_putin_buff_target,"Vladimir Putin - Buff Target Validation",FAILED,1011.00,1.00,1009.00,1.00,5,1,2025-08-24T20:55:18.928Z
+ursula_leyen_shield_target,"Ursula von der Leyen - Shield Target Validation",FAILED,1012.00,0.00,1011.00,1.00,4,1,2025-08-24T20:55:20.442Z
+xi_jinping_1,"Xi Jinping - Buff Strongest Gov",PASSED,1006.00,0.00,1006.00,0.00,0,1,2025-08-24T20:55:22.814Z
+erdogan_1,"Erdogan - Discard Random Hand",PASSED,1005.00,0.00,1005.00,0.00,0,1,2025-08-24T20:55:24.323Z
+joschka_fischer_1,"Joschka Fischer - Draw Cards",PASSED,1005.00,1.00,1004.00,0.00,0,1,2025-08-24T20:55:25.838Z
+ursula_leyen_1,"Ursula von der Leyen - Grant Shield",PASSED,1010.00,1.00,1009.00,0.00,0,1,2025-08-24T20:55:27.348Z
+emmanuel_macron_1,"Emmanuel Macron - Add AP",PASSED,1005.00,0.00,1005.00,0.00,0,1,2025-08-24T20:55:28.862Z
+olaf_scholz_1,"Olaf Scholz - Draw Cards",PASSED,1010.00,0.00,1010.00,0.00,0,1,2025-08-24T20:55:30.378Z
+lula_1,"Luiz Inácio Lula da Silva - Adjust Strongest Gov",PASSED,1009.00,0.00,1008.00,1.00,0,1,2025-08-24T20:55:31.886Z
+zelenskyy_1,"Volodymyr Zelenskyy - Grant Shield",PASSED,1006.00,1.00,1005.00,0.00,0,1,2025-08-24T20:55:33.404Z
+sergey_lavrov_1,"Sergey Lavrov - Discard Random Hand",PASSED,1011.00,0.00,1011.00,0.00,0,1,2025-08-24T20:55:34.919Z
+jack_ma_1,"Jack Ma - Draw Cards",PASSED,1016.00,0.00,1016.00,0.00,0,1,2025-08-24T20:55:36.437Z
+zhang_yiming_1,"Zhang Yiming - Set Discount",PASSED,1001.00,0.00,1001.00,0.00,0,1,2025-08-24T20:55:37.949Z
+mukesh_ambani_1,"Mukesh Ambani - Add AP",PASSED,1005.00,0.00,1005.00,0.00,0,1,2025-08-24T20:55:39.462Z
+roman_abramovich_1,"Roman Abramovich - Add AP",PASSED,1002.00,0.00,1002.00,0.00,0,1,2025-08-24T20:55:40.972Z
+alisher_usmanov_1,"Alisher Usmanov - Draw Cards",PASSED,1014.00,0.00,1014.00,0.00,0,1,2025-08-24T20:55:42.493Z
+oprah_winfrey_1,"Oprah Winfrey - Deactivate Random Hand",PASSED,1007.00,0.00,1007.00,0.00,0,1,2025-08-24T20:55:44.011Z
+george_soros_1,"George Soros - Set Discount",PASSED,1005.00,0.00,1005.00,0.00,0,1,2025-08-24T20:55:45.524Z
+warren_buffett_1,"Warren Buffett - Basic Effect",PASSED,1004.00,1.00,1003.00,0.00,0,1,2025-08-24T20:55:47.039Z
+warren_buffett_2,"Warren Buffett - With Existing Cards",PASSED,1012.00,0.00,1012.00,0.00,0,1,2025-08-24T20:55:48.561Z
+jeff_bezos_1,"Jeff Bezos - Add AP",PASSED,1013.00,0.00,1013.00,0.00,0,1,2025-08-24T20:55:50.079Z
+jeff_bezos_2,"Jeff Bezos - AP Cap Test",PASSED,1007.00,0.00,1007.00,0.00,0,1,2025-08-24T20:55:51.598Z
+larry_page_1,"Larry Page - Basic Effect",PASSED,1004.00,1.00,1003.00,0.00,0,1,2025-08-24T20:55:53.109Z
+sergey_brin_1,"Sergey Brin - Basic Effect",PASSED,1015.00,1.00,1014.00,0.00,0,1,2025-08-24T20:55:54.638Z
+tim_cook_1,"Tim Cook - Set Discount",PASSED,1007.00,0.00,1007.00,0.00,0,1,2025-08-24T20:55:56.153Z
+angela_merkel_1,"Angela Merkel - Draw Cards",PASSED,1007.00,0.00,1007.00,0.00,0,1,2025-08-24T20:55:57.667Z
+joe_biden_1,"Joe Biden - Add AP + Draw",PASSED,1008.00,0.00,1008.00,0.00,0,1,2025-08-24T20:55:59.176Z
+justin_trudeau_1,"Justin Trudeau - No Government Cards",PASSED,1008.00,0.00,1008.00,0.00,0,1,2025-08-24T20:56:00.685Z
+justin_trudeau_2,"Justin Trudeau - With Government Cards",PASSED,1014.00,0.00,1014.00,0.00,0,1,2025-08-24T20:56:02.208Z
+shinzo_abe_1,"Shinzo Abe - Draw + Discount",PASSED,1011.00,0.00,1011.00,0.00,0,1,2025-08-24T20:56:03.718Z
+narendra_modi_1,"Narendra Modi - Add AP + Buff Strongest Gov",PASSED,1003.00,0.00,1003.00,0.00,0,1,2025-08-24T20:56:05.228Z
+sam_altman_1,"Sam Altman - Draw + Discount",PASSED,1003.00,0.00,1003.00,0.00,0,1,2025-08-24T20:56:06.740Z
+greta_thunberg_1,"Greta Thunberg - Discard Random Hand",PASSED,1001.00,0.00,1001.00,0.00,0,1,2025-08-24T20:56:08.249Z
+jennifer_doudna_1,"Jennifer Doudna - Draw + Refund",PASSED,1001.00,1.00,1000.00,0.00,0,1,2025-08-24T20:56:09.751Z
+malala_yousafzai_1,"Malala Yousafzai - Draw Cards",PASSED,1070.00,0.00,1069.00,1.00,0,1,2025-08-24T20:56:11.330Z
+noam_chomsky_1,"Noam Chomsky - Set Discount",PASSED,1001.00,1.00,1000.00,0.00,0,1,2025-08-24T20:56:12.844Z
+ai_weiwei_1,"Ai Weiwei - Discard Random Hand",PASSED,1014.00,0.00,1014.00,0.00,0,1,2025-08-24T20:56:14.373Z
+alexei_navalny_1,"Alexei Navalny - No Government Cards",PASSED,1001.00,1.00,1000.00,0.00,0,1,2025-08-24T20:56:15.878Z
+alexei_navalny_2,"Alexei Navalny - With Government Cards",PASSED,1005.00,0.00,1005.00,0.00,0,1,2025-08-24T20:56:17.389Z
+anthony_fauci_1,"Anthony Fauci - Draw + Discount",PASSED,1001.00,0.00,1001.00,0.00,0,1,2025-08-24T20:56:18.901Z
+gautam_adani_1,"Gautam Adani - Add AP + Draw",PASSED,1006.00,0.00,1006.00,0.00,0,1,2025-08-24T20:56:20.415Z
+edward_snowden_1,"Edward Snowden - Discard Random Hand",PASSED,1012.00,0.00,1012.00,0.00,0,1,2025-08-24T20:56:21.938Z

@@ -1,4 +1,4 @@
-np,# Initiatives und Interventions - Politische Aktionen und Fallen
+# Initiatives und Interventions – Politische Aktionen und Fallen
 
 **Was sind Initiatives und Interventions?**
 Initiatives sind politische Aktionen, die du aktiv spielst. Interventions sind "Fallenkarten", die du verdeckt setzt und die automatisch ausloesen, wenn bestimmte Bedingungen erfuellt sind.
@@ -11,9 +11,9 @@ Initiatives sind politische Aktionen, die du aktiv spielst. Interventions sind "
 
 ---
 
-## Sofort-Initiatives (Einmalige Aktionen)
+## Sofort-Initiatives (Instant Initiatives)
 
-Sofort-Initiatives wirken einmal und sind dann weg. Du spielst sie fuer Action Points und sie loesen sofort ihren Effect aus.
+Sofort-Initiatives werden für 1 AP gespielt und in den Instant-Slot (board[player].sofort[0]) gelegt. Sie bleiben dort, bis der Spieler sie aktiviert (durch Klick oder Taste 'A'). Bei Aktivierung lösen sie ihren Effekt über die zentrale Queue aus und werden dann abgelegt. Mark Zuckerberg (Tech) gibt einmal pro Runde nach Aktivierung einer Initiative +1 AP; Ai Weiwei gibt bei Aktivierung +1 Karte und +1 AP.
 
 ### **Shadow Lobbying**
 
@@ -32,7 +32,7 @@ Sofort-Initiatives wirken einmal und sind dann weg. Du spielst sie fuer Action P
 ### **Digitaler Wahlkampf**
 
 - **Deckbuildingkosten:** 3 HP (groß)
-- **Effect:** Ziehe 2 Karten. Plattform senkt Action Points (AP)-Cost der naechsten Initiative um 1
+- **Effect:** Ziehe 2 Karten. (Historische Kostenreduktion entfällt in der Baseline; künftige Rabatte nur via Events.)
 - **Wann spielen?** Fuer Kartenfluss und Tempo
 - **Example:** Du ziehst 2 Karten, naechste Initiative ist billiger
 
@@ -53,7 +53,7 @@ Sofort-Initiatives wirken einmal und sind dann weg. Du spielst sie fuer Action P
 ### **Verzoegerungsverfahren**
 
 - **Deckbuildingkosten:** 1 HP (klein)
-- **Effect:** +1 Action Points (AP) oder ziehe 1 Karte
+- **Effect:** +1 Action Points (AP) oder ziehe 1 Karte (via Queue-Events)
 - **Wann spielen?** Fuer Flexibilitaet
 - **Example:** Du waehlst zwischen mehr Aktionen oder mehr Karten
 
@@ -101,7 +101,7 @@ Sofort-Initiatives wirken einmal und sind dann weg. Du spielst sie fuer Action P
 
 ---
 
-## Dauerhafte Initiatives (Laufende Effecte)
+## Dauerhafte Initiatives (Laufende Effekte)
 
 Dauerhafte Initiatives bleiben auf dem Gamefeld und wirken laufend. Du spielst sie in die Spezial-Slots (1 fuer Regierung, 1 fuer Oeffentlichkeit).
 
@@ -117,7 +117,7 @@ Dauerhafte Initiatives bleiben auf dem Gamefeld und wirken laufend. Du spielst s
 
 - **Deckbuildingkosten:** 2 HP (mittel)
 - **Spezial-Slot:** Oeffentlichkeit
-- **Effect:** Bei Plattform-Karten: +1 Action Points (AP) oder ziehe 1 Karte nach Initiative
+- **Effect:** (Historisch) Plattform-Synergien; aktuelle AP-Rückerstattung erfolgt explizit über Mark Zuckerberg / Ai Weiwei Effekte.
 - **Wann spielen?** Mit Plattform-Strategien
 - **Example:** Mark Zuckerberg gibt dir +1 AP nach jeder Initiative
 
@@ -129,11 +129,11 @@ Dauerhafte Initiatives bleiben auf dem Gamefeld und wirken laufend. Du spielst s
 - **Wann spielen?** Mit Oligarchen-Strategien
 - **Example:** Elon Musk spielen → Vladimir Putin +1 Einfluss
 
-### **Zivilgesellschaft(Oeffentlichkeit)**
+### **Zivilgesellschaft (Oeffentlichkeit)**
 
 - **Deckbuildingkosten:** 2 HP (mittel)
 - **Spezial-Slot:** Oeffentlichkeit
-- **Effekt:** Bewegung-Karten +1 Einfluss, NGOs machen Initiatives billiger (-1 AP)
+- **Effekt:** Bewegung-Karten +1 Einfluss (wenn vorhanden). (Historische NGO‑Kostenreduktion entfällt.)
 - **Wann spielen?** Mit Bewegungs- und NGO-Strategien
 - **Example:** Greta Thunberg +1 Einfluss, Bill Gates macht Initiatives billiger
 
@@ -319,7 +319,7 @@ Interventions sind "Fallenkarten", die du verdeckt setzt. Sie loesen automatisch
 
 ## Wie funktionieren die verschiedenen Kartentypen zusammen?
 
-### **Sofort-Initiatives + Leadership**
+### **Instant-Initiatives + Leadership**
 
 **Example:** Justin Trudeau (Leadership) + "Partei-Offensive"
 
@@ -344,7 +344,7 @@ Interventions sind "Fallenkarten", die du verdeckt setzt. Sie loesen automatisch
 
 #### **Tempo-Strategie**
 
-- **Karten:** Leadership-Government Cards + Plattform-Public Cards + Sofort-Initiatives
+- **Karten:** Leadership-Government Cards + Plattform-Public Cards + Instant-Initiatives
 - **Effect:** Viele Aktionen in wenigen Zuegen
 - **Example:** Justin Trudeau + Mark Zuckerberg + "Verzoegerungsverfahren"
 

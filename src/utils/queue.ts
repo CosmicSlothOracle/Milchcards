@@ -53,7 +53,7 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
 
       case 'ADD_AP': {
         const cur = state.actionPoints[ev.player];
-        const next = Math.max(0, Math.min(AP_CAP, cur + ev.amount));
+        const next = Math.max(0, cur + ev.amount);
         state.actionPoints[ev.player] = next;
         logPush(state, logAP(ev.player, cur, next));
         break;

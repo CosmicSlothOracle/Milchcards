@@ -1,8 +1,28 @@
 import { Card, GameState, Player } from '../types/game';
 
+// Simplified AP system (2025-08-25)
+// ------------------------------------------------------------
+// Rules:
+// 1. Each card costs exactly 1 AP to play.
+// 2. Players start every turn with 2 AP (handled in game logic).
+// 3. AP effects simply ADD to the current AP via queued ADD_AP events.
+// 4. There is **no upper AP cap**. Values may exceed previous MAX_AP of 4.
+
 export const START_AP = 2;
-export const MAX_AP = 4;
-export const BASE_AP_COST = 1;
+export const MAX_AP = Number.MAX_SAFE_INTEGER; // unlimited cap used for legacy code
+export const BASE_AP_COST = 1; // fixed cost for every card
+
+// Cache for AP calculations to prevent redundant calls
+const apCache = new Map<string, { cost: number; refund: number; net: number; reasons: string[] }>();
+
+function getCacheKey(state: GameState, player: Player, card: Card, lane?: string): string {
+  const flags = state.effectFlags[player];
+  return `${player}-${card.uid}-${lane}-${flags?.initiativeDiscount}-${flags?.initiativeRefund}-${flags?.govRefundAvailable}`;
+}
+
+function clearApCache(): void {
+  apCache.clear();
+}
 
 function isInitiative(card: Card): boolean {
   const typeStr = (card as any).type ?? '';
@@ -13,25 +33,19 @@ function isGovernment(card: Card): boolean {
   return card.kind === 'pol';
 }
 
+/**
+ * Returns the (fixed) AP cost for playing a card.
+ * The new simplified system ignores all discounts – those abilities should now
+ * enqueue an ADD_AP event instead. We still keep the signature to avoid large
+ * refactors elsewhere.
+ */
 export function getCardActionPointCost(
-  state: GameState,
-  player: Player,
-  card: Card,
-  lane?: 'innen' | 'aussen' | 'sofort'
+  _state: GameState,
+  _player: Player,
+  _card: Card,
+  _lane?: 'innen' | 'aussen' | 'sofort'
 ): { cost: number; reasons: string[] } {
-  let cost = 1;
-  const reasons: string[] = [];
-
-  if (isInitiative(card)) {
-    const disc = state.effectFlags[player]?.initiativeDiscount ?? 0;
-    if (disc > 0) {
-      const before = cost;
-      cost = Math.max(0, cost - 1);
-      reasons.push(`Initiative-Discount: -1 AP (${before}→${cost})`);
-    }
-  }
-
-  return { cost, reasons };
+  return { cost: BASE_AP_COST, reasons: [] };
 }
 
 export function getNetApCost(
@@ -40,35 +54,20 @@ export function getNetApCost(
   card: Card,
   lane?: 'innen' | 'aussen' | 'sofort'
 ): { cost: number; refund: number; net: number; reasons: string[] } {
-  const { cost, reasons } = getCardActionPointCost(state, player, card, lane);
-  let refund = 0;
+  // The net cost is always equal to the fixed cost. Refund-style abilities
+  // should enqueue ADD_AP events separately; therefore refund is **always 0**
+  // here.
 
-  if (isGovernment(card) && state.effectFlags[player]?.govRefundAvailable) {
-    refund += 1;
-    reasons.push('Bewegung: +1 AP Refund für erste Regierungskarte');
-  }
+  const cost = BASE_AP_COST;
+  const refund = 0;
+  const net = cost; // always 1
 
-  if (isInitiative(card) && (state.effectFlags[player]?.initiativeRefund ?? 0) > 0) {
-    refund += 1;
-    reasons.push('Initiative-Refund: +1 AP');
-  }
+  return { cost, refund, net, reasons: [] };
+}
 
-  const net = Math.max(0, cost - refund);
-
-  if (process.env.NODE_ENV !== 'production') {
-    console.debug('[AP DEBUG]', {
-      player,
-      card: card?.name,
-      base: 1,
-      costAfterDiscounts: cost,
-      refund,
-      net,
-      flags: state.effectFlags?.[player],
-      reasons,
-    });
-  }
-
-  return { cost, refund, net, reasons };
+// Clear cache when game state changes significantly
+export function clearApCacheOnStateChange(): void {
+  clearApCache();
 }
 
 export function wouldBeNetZero(
@@ -84,9 +83,8 @@ export const isInitiativeCard = isInitiative;
 export const isGovernmentCard = isGovernment;
 export const isNetZeroMove = wouldBeNetZero;
 export const canPlayCard = (state: GameState, p: Player, card: Card): boolean => {
-  const actions = state.actionsUsed?.[p] ?? 0;
-  if (actions < 2) return true;
-  return wouldBeNetZero(state, p, card);
+  // In the simplified AP system we only check that the player still has AP.
+  return state.actionPoints[p] > 0;
 };
 
 export const hasGretaOnBoard = (state: GameState, p: Player) =>

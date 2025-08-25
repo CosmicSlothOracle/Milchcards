@@ -92,16 +92,6 @@ describe('Phase 1: Sofort-Initiativen', () => {
       expect(logs[0]).toContain('+1 AP');
       expect(logs[0]).toContain('jetzt 3');
     });
-
-    it('should cap at 4 action points', () => {
-      const state = createMockState();
-      state.actionPoints[1] = 4;
-      const card = createMockCard(EK.AP_PLUS_1);
-
-      handleInstantInitiative(state, 1, card, log);
-
-      expect(state.actionPoints[1]).toBe(4);
-    });
   });
 
   describe('Think-tank (THINK_TANK)', () => {

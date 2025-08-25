@@ -683,7 +683,7 @@ function App() {
                 opacity: 0.9,
                 marginTop: '4px',
               }}>
-                AP: {gameState.actionPoints[gameState.current]} | Actions: {gameState.actionsUsed[gameState.current]}/2
+                AP: {gameState.actionPoints[gameState.current]}
               </div>
             </div>
           )}

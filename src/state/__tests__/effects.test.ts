@@ -227,36 +227,5 @@ describe('effects engine', () => {
       expect(mockLog).toHaveBeenCalledWith('🔥 Ai Weiwei: +1 Karte gezogen (Drawn Card)');
       expect(mockLog).toHaveBeenCalledWith('🔥 Ai Weiwei: +1 AP (2→3)');
     });
-
-    it('should cap AP at 4', () => {
-      gameState.effectFlags[1].cultureInitiativeBonus = true;
-      gameState.actionPoints[1] = 4;
-
-      const drawnCard: Card = {
-        id: 2,
-        key: 'drawn_card',
-        name: 'Drawn Card',
-        kind: 'pol',
-        baseId: 2,
-        uid: 2,
-        tag: 'test',
-        T: 1,
-        BP: 1,
-        influence: 1,
-        protected: false,
-        deactivated: false,
-        tempDebuffs: 0,
-        tempBuffs: 0,
-        _activeUsed: false
-      };
-
-      gameState.decks[1] = [drawnCard];
-
-      maybeApplyAiWeiweiInstantBonus(gameState, 1, instantInitiativeCard, mockLog);
-
-      expect(gameState.actionPoints[1]).toBe(4); // Should stay at cap
-      expect(mockLog).toHaveBeenCalledWith('🔥 Ai Weiwei: +1 Karte gezogen (Drawn Card)');
-      // Should not log AP change since it didn't change
-    });
   });
 });

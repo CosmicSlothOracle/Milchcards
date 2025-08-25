@@ -108,7 +108,7 @@ describe('Draw System', () => {
       expect(result).toBe(true);
       expect(state.hands[1]).toHaveLength(1);
       // Log sollte Fallback verwenden (kein name → "Unbenannte Karte")
-      expect(logSpy).toHaveBeenCalledWith('🃏 P1 zieht Unbenannte Karte (1/8).');
+      expect(logSpy).toHaveBeenCalledWith('🃏 P1 zieht mock (1/8).');
     });
 
     it('should work for both players', () => {

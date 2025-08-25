@@ -1,7 +1,7 @@
-# Government Cards - Politiker und Staatschefs
+# Government Cards – Politiker und Staatschefs
 
 **Was sind Government Cards?**
-Government Cards sind Politiker und Staatschefs, die dir Influence geben. Du spielst sie in die Regierungsreihe (maximal 5 Karten). Wer am Ende der Round mehr Influence in der Regierungsreihe hat, gewinnt die Round.
+Government Cards sind Politiker und Staatschefs, die dir Influence geben. Du spielst sie in die Regierungsreihe (maximal 5 Karten). Wer am Ende der Runde mehr Influence in der Regierungsreihe hat, gewinnt die Runde. Jede gespielte Karte kostet 1 AP; jeder Zug startet mit 2 AP (kein AP-Cap).
 
 **Wie funktionieren die Werte?**
 
@@ -21,8 +21,8 @@ Government Cards sind Politiker und Staatschefs, die dir Influence geben. Du spi
 - **Tier:** 2 (maechtig)
 - **Deckbuildingkosten:** 17 HP
 - **Einfluss:** 10 (Basis)
-- **Faehigkeit:** Du darfst 2 Interventionen gleichzeitig spielen
-- **Keyword:** Leadership (erste Initiative pro Round kostet 0 Action Points)
+- **Faehigkeit:** [IMPLEMENTED] Du darfst 2 Interventionen gleichzeitig spielen (kostet 2 AP, einmal pro Runde)
+- **Keyword:** Leadership (erste Initiative pro Round kostet 0 Action Points) [PLANNED]
 - **Persoenliche Informationen:**
   - Staatsangehoerigkeit: Russisch
   - Geburtsdatum: 7. Oktober 1952
@@ -37,8 +37,8 @@ Government Cards sind Politiker und Staatschefs, die dir Influence geben. Du spi
 - **Tier:** 2 (maechtig)
 - **Deckbuildingkosten:** 17 HP
 - **Einfluss:** 10 (Basis)
-- **Faehigkeit:** Gegnerische NGO-Effekte sind für 1 Runde deaktiviert
-- **Keyword:** Leadership (erste Initiative pro Round kostet 0 Action Points)
+- **Faehigkeit:** Gegnerische NGO-Effekte sind für 1 Runde deaktiviert [PLANNED]
+- **Keyword:** Leadership (erste Initiative pro Round kostet 0 Action Points) [PLANNED]
 - **Persoenliche Informationen:**
   - Staatsangehoerigkeit: Chinesisch
   - Geburtsdatum: 15. Juni 1953
@@ -49,12 +49,12 @@ Government Cards sind Politiker und Staatschefs, die dir Influence geben. Du spi
 
 ### **Recep Tayyip Erdoğan**
 
-- **Power:** 10
+- **Influence:** 10
 - **Tier:** 2 (maechtig)
 - **Deckbuildingkosten:** 17 HP
-- **Influence:** 10 (Basis)
-- **Faehigkeit:** Gegner verliert 1 Action Points (AP) beim Ausspielen einer NGO oder Bewegung
-- **Keyword:** Leadership (erste Initiative pro Round kostet 0 Action Points)
+- **Einfluss:** 10 (Basis)
+- **Faehigkeit:** Gegner verliert 1 Action Points (AP) beim Ausspielen einer NGO oder Bewegung [PLANNED]
+- **Keyword:** Leadership (erste Initiative pro Round kostet 0 Action Points) [PLANNED]
 - **Persoenliche Informationen:**
   - Staatsangehoerigkeit: Tuerkisch
   - Geburtsdatum: 26. Februar 1954
@@ -65,12 +65,12 @@ Government Cards sind Politiker und Staatschefs, die dir Influence geben. Du spi
 
 ### **Justin Trudeau**
 
-- **Power:** 8
+- **Influence:** 8
 - **Tier:** 2 (maechtig)
 - **Deckbuildingkosten:** 13 HP
-- **Influence:** 8 (Basis)
-- **Faehigkeit:** Erste Initiative pro Round kostet 0 Action Points
-- **Keyword:** Leadership (erste Initiative pro Round kostet 0 Action Points)
+- **Einfluss:** 8 (Basis)
+- **Faehigkeit:** Erste Initiative pro Round kostet 0 Action Points [PLANNED]
+- **Keyword:** Leadership (erste Initiative pro Round kostet 0 Action Points) [PLANNED]
 - **Persoenliche Informationen:**
   - Staatsangehoerigkeit: Kanadisch
   - Geburtsdatum: 25. Dezember 1971
@@ -85,8 +85,8 @@ Government Cards sind Politiker und Staatschefs, die dir Influence geben. Du spi
 - **Tier:** 2 (maechtig)
 - **Deckbuildingkosten:** 13 HP
 - **Einfluss:** 9 (Basis)
-- **Faehigkeit:** Wenn du weniger Einfluss hast als der Gegner: +2 Einfluss auf alle deine Government Cards
-- **Keyword:** Leadership (erste Initiative pro Round kostet 0 Action Points)
+- **Faehigkeit:** Wenn du weniger Einfluss hast als der Gegner: +2 Einfluss auf alle deine Government Cards [PLANNED]
+- **Keyword:** Leadership (erste Initiative pro Round kostet 0 Action Points) [PLANNED]
 - **Persoenliche Informationen:**
   - Staatsangehoerigkeit: Ukrainisch
   - Geburtsdatum: 25. Januar 1978
@@ -101,8 +101,8 @@ Government Cards sind Politiker und Staatschefs, die dir Influence geben. Du spi
 - **Tier:** 2 (maechtig)
 - **Deckbuildingkosten:** 15 HP
 - **Einfluss:** 9 (Basis)
-- **Faehigkeit:** Bei einer EU-Karte: +1 Action Points (AP)
-- **Schluesselwoerter:** Leadership, Diplomat (Einflussverschiebung einmal pro Zug)
+- **Faehigkeit:** Bei einer EU-Karte: +1 Action Points (AP) [PLANNED]
+- **Keywords:** Leadership, Diplomat (Einflussverschiebung einmal pro Zug) [PLANNED]
 - **Persoenliche Informationen:**
   - Staatsangehoerigkeit: Deutsch
   - Geburtsdatum: 8. Oktober 1958
@@ -113,12 +113,12 @@ Government Cards sind Politiker und Staatschefs, die dir Influence geben. Du spi
 
 ### **Narendra Modi**
 
-- **Power:** 9
+- **Influence:** 9
 - **Tier:** 2 (maechtig)
 - **Deckbuildingkosten:** 13 HP
-- **Influence:** 9 (Basis)
-- **Faehigkeit:** Oligarchen-Karten kosten 1 HP weniger beim Deckbuilding
-- **Keyword:** Leadership (erste Initiative pro Round kostet 0 Action Points)
+- **Einfluss:** 9 (Basis)
+- **Faehigkeit:** Oligarchen-Karten kosten 1 HP weniger beim Deckbuilding [PLANNED]
+- **Keyword:** Leadership (erste Initiative pro Round kostet 0 Action Points) [PLANNED]
 - **Persoenliche Informationen:**
   - Staatsangehoerigkeit: Indisch
   - Geburtsdatum: 17. September 1950
@@ -129,12 +129,12 @@ Government Cards sind Politiker und Staatschefs, die dir Influence geben. Du spi
 
 ### **Luiz Inácio Lula da Silva**
 
-- **Power:** 9
+- **Influence:** 9
 - **Tier:** 2 (maechtig)
 - **Deckbuildingkosten:** 13 HP
-- **Influence:** 9 (Basis)
-- **Faehigkeit:** Wenn eine Bewegung liegt: +2 Influence
-- **Keyword:** Leadership (erste Initiative pro Round kostet 0 Action Points)
+- **Einfluss:** 9 (Basis)
+- **Faehigkeit:** Wenn eine Bewegung liegt: +2 Influence [PLANNED]
+- **Keyword:** Leadership (erste Initiative pro Round kostet 0 Action Points) [PLANNED]
 - **Persoenliche Informationen:**
   - Staatsangehoerigkeit: Brasilianisch
   - Geburtsdatum: 27. Oktober 1945
@@ -149,8 +149,8 @@ Government Cards sind Politiker und Staatschefs, die dir Influence geben. Du spi
 - **Tier:** 2 (maechtig)
 - **Deckbuildingkosten:** 13 HP
 - **Einfluss:** 9 (Basis)
-- **Faehigkeit:** Du kannst gegnerischen Einfluss auf deine Government Cards umleiten (einmal pro Game)
-- **Keyword:** Diplomat (Einflussverschiebung einmal pro Zug)
+- **Faehigkeit:** Du kannst gegnerischen Einfluss auf deine Government Cards umleiten (einmal pro Game) [PLANNED]
+- **Keyword:** Diplomat (Einflussverschiebung einmal pro Zug) [PLANNED]
 - **Persoenliche Informationen:**
   - Staatsangehoerigkeit: Russisch
   - Geburtsdatum: 21. Maerz 1950
@@ -161,12 +161,12 @@ Government Cards sind Politiker und Staatschefs, die dir Influence geben. Du spi
 
 ### **Wolfgang Schaeuble**
 
-- **Power:** 8
+- **Influence:** 8
 - **Tier:** 2 (maechtig)
 - **Deckbuildingkosten:** 13 HP
-- **Influence:** 8 (Basis)
-- **Faehigkeit:** Wenn eine Finanzen-Initiative liegt: -1 Action Points (AP) fuer deine naechste Government Cards
-- **Keyword:** Leadership (erste Initiative pro Round kostet 0 Action Points)
+- **Einfluss:** 8 (Basis)
+- **Faehigkeit:** Wenn eine Finanzen-Initiative liegt: -1 Action Points (AP) fuer deine naechste Government Cards [PLANNED]
+- **Keyword:** Leadership (erste Initiative pro Round kostet 0 Action Points) [PLANNED]
 - **Persoenliche Informationen:**
   - Staatsangehoerigkeit: Deutsch
   - Geburtsdatum: 18. September 1942
@@ -181,8 +181,8 @@ Government Cards sind Politiker und Staatschefs, die dir Influence geben. Du spi
 - **Tier:** 2 (maechtig)
 - **Deckbuildingkosten:** 12 HP
 - **Einfluss:** 8 (Basis)
-- **Faehigkeit:** NATO-Buff: Wenn eine Government Cards mit Influence 7 oder hoeher liegt: +1 Einfluss
-- **Keyword:** Diplomat (Einflussverschiebung einmal pro Zug)
+- **Faehigkeit:** NATO-Buff: Wenn eine Government Cards mit Influence 7 oder hoeher liegt: +1 Einfluss [PLANNED]
+- **Keyword:** Diplomat (Einflussverschiebung einmal pro Zug) [PLANNED]
 - **Persoenliche Informationen:**
   - Staatsangehoerigkeit: Norwegisch
   - Geburtsdatum: 16. Maerz 1959
@@ -193,12 +193,12 @@ Government Cards sind Politiker und Staatschefs, die dir Influence geben. Du spi
 
 ### **Helmut Schmidt**
 
-- **Power:** 9
+- **Influence:** 9
 - **Tier:** 2 (maechtig)
 - **Deckbuildingkosten:** 15 HP
-- **Influence:** 9 (Basis)
-- **Faehigkeit:** +1 Action Points (AP) bei einer Initiative mit Wirtschaftsfokus
-- **Keyword:** Leadership (erste Initiative pro Round kostet 0 Action Points)
+- **Einfluss:** 9 (Basis)
+- **Faehigkeit:** +1 Action Points (AP) bei einer Initiative mit Wirtschaftsfokus [PLANNED]
+- **Keyword:** Leadership (erste Initiative pro Round kostet 0 Action Points) [PLANNED]
 - **Persoenliche Informationen:**
   - Staatsangehoerigkeit: Deutsch
   - Geburtsdatum: 23. Dezember 1918
@@ -209,12 +209,12 @@ Government Cards sind Politiker und Staatschefs, die dir Influence geben. Du spi
 
 ### **Javier Milei**
 
-- **Power:** 7
+- **Influence:** 7
 - **Tier:** 2 (maechtig)
 - **Deckbuildingkosten:** 11 HP
-- **Influence:** 7 (Basis)
-- **Faehigkeit:** Wenn du passt: +1 Karte ziehen ("Anarchie-Boost")
-- **Keyword:** Leadership (erste Initiative pro Round kostet 0 Action Points)
+- **Einfluss:** 7 (Basis)
+- **Faehigkeit:** Wenn du passt: +1 Karte ziehen ("Anarchie-Boost") [PLANNED]
+- **Keyword:** Leadership (erste Initiative pro Round kostet 0 Action Points) [PLANNED]
 - **Persoenliche Informationen:**
   - Staatsangehoerigkeit: Argentinisch
   - Geburtsdatum: 22. Oktober 1970
@@ -245,8 +245,8 @@ Government Cards sind Politiker und Staatschefs, die dir Influence geben. Du spi
 - **Tier:** 2 (maechtig)
 - **Deckbuildingkosten:** 11 HP
 - **Einfluss:** 7 (Basis)
-- **Faehigkeit:** Einmal pro Round: +1 Einfluss auf eine Government Cards mit Influence 5 oder weniger
-- **Keyword:** Leadership (erste Initiative pro Round kostet 0 Action Points)
+- **Faehigkeit:** Einmal pro Round: +1 Einfluss auf eine Government Cards mit Influence 5 oder weniger [PLANNED]
+- **Keyword:** Leadership (erste Initiative pro Round kostet 0 Action Points) [PLANNED]
 - **Persoenliche Informationen:**
   - Staatsangehoerigkeit: US-Amerikanisch
   - Geburtsdatum: 20. Oktober 1964
@@ -593,12 +593,12 @@ Government Cards sind Politiker und Staatschefs, die dir Influence geben. Du spi
 
 ### **Andrzej Duda**
 
-- **Power:** 8
+- **Influence:** 8
 - **Tier:** 2 (maechtig)
 - **Deckbuildingkosten:** 13 HP
-- **Influence:** 8 (Basis)
+- **Einfluss:** 8 (Basis)
 - **Faehigkeit:** Keine spezielle Faehigkeit
-- **Keyword:** Leadership (erste Initiative pro Round kostet 0 Action Points)
+- **Keyword:** Leadership (erste Initiative pro Round kostet 0 Action Points) [PLANNED]
 - **Persoenliche Informationen:**
   - Staatsangehoerigkeit: Polnisch
   - Geburtsdatum: 16. Mai 1972
@@ -609,12 +609,12 @@ Government Cards sind Politiker und Staatschefs, die dir Influence geben. Du spi
 
 ### **Anthony Albanese**
 
-- **Power:** 8
+- **Influence:** 8
 - **Tier:** 2 (maechtig)
 - **Deckbuildingkosten:** 13 HP
-- **Influence:** 8 (Basis)
+- **Einfluss:** 8 (Basis)
 - **Faehigkeit:** Keine spezielle Faehigkeit
-- **Keyword:** Leadership (erste Initiative pro Round kostet 0 Action Points)
+- **Keyword:** Leadership (erste Initiative pro Round kostet 0 Action Points) [PLANNED]
 - **Persoenliche Informationen:**
   - Staatsangehoerigkeit: Australisch
   - Geburtsdatum: 2. Maerz 1963
@@ -625,12 +625,12 @@ Government Cards sind Politiker und Staatschefs, die dir Influence geben. Du spi
 
 ### **Benjamin Netanyahu**
 
-- **Power:** 9
+- **Influence:** 9
 - **Tier:** 2 (maechtig)
 - **Deckbuildingkosten:** 15 HP
-- **Influence:** 9 (Basis)
-- **Faehigkeit:** Bei Militaer-Initiative: +1 Influence
-- **Keyword:** Leadership (erste Initiative pro Round kostet 0 Action Points)
+- **Einfluss:** 9 (Basis)
+- **Faehigkeit:** Bei Militaer-Initiative: +1 Influence [PLANNED]
+- **Keyword:** Leadership (erste Initiative pro Round kostet 0 Action Points) [PLANNED]
 - **Persoenliche Informationen:**
   - Staatsangehoerigkeit: Israelisch
   - Geburtsdatum: 21. Oktober 1949
@@ -641,12 +641,12 @@ Government Cards sind Politiker und Staatschefs, die dir Influence geben. Du spi
 
 ### **Dick Cheney**
 
-- **Power:** 8
+- **Influence:** 8
 - **Tier:** 2 (maechtig)
 - **Deckbuildingkosten:** 13 HP
-- **Influence:** 8 (Basis)
-- **Faehigkeit:** Bei eigener Intervention: +1 Influence (1×/Round)
-- **Keyword:** Leadership (erste Initiative pro Round kostet 0 Action Points)
+- **Einfluss:** 8 (Basis)
+- **Faehigkeit:** Bei eigener Intervention: +1 Influence (1×/Round) [PLANNED]
+- **Keyword:** Leadership (erste Initiative pro Round kostet 0 Action Points) [PLANNED]
 - **Persoenliche Informationen:**
   - Staatsangehoerigkeit: US-Amerikanisch
   - Geburtsdatum: 30. Januar 1941
@@ -657,12 +657,12 @@ Government Cards sind Politiker und Staatschefs, die dir Influence geben. Du spi
 
 ### **Donald Trump**
 
-- **Power:** 10
+- **Influence:** 10
 - **Tier:** 2 (maechtig)
 - **Deckbuildingkosten:** 17 HP
-- **Influence:** 10 (Basis)
-- **Faehigkeit:** Wenn Medien liegt: +1 Influence
-- **Keyword:** Leadership (erste Initiative pro Round kostet 0 Action Points)
+- **Einfluss:** 10 (Basis)
+- **Faehigkeit:** Wenn Medien liegt: +1 Influence [PLANNED]
+- **Keyword:** Leadership (erste Initiative pro Round kostet 0 Action Points) [PLANNED]
 - **Persoenliche Informationen:**
   - Staatsangehoerigkeit: US-Amerikanisch
   - Geburtsdatum: 14. Juni 1946
@@ -673,12 +673,12 @@ Government Cards sind Politiker und Staatschefs, die dir Influence geben. Du spi
 
 ### **Ebrahim Raisi**
 
-- **Power:** 9
+- **Influence:** 9
 - **Tier:** 2 (maechtig)
 - **Deckbuildingkosten:** 15 HP
-- **Influence:** 9 (Basis)
+- **Einfluss:** 9 (Basis)
 - **Faehigkeit:** Keine spezielle Faehigkeit
-- **Keyword:** Leadership (erste Initiative pro Round kostet 0 Action Points)
+- **Keyword:** Leadership (erste Initiative pro Round kostet 0 Action Points) [PLANNED]
 - **Persoenliche Informationen:**
   - Staatsangehoerigkeit: Iranisch
   - Geburtsdatum: 14. Dezember 1960
@@ -689,12 +689,12 @@ Government Cards sind Politiker und Staatschefs, die dir Influence geben. Du spi
 
 ### **Emmanuel Macron**
 
-- **Power:** 9
+- **Influence:** 9
 - **Tier:** 2 (maechtig)
 - **Deckbuildingkosten:** 15 HP
-- **Influence:** 9 (Basis)
+- **Einfluss:** 9 (Basis)
 - **Faehigkeit:** Keine spezielle Faehigkeit
-- **Keyword:** Leadership (erste Initiative pro Round kostet 0 Action Points)
+- **Keyword:** Leadership (erste Initiative pro Round kostet 0 Action Points) [PLANNED]
 - **Persoenliche Informationen:**
   - Staatsangehoerigkeit: Franzoesisch
   - Geburtsdatum: 21. Dezember 1977
@@ -705,12 +705,12 @@ Government Cards sind Politiker und Staatschefs, die dir Influence geben. Du spi
 
 ### **Giorgia Meloni**
 
-- **Power:** 9
+- **Influence:** 9
 - **Tier:** 2 (maechtig)
 - **Deckbuildingkosten:** 15 HP
-- **Influence:** 9 (Basis)
+- **Einfluss:** 9 (Basis)
 - **Faehigkeit:** Keine spezielle Faehigkeit
-- **Keyword:** Leadership (erste Initiative pro Round kostet 0 Action Points)
+- **Keyword:** Leadership (erste Initiative pro Round kostet 0 Action Points) [PLANNED]
 - **Persoenliche Informationen:**
   - Staatsangehoerigkeit: Italienisch
   - Geburtsdatum: 15. Januar 1977
@@ -721,12 +721,12 @@ Government Cards sind Politiker und Staatschefs, die dir Influence geben. Du spi
 
 ### **King Charles III**
 
-- **Power:** 7
+- **Influence:** 7
 - **Tier:** 2 (maechtig)
 - **Deckbuildingkosten:** 12 HP
-- **Influence:** 7 (Basis)
+- **Einfluss:** 7 (Basis)
 - **Faehigkeit:** Keine spezielle Faehigkeit
-- **Keyword:** Leadership (erste Initiative pro Round kostet 0 Action Points)
+- **Keyword:** Leadership (erste Initiative pro Round kostet 0 Action Points) [PLANNED]
 - **Persoenliche Informationen:**
   - Staatsangehoerigkeit: Britisch
   - Geburtsdatum: 14. November 1948
@@ -737,12 +737,12 @@ Government Cards sind Politiker und Staatschefs, die dir Influence geben. Du spi
 
 ### **Mohammed bin Salman**
 
-- **Power:** 10
+- **Influence:** 10
 - **Tier:** 2 (maechtig)
 - **Deckbuildingkosten:** 17 HP
-- **Influence:** 10 (Basis)
-- **Faehigkeit:** Oligarch spielt → +1 Influence
-- **Keyword:** Leadership (erste Initiative pro Round kostet 0 Action Points)
+- **Einfluss:** 10 (Basis)
+- **Faehigkeit:** Oligarch spielt → +1 Influence [PLANNED]
+- **Keyword:** Leadership (erste Initiative pro Round kostet 0 Action Points) [PLANNED]
 - **Persoenliche Informationen:**
   - Staatsangehoerigkeit: Saudisch
   - Geburtsdatum: 31. August 1985
@@ -993,12 +993,12 @@ Government Cards sind Politiker und Staatschefs, die dir Influence geben. Du spi
 
 ### **Donald Rumsfeld**
 
-- **Power:** 7
+- **Influence:** 7
 - **Tier:** 2 (maechtig)
 - **Deckbuildingkosten:** 12 HP
-- **Influence:** 7 (Basis)
-- **Faehigkeit:** Bei Militaer-Initiative: +1 Effect
-- **Keyword:** Leadership (erste Initiative pro Round kostet 0 Action Points)
+- **Einfluss:** 7 (Basis)
+- **Faehigkeit:** Bei Militaer-Initiative: +1 Effect [PLANNED]
+- **Keyword:** Leadership (erste Initiative pro Round kostet 0 Action Points) [PLANNED]
 - **Persoenliche Informationen:**
   - Staatsangehoerigkeit: US-Amerikanisch
   - Geburtsdatum: 9. Juli 1932

@@ -23,17 +23,17 @@ Die Basis fuer die HP-Cost ist der **Powerwert (M)** – das ist der Zahlenwert 
 ### **Power (M) → HP-Cost**
 
 | Power (M) | HP-Cost |
-| --------- | --------- |
-| 1         | 1 HP      |
-| 2         | 1 HP      |
-| 3         | 2 HP      |
-| 4         | 3 HP      |
-| 5         | 4 HP      |
-| 6         | 5 HP      |
-| 7         | 7 HP      |
-| 8         | 9 HP      |
-| 9         | 11 HP     |
-| 10        | 13 HP     |
+| --------- | ------- |
+| 1         | 1 HP    |
+| 2         | 1 HP    |
+| 3         | 2 HP    |
+| 4         | 3 HP    |
+| 5         | 4 HP    |
+| 6         | 5 HP    |
+| 7         | 7 HP    |
+| 8         | 9 HP    |
+| 9         | 11 HP   |
+| 10        | 13 HP   |
 
 ### **🔸 Zusaetzliche Cost**
 
@@ -98,16 +98,16 @@ Der HP-Wert richtet sich nach der **Subklasse** (Oligarch, Bewegung, Plattform e
 ### **Initiatives**
 
 | Kategorie | HP-Cost |
-| --------- | --------- |
-| Klein     | 1 HP      |
-| Mittel    | 2 HP      |
-| Groß      | 3–4 HP    |
+| --------- | ------- |
+| Klein     | 1 HP    |
+| Mittel    | 2 HP    |
+| Groß      | 3–4 HP  |
 
 ### **Interventions**
 
 | Kategorie | HP-Cost |
-| --------- | --------- |
-| Standard  | 2–3 HP    |
+| --------- | ------- |
+| Standard  | 2–3 HP  |
 
 ---
 
@@ -298,7 +298,7 @@ Der HP-Wert richtet sich nach der **Subklasse** (Oligarch, Bewegung, Plattform e
 
 - Viele Leadership-Government Cards
 - Plattform-Public Cards
-- Sofort-Initiatives fuer Tempo
+- Instant-Initiatives fuer Tempo
 
 ### **Defensiv (Kontrolle + Reaktion)**
 

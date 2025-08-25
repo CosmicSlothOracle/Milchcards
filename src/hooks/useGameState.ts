@@ -240,7 +240,7 @@ export function useGameState() {
     if (gameState.actionPoints[player] <= 0) return true;
 
     // Wenn 2 Aktionen verwendet wurden
-    if (gameState.actionsUsed[player] >= 2) return true;
+    // if (gameState.actionsUsed[player] >= 2) return true;
 
     return false;
   }, []);

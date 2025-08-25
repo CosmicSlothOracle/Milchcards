@@ -28,13 +28,22 @@ export function useGameAI(
         2: enabled
       }
     }));
+
+    // Only set preset when AI is enabled
+    if (enabled) {
+      setAiPreset('AUTORITAERER_REALIST');
+    }
   }, [setGameState]);
 
-  // Enhanced setAiPreset with logging - temporarily disabled for build
-  // const setAiPresetWithLog = useCallback((preset: keyof typeof PRESET_DECKS) => {
-  //   console.log('🔧 DEBUG: setAiPreset called with:', preset);
-  //   setAiPreset(preset);
-  // }, []);
+  // Enhanced setAiPreset with logging - only when AI is enabled
+  const setAiPresetWithLog = useCallback((preset: keyof typeof PRESET_DECKS) => {
+    if (aiEnabled) {
+      console.log('🔧 DEBUG: setAiPreset called with:', preset);
+      setAiPreset(preset);
+    } else {
+      console.log('🔧 DEBUG: setAiPreset ignored - AI not enabled');
+    }
+  }, [aiEnabled]);
 
   const runAITurn = useCallback(() => {
     console.log('🔧 DEBUG: runAITurn called - aiEnabled:', aiEnabled, 'current player:', gameState.current);
@@ -69,8 +78,8 @@ export function useGameAI(
       log(`🤖 KI-Analyse: Spieler ${playerInfluence} vs KI ${aiInfluence} (Diff: ${influenceDiff})`);
 
       // Check if AI should pass
-      if (aiAP <= 0 || aiActionsUsed >= 2) {
-        log('🤖 KI passt - keine AP mehr oder 2 Aktionen verwendet.');
+      if (aiAP <= 0) {
+        log('🤖 KI passt - keine AP mehr.');
         return { ...prev, passed: { ...prev.passed, 2: true } };
       }
 
@@ -295,7 +304,7 @@ export function useGameAI(
     // Auto-advance turn after AI action if needed
     setTimeout(() => {
       setGameState(currentState => {
-        if (currentState.current === 2 && (currentState.actionPoints[2] <= 0 || currentState.actionsUsed[2] >= 2)) {
+        if (currentState.current === 2 && currentState.actionPoints[2] <= 0) {
           // Trigger turn advancement
           const newCurrent: Player = 1;
           const newActionPoints = { ...currentState.actionPoints };
