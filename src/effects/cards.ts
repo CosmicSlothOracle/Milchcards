@@ -1,10 +1,18 @@
 import { GameState, Player, Card, EffectEvent } from '../types/game';
 import { resolveQueue } from '../utils/queue';
 import { getStrongestGovernmentUid } from '../utils/targets';
+import { triggerCardEffect, LEGACY_NAME_TO_KEY } from './registry';
 
 function other(p: Player): Player { return p === 1 ? 2 : 1; }
 
 export function triggerCardEffects(state: GameState, player: Player, card: Card) {
+  // Try registry first (new system)
+  if (card.effectKey || LEGACY_NAME_TO_KEY[card.name]) {
+    triggerCardEffect(state, player, card);
+    return;
+  }
+
+  // Fallback to legacy switch statement for unmapped cards
   // Ensure queue exists
   if (!state._effectQueue) state._effectQueue = [];
 

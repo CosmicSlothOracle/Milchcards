@@ -1,6 +1,5 @@
 import type { GameState, Player, Card } from '../types/game';
 import { EK, EffectKey } from '../data/effectKeys';
-import { MAX_AP } from '../utils/ap';
 import { attemptDisable, grantShield } from '../utils/status';
 
 function normalizeEffectKey(card: any): EffectKey | undefined {
@@ -39,7 +38,7 @@ export function handleInstantInitiative(state: GameState, actor: Player, card: C
     }
 
     case EK.AP_PLUS_1: { // Verzögerungsverfahren
-      state.actionPoints[actor] = Math.min(4, (state.actionPoints[actor] ?? 0) + 1);
+      state.actionPoints[actor] = (state.actionPoints[actor] ?? 0) + 1;
       log(`⏱️ ${card.name}: +1 AP (jetzt ${state.actionPoints[actor]}).`);
       break;
     }
@@ -47,7 +46,7 @@ export function handleInstantInitiative(state: GameState, actor: Player, card: C
     case EK.AP_MOD: {
       const delta = Number((card as any).apDelta ?? 0);
       const before = state.actionPoints[actor] ?? 0;
-      const after = Math.max(0, Math.min(MAX_AP, before + delta));
+      const after = Math.max(0, before + delta);
       state.actionPoints[actor] = after;
       const s = delta >= 0 ? `+${delta}` : `${delta}`;
       log(`⏱️ ${card.name}: AP ${before} → ${after} (${s}).`);

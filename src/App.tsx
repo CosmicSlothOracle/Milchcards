@@ -12,10 +12,11 @@ import { BuilderEntry, PoliticianCard, Player } from './types/game';
 import { Specials, PRESET_DECKS } from './data/gameData';
 import { buildDeckFromEntries } from './utils/gameUtils';
 import { copyDebugSnapshotToClipboard, downloadDebugSnapshot } from './utils/debugExport';
+import { GameProvider } from './context/GameContext';
 // Temporarily disabled for build
 // import { hasAnyZeroApPlay } from './utils/ap';
 
-function App() {
+function AppContent() {
   // Old image atlas/background removed; cards load their own images per file mapping
 
   const [deckBuilderOpen, setDeckBuilderOpen] = useState(true);
@@ -691,6 +692,14 @@ function App() {
       </div>
     )}
     </div>
+  );
+}
+
+function App() {
+  return (
+    <GameProvider>
+      <AppContent />
+    </GameProvider>
   );
 }
 

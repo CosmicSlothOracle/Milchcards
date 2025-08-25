@@ -99,18 +99,14 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
       }
 
       case 'SET_DISCOUNT': {
-        const prev = state.effectFlags[ev.player].initiativeDiscount || 0;
-        const next = Math.max(0, Math.min(MAX_DISCOUNT, prev + ev.amount));
-        state.effectFlags[ev.player].initiativeDiscount = next;
-        logPush(state, logDiscount(ev.player, prev, next));
+        // No-op: Discounts are simplified to direct AP in new system
+        logPush(state, `[DEPRECATED] SET_DISCOUNT ignored - use ADD_AP instead`);
         break;
       }
 
       case 'REFUND_NEXT_INITIATIVE': {
-        const prev = state.effectFlags[ev.player].initiativeRefund || 0;
-        const next = Math.max(0, Math.min(MAX_REFUND, prev + ev.amount));
-        state.effectFlags[ev.player].initiativeRefund = next;
-        logPush(state, logRefund(ev.player, prev, next));
+        // No-op: Refunds are simplified to direct AP in new system
+        logPush(state, `[DEPRECATED] REFUND_NEXT_INITIATIVE ignored - use ADD_AP instead`);
         break;
       }
 
