@@ -15,6 +15,8 @@ export interface Card {
   // optional card-specific fields
   deactivated?: boolean;  // runtime disabled status
   protectedOnce?: boolean;// runtime shield flag (consumed once)
+  // New effectKey field for registry
+  effectKey?: string;     // Registry key for card effects
 }
 
 export interface PoliticianCard extends Card {
