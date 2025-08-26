@@ -1,4 +1,5 @@
-import { GameState, Player, EffectEvent, PoliticianCard, Card } from '../types/game';
+import { GameState, Player, PoliticianCard, Card } from '../types/game';
+import { EffectEvent } from '../types/effects';
 import { getStrongestGovernment } from './targets';
 import { AP_CAP, MAX_DISCOUNT, MAX_REFUND } from '../config/gameConstants';
 import {
@@ -98,17 +99,9 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
         break;
       }
 
-      case 'SET_DISCOUNT': {
-        // No-op: Discounts are simplified to direct AP in new system
-        logPush(state, `[DEPRECATED] SET_DISCOUNT ignored - use ADD_AP instead`);
-        break;
-      }
-
-      case 'REFUND_NEXT_INITIATIVE': {
-        // No-op: Refunds are simplified to direct AP in new system
-        logPush(state, `[DEPRECATED] REFUND_NEXT_INITIATIVE ignored - use ADD_AP instead`);
-        break;
-      }
+      // Legacy cases - removed
+      // SET_DISCOUNT and REFUND_NEXT_INITIATIVE are no longer supported
+      // Use ADD_AP instead
 
       case 'GRANT_SHIELD': {
         if (!state.shields) state.shields = new Set();
@@ -178,6 +171,18 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
         break;
       }
 
+      case 'TRAP_TRIGGERED': {
+        // This is a notification event, actual effects are handled separately
+        const trapId = ev.trapId;
+        const targetId = ev.targetId;
+        const trapCard = findCardByUidOnBoard(state, trapId) || state.traps[ev.player].find(c => c.uid === trapId);
+        const targetCard = findCardByUidOnBoard(state, targetId);
+        
+        if (trapCard && targetCard) {
+          logPush(state, `🪤 ${trapCard.name} wurde gegen ${targetCard.name} ausgelöst!`);
+        }
+        break;
+      }
 
     }
   }

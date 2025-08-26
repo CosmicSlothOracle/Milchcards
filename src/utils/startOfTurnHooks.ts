@@ -3,7 +3,7 @@ import { GameState, Player } from '../types/game';
 function other(p: Player): Player { return p === 1 ? 2 : 1; }
 
 export function startOfTurn(state: GameState, p: Player) {
-  // Standard-Refresh
+  // Standard-Refresh: 2 AP pro Zug
   state.actionPoints[p] = 2;
   state.actionsUsed[p] = 0;
 

@@ -1,4 +1,5 @@
-import { GameState, Player, Card, EffectEvent } from '../types/game';
+import { GameState, Player, Card } from '../types/game';
+import { EffectEvent } from '../types/effects';
 
 // Legacy name to effect key mapping for backward compatibility
 export const LEGACY_NAME_TO_KEY: Record<string, string> = {

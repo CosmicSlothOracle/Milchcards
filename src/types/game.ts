@@ -1,4 +1,5 @@
 import type { UID } from './primitives';
+import type { EffectEvent } from './effects';
 
 export type Player = 1 | 2;
 
@@ -93,7 +94,17 @@ export interface EffectFlags {
   initiativeInfluencePenaltyForOpponent: number; // Noam gives opponent -1 (we store on owner, apply against enemy)
   initiativeOnPlayDraw1Ap1: boolean;        // Ai Weiwei
 
-  // Legacy flags for compatibility
+  // Trap system flags
+  trapTriggered?: boolean;           // Set when a trap was triggered this turn
+  trapProtection?: boolean;          // Trap protection active for next card
+
+  // Mark Zuckerberg special flag
+  markZuckerbergUsed: boolean;       // Tracks if Mark Zuckerberg's once-per-turn effect was used
+  
+  // Opportunist system
+  opportunistActive?: boolean;       // Opportunist mirror effect active
+
+  // Legacy flags for compatibility (deprecated)
   nextGovPlus2?: boolean;
   diplomatInfluenceTransferUsed?: boolean;
   influenceTransferBlocked?: boolean;
@@ -115,21 +126,27 @@ export interface EffectFlags {
   interventionEffectReduced?: boolean;
   nextInitiativeRefund?: number;
   nextInitiativeDiscounted?: boolean;
-  opportunistActive?: boolean;
-  markZuckerbergUsed: boolean;
 }
 
 export function createDefaultEffectFlags(): EffectFlags {
   return {
+    // AP system
     initiativeDiscount: 0,
     initiativeRefund: 0,
     govRefundAvailable: false,
 
+    // Initiative auras
     initiativeInfluenceBonus: 0,
     initiativeInfluencePenaltyForOpponent: 0,
     initiativeOnPlayDraw1Ap1: false,
 
+    // Trap system
+    trapTriggered: false,
+    trapProtection: false,
+
+    // Special flags
     markZuckerbergUsed: false,
+    opportunistActive: false,
   };
 }
 
@@ -257,19 +274,7 @@ export interface EffectQueue {
 export type Lane = 'innen' | 'aussen';
 
 // Effect Event model (used by utils/queue.ts)
-export type EffectEvent =
-  | { type: 'LOG'; msg: string }
-  | { type: 'ADD_AP'; player: Player; amount: number }                           // clamps [0..4]
-  | { type: 'DRAW_CARDS'; player: Player; amount: number }
-  | { type: 'DISCARD_RANDOM_FROM_HAND'; player: Player; amount: number }
-  | { type: 'ADJUST_INFLUENCE'; player: Player; amount: number; reason?: string } // alias → BUFF_STRONGEST_GOV
-  | { type: 'BUFF_STRONGEST_GOV'; player: Player; amount: number }               // +/- tempBuffs
-  | { type: 'SET_DISCOUNT'; player: Player; amount: number }                     // initiativeDiscount += clamp
-  | { type: 'REFUND_NEXT_INITIATIVE'; player: Player; amount: number }           // initiativeRefund += clamp
-  | { type: 'GRANT_SHIELD'; targetUid: number }                                  // shields.add(uid)
-  | { type: 'DEACTIVATE_CARD'; targetUid: number }                                // card.deactivated = true
-  | { type: 'DEACTIVATE_RANDOM_HAND'; player: Player; amount: number }           // random hand cards → discard
-  | { type: 'INITIATIVE_ACTIVATED'; player: Player }                             // löst Cluster-3 + Plattform aus
+// EffectEvent moved to types/effects.ts
 
 
 export function createEmptyBoardRow(): BoardRow {
