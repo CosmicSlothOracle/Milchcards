@@ -8,11 +8,12 @@ import { triggerCardEffects } from '../effects/cards';
 import { ensureTestBaselineAP } from '../utils/testCompat';
 import { resolveQueue } from '../utils/queue';
 import { applyStartOfTurnFlags } from '../utils/startOfTurnHooks';
-import { checkTrapsOnOpponentPlay, registerTrap, isSystemrelevant, grantOneTimeProtection, isBoycottTrap } from '../utils/traps';
+import { registerTrap, applyTrapsOnCardPlayed } from '../utils/traps';
 import { recomputeAuraFlags } from '../state/effects';
 import { activateInstantInitiative as activateInstantInitiativeRuntime } from '../state/instantRuntime';
 import { isInstantInitiative } from '../utils/initiative';
 import { emptyBoard } from '../state/board';
+import type { EffectEvent } from '../types/effects';
 
 // Helper function for getting the other player
 const other = (p: Player): Player => (p === 1 ? 2 : 1) as Player;
@@ -429,11 +430,16 @@ export function useGameActions(
         log(`🃏 Player ${player}: ${playedCard.name} gespielt in ${targetLane === 'aussen' ? 'Regierung' : 'Öffentlichkeit'}`);
 
         // 3) Nachdem die Karte gelegt wurde: gegnerische Traps prüfen
-        const tag = (playedCard as any).tag ?? '';
-        const isNGOorPlatform = ['NGO', 'Plattform'].includes(tag);
-        checkTrapsOnOpponentPlay(newState, player === 1 ? 2 : 1, playedCard.uid, isNGOorPlatform, log);
-
-
+        applyTrapsOnCardPlayed(
+          newState,
+          player,
+          playedCard,
+          (event) => {
+            if (!newState._effectQueue) newState._effectQueue = [];
+            newState._effectQueue.push(event);
+          },
+          log
+        );
 
         // 👉 Erst JETZT Auren anwenden (damit +2 Basis erhalten bleibt)
         applyAurasForPlayer(newState, player, log);
@@ -445,6 +451,15 @@ export function useGameActions(
           resolveQueue(newState, newState._queue);
           newState._queue = [];
         }
+
+        // Check for trap triggers
+        applyTrapsOnCardPlayed(
+          newState,
+          player,
+          playedCard,
+          (e) => (newState._effectQueue ??= []).push(e),
+          (m) => (newState._effectQueue ??= []).push({ type: 'LOG', msg: m })
+        );
 
         // 🔥 ROMAN ABRAMOVICH EFFEKT: Wenn Regierungskarte mit Einfluss ≤5 gespielt wird
         if (playedCard.kind === 'pol' && (playedCard as any).influence <= 5) {
@@ -500,12 +515,13 @@ export function useGameActions(
         const isInitiative = /initiative/.test(typeStr); // matcht "Initiative", "Sofort-Initiative", etc.
 
                   // 1) Falls es eine "Systemrelevant" ist (sofortiger Buff auf letzte eigene Regierungskarte)
-        if (isSystemrelevant(playedCard)) {
+        if (playedCard.kind === 'spec' && (playedCard as any).type?.toLowerCase().includes('systemrelevant')) {
           const ownBoard = newState.board[player];
           const candidates = [...ownBoard.aussen, ...ownBoard.innen].filter(c => c.kind === 'pol') as PoliticianCard[];
           const target = candidates[candidates.length - 1]; // letzte eigene Regierungskarte
           if (target) {
-            grantOneTimeProtection(target, log);
+            (target as any).protected = true;
+            log(`🛡️ ${target.name} erhält einmaligen Schutz.`);
           } else {
             log('🛈 Systemrelevant: Keine eigene Regierungskarte im Spiel – Effekt verpufft.');
           }
@@ -532,6 +548,14 @@ export function useGameActions(
           newState._queue = [];
         }
 
+          // Check for trap triggers
+          applyTrapsOnCardPlayed(
+            newState,
+            player,
+            playedCard,
+            (e) => (newState._effectQueue ??= []).push(e),
+            (m) => (newState._effectQueue ??= []).push({ type: 'LOG', msg: m })
+          );
 
           return newState;
         }
@@ -575,15 +599,24 @@ export function useGameActions(
           newState.discard = [...newState.discard, playedCard];
           log(`P${player} spielt Initiative: ${playedCard.name}`);
 
-          // 6) Karteneffekte enqueuen + Queue auflösen
-          triggerCardEffects(newState, player, playedCard);
-          // Queue needs array of events
-        if (newState._queue && newState._queue.length > 0) {
-          resolveQueue(newState, newState._queue);
-          newState._queue = [];
-        }
+                     // 6) Karteneffekte enqueuen + Queue auflösen
+           triggerCardEffects(newState, player, playedCard);
+           // Queue needs array of events
+         if (newState._queue && newState._queue.length > 0) {
+           resolveQueue(newState, newState._queue);
+           newState._queue = [];
+         }
 
-          // 🔥 CLUSTER 3: Auren-Flags neu berechnen (nach Kartenspielen)
+           // Check for trap triggers
+           applyTrapsOnCardPlayed(
+             newState,
+             player,
+             playedCard,
+             (e) => (newState._effectQueue ??= []).push(e),
+             (m) => (newState._effectQueue ??= []).push({ type: 'LOG', msg: m })
+           );
+
+           // 🔥 CLUSTER 3: Auren-Flags neu berechnen (nach Kartenspielen)
           recomputeAuraFlags(newState);
 
           // 🔥 CLUSTER 3: Ai Weiwei Bonus wird bei Aktivierung angewendet (nicht beim Spielen)
@@ -638,18 +671,24 @@ export function useGameActions(
             // Sofort Auren prüfen (z.B. JF +1, wenn JF schon liegt)
             applyAurasForPlayer(newState, player, log);
 
-            // 6) Karteneffekte enqueuen + Queue auflösen
-            triggerCardEffects(newState, player, playedCard);
-            // Queue needs array of events
-        if (newState._queue && newState._queue.length > 0) {
-          resolveQueue(newState, newState._queue);
-          newState._queue = [];
-        }
+                         // 6) Karteneffekte enqueuen + Queue auflösen
+             triggerCardEffects(newState, player, playedCard);
+             // Queue needs array of events
+         if (newState._queue && newState._queue.length > 0) {
+           resolveQueue(newState, newState._queue);
+           newState._queue = [];
+         }
 
-            // 3) Nachdem die Karte gelegt wurde: gegnerische Traps prüfen
-            const tag = (playedCard as any).tag ?? '';
-            const isNGOorPlatform = ['NGO', 'Plattform'].includes(tag);
-            checkTrapsOnOpponentPlay(newState, player === 1 ? 2 : 1, playedCard.uid, isNGOorPlatform, log);
+             // Check for trap triggers
+             applyTrapsOnCardPlayed(
+               newState,
+               player,
+               playedCard,
+               (e) => (newState._effectQueue ??= []).push(e),
+               (m) => (newState._effectQueue ??= []).push({ type: 'LOG', msg: m })
+             );
+
+
 
             // 🔥 PUBLIC CARD EFFECTS - Passive effects when played
 
@@ -744,12 +783,12 @@ export function useGameActions(
         }
 
                   // 4) Default: Traps/Interventions
-        // Falls "Boykott-Kampagne" als Trap gelegt wird
-        if (isBoycottTrap(playedCard)) {
-          registerTrap(newState, player, playedCard, log);
-          // NICHT sofort checken – sie wartet auf den Gegner
-          return newState;
-        }
+                  // Falls Trap-Karte gelegt wird
+          if (playedCard.kind === 'spec' && (playedCard as any).type?.toLowerCase().includes('trap')) {
+            registerTrap(newState, player, playedCard.key || playedCard.name.toLowerCase().replace(/[- ]/g, '_'));
+            // NICHT sofort checken – sie wartet auf den Gegner
+            return newState;
+          }
 
         newState.traps[player] = [...newState.traps[player], playedCard];
         log(`P${player} spielt ${playedCard.name} als ${specCard.type}`);
@@ -761,6 +800,15 @@ export function useGameActions(
           resolveQueue(newState, newState._queue);
           newState._queue = [];
         }
+
+        // Check for trap triggers
+        applyTrapsOnCardPlayed(
+          newState,
+          player,
+          playedCard,
+          (e) => (newState._effectQueue ??= []).push(e),
+          (m) => (newState._effectQueue ??= []).push({ type: 'LOG', msg: m })
+        );
 
         // 🔥 AP-REFUNDS nach dem Kartenspielen anwenden
         applyApRefundsAfterPlay(newState, player, selectedCard);
@@ -774,6 +822,15 @@ export function useGameActions(
           resolveQueue(newState, newState._queue);
           newState._queue = [];
         }
+
+      // Check for trap triggers
+      applyTrapsOnCardPlayed(
+        newState,
+        player,
+        selectedCard,
+        (e) => (newState._effectQueue ??= []).push(e),
+        (m) => (newState._effectQueue ??= []).push({ type: 'LOG', msg: m })
+      );
 
       // 🔥 AP-REFUNDS nach dem Kartenspielen anwenden
       applyApRefundsAfterPlay(newState, player, selectedCard);
@@ -802,6 +859,15 @@ export function useGameActions(
 
       // 1) Normale Karten-Effekte der Sofort-Karte feuern
       triggerCardEffects(newState, player, instantCard);
+
+      // Check for trap triggers
+      applyTrapsOnCardPlayed(
+        newState,
+        player,
+        instantCard,
+        (e) => (newState._effectQueue ??= []).push(e),
+        (m) => (newState._effectQueue ??= []).push({ type: 'LOG', msg: m })
+      );
 
       // 2) Karte nach Aktivierung in den Ablagestapel
       const [played] = newState.board[player].sofort.splice(0, 1);

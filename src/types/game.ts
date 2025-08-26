@@ -100,7 +100,17 @@ export interface EffectFlags {
 
   // Mark Zuckerberg special flag
   markZuckerbergUsed: boolean;       // Tracks if Mark Zuckerberg's once-per-turn effect was used
-  
+
+  // New initiative activation flags
+  zuckOnceAp?: boolean;              // Mark Zuckerberg once-per-turn AP bonus
+  zuckSpent?: boolean;               // Tracks if Mark Zuckerberg AP was spent this turn
+  aiWeiweiOnActivate?: boolean;      // Ai Weiwei activation bonus flag
+
+  // Aura flags for initiative bonuses
+  auraScience?: number;              // Jennifer Doudna science bonus
+  auraHealth?: number;               // Anthony Fauci health bonus
+  auraMilitaryPenalty?: number;      // Noam Chomsky military penalty
+
   // Opportunist system
   opportunistActive?: boolean;       // Opportunist mirror effect active
 
@@ -147,6 +157,16 @@ export function createDefaultEffectFlags(): EffectFlags {
     // Special flags
     markZuckerbergUsed: false,
     opportunistActive: false,
+
+    // New initiative activation flags
+    zuckOnceAp: false,
+    zuckSpent: false,
+    aiWeiweiOnActivate: false,
+
+    // Aura flags for initiative bonuses
+    auraScience: 0,
+    auraHealth: 0,
+    auraMilitaryPenalty: 0,
   };
 }
 

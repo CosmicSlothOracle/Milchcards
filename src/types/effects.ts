@@ -1,16 +1,23 @@
-import type { GameState, Player, Card } from './game';
+import type { Player } from './game';
 
 export type EffectEvent =
   | { type: 'LOG'; msg: string }
-  | { type: 'ADD_AP'; player: Player; amount: number }                           // clamps [0..4]
+  | { type: 'ADD_AP'; player: Player; amount: number }
   | { type: 'DRAW_CARDS'; player: Player; amount: number }
   | { type: 'DISCARD_RANDOM_FROM_HAND'; player: Player; amount: number }
-  | { type: 'ADJUST_INFLUENCE'; player: Player; amount: number; reason?: string } // alias → BUFF_STRONGEST_GOV
-  | { type: 'BUFF_STRONGEST_GOV'; player: Player; amount: number }               // +/- tempBuffs
-  | { type: 'GRANT_SHIELD'; targetUid: number }                                  // shields.add(uid)
-  | { type: 'DEACTIVATE_CARD'; targetUid: number }                               // card.deactivated = true
-  | { type: 'DEACTIVATE_RANDOM_HAND'; player: Player; amount: number }           // random hand cards → discard
-  | { type: 'INITIATIVE_ACTIVATED'; player: Player }                             // löst Cluster-3 + Plattform aus
-  | { type: 'TRAP_TRIGGERED'; player: Player; trapId: number; targetId: number } // Falle ausgelöst
+  | { type: 'DEACTIVATE_RANDOM_HAND'; player: Player; amount: number }
+  | { type: 'ADJUST_INFLUENCE'; player: Player; amount: number; targetUid?: number; reason?: string }
+  | { type: 'GRANT_SHIELD'; player: Player; targetUid?: number; amount: number }
+  | { type: 'DEACTIVATE_CARD'; player: Player; targetUid: number }
+  | { type: 'REACTIVATE_CARD'; player: Player; targetUid: number }
+  | { type: 'RETURN_TO_HAND'; player: Player; targetUid: number }
+  | { type: 'CANCEL_CARD'; player: Player; targetUid: number }
+  | { type: 'BUFF_STRONGEST_GOV'; player: Player; amount: number }
+  | { type: 'INITIATIVE_ACTIVATED'; player: Player }
+  | { type: 'REGISTER_TRAP'; player: Player; key: string };
+
+// Optional: tolerant fallback in der Migrationsphase
+// | { type: string; [k: string]: any };
 
 export type EffectQueue = EffectEvent[];
+

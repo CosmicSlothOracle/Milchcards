@@ -1,4 +1,5 @@
-import { GameState, Player, Card, EffectEvent } from '../types/game';
+import { GameState, Player, Card } from '../types/game';
+import { EffectEvent } from '../types/effects';
 import { resolveQueue } from '../utils/queue';
 import { getStrongestGovernmentUid } from '../utils/targets';
 import { triggerCardEffect, LEGACY_NAME_TO_KEY } from './registry';
@@ -126,14 +127,14 @@ export function triggerCardEffects(state: GameState, player: Player, card: Card)
       state._effectQueue.push({ type: 'LOG', msg: 'Joschka Fischer: +1 Karte' });
       break;
     }
-    case 'Ursula von der Leyen': {
-      const uid = getStrongestGovernmentUid(state, player);
-      if (uid != null) {
-        state._effectQueue.push({ type: 'GRANT_SHIELD', targetUid: uid });
+          case 'Ursula von der Leyen': {
+        const uid = getStrongestGovernmentUid(state, player);
+        if (uid != null) {
+          state._effectQueue.push({ type: 'GRANT_SHIELD', player, targetUid: uid, amount: 1 });
+        }
+        state._effectQueue.push({ type: 'LOG', msg: 'Ursula von der Leyen: 🛡️ Schutz auf stärkste Regierung' });
+        break;
       }
-      state._effectQueue.push({ type: 'LOG', msg: 'Ursula von der Leyen: 🛡️ Schutz auf stärkste Regierung' });
-      break;
-    }
     case 'Emmanuel Macron': {
       state._effectQueue.push({ type: 'ADD_AP', player, amount: 1 });
       state._effectQueue.push({ type: 'LOG', msg: 'Emmanuel Macron: +1 AP' });
@@ -150,14 +151,14 @@ export function triggerCardEffects(state: GameState, player: Player, card: Card)
       state._effectQueue.push({ type: 'LOG', msg: 'Luiz Inácio Lula da Silva: stärkste Regierung +1 Einfluss' });
       break;
     }
-    case 'Volodymyr Zelenskyy': {
-      const uid = getStrongestGovernmentUid(state, player);
-      if (uid != null) {
-        state._effectQueue.push({ type: 'GRANT_SHIELD', targetUid: uid });
+          case 'Volodymyr Zelenskyy': {
+        const uid = getStrongestGovernmentUid(state, player);
+        if (uid != null) {
+          state._effectQueue.push({ type: 'GRANT_SHIELD', player, targetUid: uid, amount: 1 });
+        }
+        state._effectQueue.push({ type: 'LOG', msg: 'Volodymyr Zelenskyy: 🛡️ Schutz auf stärkste Regierung' });
+        break;
       }
-      state._effectQueue.push({ type: 'LOG', msg: 'Volodymyr Zelenskyy: 🛡️ Schutz auf stärkste Regierung' });
-      break;
-    }
     case 'Sergey Lavrov': {
       const opp: Player = player === 1 ? 2 : 1;
       state._effectQueue.push({ type: 'DISCARD_RANDOM_FROM_HAND', player: opp, amount: 1 });

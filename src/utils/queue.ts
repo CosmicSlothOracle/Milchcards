@@ -2,6 +2,7 @@ import { GameState, Player, PoliticianCard, Card } from '../types/game';
 import { EffectEvent } from '../types/effects';
 import { getStrongestGovernment } from './targets';
 import { AP_CAP, MAX_DISCOUNT, MAX_REFUND } from '../config/gameConstants';
+import { registerTrap } from './traps';
 import {
   logAP, logDiscount, logRefund, logDraw, logDiscardRandom,
   logDeactivateRandom, logBuffStrongest, logShield, logDeactivateCard,
@@ -105,8 +106,9 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
 
       case 'GRANT_SHIELD': {
         if (!state.shields) state.shields = new Set();
-        state.shields.add(ev.targetUid);
-        logPush(state, logShield(ev.targetUid));
+        const targetUid = ev.targetUid || 0;
+        state.shields.add(targetUid);
+        logPush(state, logShield(targetUid));
         break;
       }
 
@@ -116,6 +118,60 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
           (card as any).deactivated = true;
           logPush(state, logDeactivateCard(card.name));
         }
+        break;
+      }
+
+      case 'REACTIVATE_CARD': {
+        const card = findCardByUidOnBoard(state, ev.targetUid);
+        if (card) {
+          (card as any).deactivated = false;
+          logPush(state, `🔄 ${card.name} wurde reaktiviert`);
+        }
+        break;
+      }
+
+      case 'RETURN_TO_HAND': {
+        const card = findCardByUidOnBoard(state, ev.targetUid);
+        if (card) {
+          // Remove from board
+          for (const p of [1, 2] as const) {
+            for (const lane of ['innen', 'aussen', 'sofort'] as const) {
+              const idx = state.board[p][lane].findIndex(c => c.uid === ev.targetUid);
+              if (idx !== -1) {
+                state.board[p][lane].splice(idx, 1);
+                // Add to hand
+                state.hands[ev.player].push(card);
+                logPush(state, `🔄 ${card.name} wurde zur Hand zurückgegeben`);
+                break;
+              }
+            }
+          }
+        }
+        break;
+      }
+
+      case 'CANCEL_CARD': {
+        const card = findCardByUidOnBoard(state, ev.targetUid);
+        if (card) {
+          // Remove from board and add to discard
+          for (const p of [1, 2] as const) {
+            for (const lane of ['innen', 'aussen', 'sofort'] as const) {
+              const idx = state.board[p][lane].findIndex(c => c.uid === ev.targetUid);
+              if (idx !== -1) {
+                state.board[p][lane].splice(idx, 1);
+                state.discard.push(card);
+                logPush(state, `❌ ${card.name} wurde annulliert`);
+                break;
+              }
+            }
+          }
+        }
+        break;
+      }
+
+      case 'REGISTER_TRAP': {
+        registerTrap(state, ev.player, (ev as any).key);
+        logPush(state, `Trap registered: ${(ev as any).key} (P${ev.player})`);
         break;
       }
 
@@ -144,45 +200,25 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
 
       case 'INITIATIVE_ACTIVATED': {
         const p = ev.player;
-        const opp = other(p);
+        const flags = state.effectFlags[p] || {};
 
-        // Cluster-3: temporäre Auren für Sofort-Initiativen (namenbasiert, keine Tags)
-        let delta = 0;
-        delta += state.effectFlags[p].initiativeInfluenceBonus || 0;                 // z.B. +1 (Doudna/Fauci)
-        delta -= state.effectFlags[opp].initiativeInfluencePenaltyForOpponent || 0;  // z.B. -1 (Chomsky)
-
-        if (delta !== 0) {
-          events.unshift({ type: 'BUFF_STRONGEST_GOV', player: p, amount: delta });
-          logPush(state, logInitiativeAura(p, delta));
+        if (flags.zuckOnceAp && !flags.zuckSpent) {
+          events.unshift({ type: 'ADD_AP', player: p, amount: 1 } as EffectEvent);
+          flags.zuckSpent = true;
+          logPush(state, 'Mark Zuckerberg: +1 AP on activation (once per turn).');
         }
 
-        if (state.effectFlags[p].initiativeOnPlayDraw1Ap1) {
-          events.unshift({ type: 'ADD_AP', player: p, amount: 1 });
-          events.unshift({ type: 'DRAW_CARDS', player: p, amount: 1 });
-          logPush(state, logAiWeiwei());
+        if (flags.aiWeiweiOnActivate) {
+          events.unshift({ type: 'DRAW_CARDS', player: p, amount: 1 } as EffectEvent);
+          events.unshift({ type: 'ADD_AP', player: p, amount: 1 } as EffectEvent);
+          logPush(state, 'Ai Weiwei: +1 card & +1 AP on activation.');
         }
 
-        // Plattform: Einmal pro Runde nach Initiative +1 AP, wenn Mark Zuckerberg liegt und nicht verbraucht
-        if (hasPublic(state, p, 'Mark Zuckerberg') && !state.effectFlags[p].markZuckerbergUsed) {
-          state.effectFlags[p].markZuckerbergUsed = true;
-          events.unshift({ type: 'ADD_AP', player: p, amount: 1 });
-          logPush(state, logPlattformBonus());
-        }
+        state.effectFlags[p] = flags;
         break;
       }
 
-      case 'TRAP_TRIGGERED': {
-        // This is a notification event, actual effects are handled separately
-        const trapId = ev.trapId;
-        const targetId = ev.targetId;
-        const trapCard = findCardByUidOnBoard(state, trapId) || state.traps[ev.player].find(c => c.uid === trapId);
-        const targetCard = findCardByUidOnBoard(state, targetId);
-        
-        if (trapCard && targetCard) {
-          logPush(state, `🪤 ${trapCard.name} wurde gegen ${targetCard.name} ausgelöst!`);
-        }
-        break;
-      }
+
 
     }
   }

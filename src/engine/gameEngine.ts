@@ -1,7 +1,7 @@
 import { GameState, Player, Card } from '../types/game';
 import { triggerCardEffects } from '../effects/cards';
 import { resolveQueue } from '../utils/queue';
-import { checkTraps } from '../utils/traps';
+import { applyTrapsOnCardPlayed } from '../utils/traps';
 
 // Pure game engine - no React dependencies
 export class GameEngine {
@@ -44,12 +44,20 @@ export class GameEngine {
 
     // Trigger card effects
     triggerCardEffects(this.state, player, playedCard);
-    
+
     // Check for trap triggers from opponent
-    const opponent = player === 1 ? 2 : 1;
-    const trapEvents = checkTraps(this.state, opponent, playedCard);
-    if (trapEvents.length > 0 && !this.state._effectQueue) this.state._effectQueue = [];
-    if (trapEvents.length > 0) this.state._effectQueue.push(...trapEvents);
+    applyTrapsOnCardPlayed(
+      this.state,
+      player,
+      playedCard,
+      (event) => {
+        if (!this.state._effectQueue) this.state._effectQueue = [];
+        this.state._effectQueue.push(event);
+      },
+      (msg) => {
+        this.state.log.push(msg);
+      }
+    );
 
     // Resolve effect queue
     if (this.state._effectQueue && this.state._effectQueue.length > 0) {
