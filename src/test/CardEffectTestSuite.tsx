@@ -176,8 +176,8 @@ const CardEffectTestSuite: React.FC = () => {
         2: { innen: [], aussen: [], sofort: [] }
       },
       permanentSlots: {
-        1: { government: null, public: null },
-        2: { government: null, public: null }
+        1: { government: null, public: null, initiativePermanent: null },
+        2: { government: null, public: null, initiativePermanent: null }
       },
       traps: { 1: [], 2: [] },
       discard: [],

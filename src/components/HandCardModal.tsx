@@ -3,6 +3,7 @@ import { GameState, Card, PoliticianCard, SpecialCard } from '../types/game';
 import { Specials } from '../data/gameData';
 import { drawCardImage, sortHandCards } from '../utils/gameUtils';
 import { getCardDetails, convertHPToUSD } from '../data/cardDetails';
+import { withIcons } from '../ui/withIcons';
 import { makeUid } from '../utils/id';
 import { wouldBeNetZero, getNetApCost } from '../utils/ap';
 
@@ -390,7 +391,7 @@ export const HandCardModal: React.FC<HandCardModalProps> = ({
               <div style={{ marginTop: '8px' }}>
                 <div style={{ color: '#9ca3af', marginBottom: '4px' }}>Schlüsselwörter</div>
                 <div style={{ color: '#e5e7eb', fontSize: '11px' }}>
-                  {cardDetails.subcategories.join(', ')}
+                  {withIcons(cardDetails.subcategories.join(', '), 12)}
                 </div>
               </div>
             )}
@@ -469,7 +470,7 @@ export const HandCardModal: React.FC<HandCardModalProps> = ({
               lineHeight: '1.4',
               fontSize: '12px',
             }}>
-              {cardDetails?.gameEffect || (currentCard.kind === 'spec'
+              {cardDetails?.gameEffect ? withIcons(cardDetails.gameEffect, 14) : (currentCard.kind === 'spec'
                 ? (() => {
                     const specCard = currentCard as SpecialCard;
                     const baseSpecial = Specials.find(s => s.id === specCard.baseId);

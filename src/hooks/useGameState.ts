@@ -34,8 +34,8 @@ const initialGameState: GameState = {
   traps: { 1: [], 2: [] },
   board: emptyBoard(),
   permanentSlots: {
-    1: { government: null, public: null },
-    2: { government: null, public: null },
+    1: { government: null, public: null, initiativePermanent: null },
+    2: { government: null, public: null, initiativePermanent: null },
   },
   discard: [],
   log: [],
@@ -119,8 +119,22 @@ export function useGameState() {
     log(`⚠️ WARN: ${warning} - ${context}`);
   }, [log]);
 
+  // Nach Queue-Auflösung: Hand-Arrays immutabel neu zuweisen → Canvas & UI bekommen die neuen UIDs
+  const afterQueueResolved = useCallback(() => {
+    setGameState(s => {
+      const n = { ...s };
+      n.hands = {
+        1: [...s.hands[1]],
+        2: [...s.hands[2]],
+      } as any;
+      // optional: version bump für Canvas
+      (n as any)._version = ((s as any)._version ?? 0) + 1;
+      return n;
+    });
+  }, []);
+
   // Import functionality from separated hooks
-  const gameActions = useGameActions(gameState, setGameState, log);
+  const gameActions = useGameActions(gameState, setGameState, log, afterQueueResolved);
   const gameAI = useGameAI(gameState, setGameState, log);
   const gameEffects = useGameEffects(gameState, setGameState, log);
 
@@ -168,8 +182,8 @@ export function useGameState() {
       board: emptyBoard(),
       traps: { 1: [], 2: [] },
       permanentSlots: {
-        1: { government: null, public: null },
-        2: { government: null, public: null },
+        1: { government: null, public: null, initiativePermanent: null },
+        2: { government: null, public: null, initiativePermanent: null },
       },
       // instantSlot wird nicht mehr verwendet - Sofort-Initiativen gehen in board[player].sofort
       discard: [],
@@ -213,8 +227,8 @@ export function useGameState() {
       board: emptyBoard(),
       traps: { 1: [], 2: [] },
       permanentSlots: {
-        1: { government: null, public: null },
-        2: { government: null, public: null },
+        1: { government: null, public: null, initiativePermanent: null },
+        2: { government: null, public: null, initiativePermanent: null },
       },
       // instantSlot wird nicht mehr verwendet - Sofort-Initiativen gehen in board[player].sofort
       discard: [],
@@ -261,10 +275,31 @@ export function useGameState() {
 
       // === SOFORT-INITIATIVEN ===
       if (specCard.name === 'Shadow Lobbying') {
-        logCardEffect(specCard.name, 'Öffentlichkeits-Effekte zählen doppelt diese Runde');
-        const flags = { ...newState.effectFlags?.[player], publicEffectDoubled: true };
-        newState.effectFlags = { ...newState.effectFlags, [player]: flags } as GameState['effectFlags'];
-        logDataFlow('effectFlags', 'newState', { player, publicEffectDoubled: true }, 'Shadow Lobbying flag set');
+        // Count own board cards with tag Oligarch
+        const boardCards = [
+          ...newState.board[player].innen,
+          ...newState.board[player].aussen,
+        ];
+        const oligarchCount = boardCards.filter(c => {
+          const details = getCardDetails(c.name);
+          return details?.subcategories?.includes('Oligarch');
+        }).length;
+
+        const buffAmount = Math.min(oligarchCount, 3);
+
+        if (buffAmount > 0) {
+          const govCards = newState.board[player].aussen.filter(c => c.kind === 'pol') as PoliticianCard[];
+          if (govCards.length) {
+            const target = govCards[0];
+            const oldInfl = target.influence;
+            adjustInfluence(target, buffAmount, 'Shadow Lobbying');
+            logCardEffect(specCard.name, `${target.name} erhält +${buffAmount} Einfluss ( ${oldInfl} → ${target.influence} )`);
+          } else {
+            logWarning('No government cards', 'Shadow Lobbying buff had no target');
+          }
+        } else {
+          logCardEffect(specCard.name, 'Keine Oligarchen – kein Einfluss-Buff');
+        }
       }
       else if (specCard.name === 'Spin Doctor') {
         const govCards = newState.board[player].aussen.filter(c => c.kind === 'pol') as PoliticianCard[];
@@ -287,9 +322,8 @@ export function useGameState() {
         const { newHands, newDecks } = drawCards(player, 2, newState, logFunc);
         newState = { ...newState, hands: newHands, decks: newDecks };
 
-        const flags = { ...newState.effectFlags?.[player], platformInitiativeDiscount: 1 };
-        newState.effectFlags = { ...newState.effectFlags, [player]: flags } as GameState['effectFlags'];
-        logDataFlow('effectFlags', 'newState', { player, platformInitiativeDiscount: 1 }, 'Platform discount flag set');
+        // Simplified AP system: No discounts
+        logDataFlow('effectFlags', 'newState', { player }, 'Platform effect applied');
       }
       else if (specCard.name === 'Partei-Offensive') {
         const opponent: Player = player === 1 ? 2 : 1;
@@ -453,24 +487,21 @@ export function useGameState() {
 
       // Reset AP for the new current player
       const newActionPoints = { ...prev.actionPoints };
-      const newActionsUsed = { ...prev.actionsUsed };
       newActionPoints[newCurrent] = 2;
-      newActionsUsed[newCurrent] = 0;
 
       logDataFlow('AP reset', 'newCurrent', {
         player: newCurrent,
         oldAP: prev.actionPoints[newCurrent],
         newAP: newActionPoints[newCurrent],
-        oldActions: prev.actionsUsed[newCurrent],
-        newActions: newActionsUsed[newCurrent]
+        oldActions: 0,
+        newActions: 0
       }, 'Resource reset for new player');
 
       // Apply start-of-turn hooks for the new current player
       const newState: GameState = {
         ...prev,
         current: newCurrent,
-        actionPoints: newActionPoints,
-        actionsUsed: newActionsUsed
+        actionPoints: newActionPoints
       };
 
       // Log turn change
@@ -494,13 +525,15 @@ export function useGameState() {
       logDataFlow('nextTurn', 'finalState', {
         current: newState.current,
         ap: newState.actionPoints[newCurrent],
-        actions: newState.actionsUsed[newCurrent],
         aiEnabled: prev.aiEnabled?.[2] ?? false
       }, 'Turn change completed');
 
       return newState;
     });
-  }, [logFunctionCall, logDataFlow, logConditionCheck, logGameStateChange, gameAI, log, logAIAction]);
+
+    // Nach Zugwechsel ebenfalls spiegeln (z. B. Auto-Draw am EoT)
+    afterQueueResolved();
+  }, [logFunctionCall, logDataFlow, logConditionCheck, logGameStateChange, gameAI, log, logAIAction, afterQueueResolved]);
 
   // Automatischer Zugwechsel basierend auf AP
   const checkAndAdvanceTurn = useCallback((gameState: GameState) => {
@@ -1337,5 +1370,6 @@ export function useGameState() {
     // Effects functionality
     executeCardEffect,
     processEffectQueue,
+    afterQueueResolved,
   };
 }

@@ -25,7 +25,7 @@ export function ensureTestBaselineAP(state: GameState): void {
 
   // We only interfere right at the beginning of round 1 before any actions.
   const isFirstRound = (state.round ?? 1) === 1;
-  const noActionsYet = ((state.actionsUsed?.[1] ?? 0) + (state.actionsUsed?.[2] ?? 0)) === 0;
+  const noActionsYet = true; // No action limit anymore
 
   if (!isFirstRound || !noActionsYet) return;
 

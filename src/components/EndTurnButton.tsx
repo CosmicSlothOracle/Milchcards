@@ -22,9 +22,9 @@ export const EndTurnButton: React.FC<EndTurnButtonProps> = ({
 
   const getButtonText = () => {
     if (gameState.isEndingTurn) {
-      return 'Beende Zug…';
+      return 'Ending turn...';
     }
-    return 'Zug beenden';
+    return 'End turn';
   };
 
   const getButtonClass = () => {
@@ -42,7 +42,7 @@ export const EndTurnButton: React.FC<EndTurnButtonProps> = ({
       onClick={onEndTurn}
       disabled={isDisabled}
       className={getButtonClass()}
-      title={isDisabled ? 'Warte auf Effekt-Auflösung oder anderer Spieler ist am Zug' : 'Zug beenden und Karte ziehen'}
+      title={isDisabled ? 'Wait for effect resolution or other player is active' : 'End turn and draw card'}
     >
       {getButtonText()}
     </button>

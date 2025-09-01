@@ -93,22 +93,11 @@ export function sumGovernmentInfluenceWithAuras(state: GameState, player: Player
       if (!hasNgoMovement) influence += 1;
     }
 
-        // 🔥 CLUSTER 3: Temporäre Initiative-Boni (bis Rundenende)
+        // 🔥 CLUSTER 3: Aura-Effekte (on-demand Board-Check)
+        // Legacy flag-based aura checks removed - auras are now calculated on-demand
 
-    // Jennifer Doudna: +1 Einfluss bei Initiativen
-    if (state.effectFlags[player]?.scienceInitiativeBonus) {
-      influence += 1;
-    }
-
-    // Anthony Fauci: +1 Einfluss bei Initiativen
-    if (state.effectFlags[player]?.healthInitiativeBonus) {
-      influence += 1;
-    }
-
-    // Noam Chomsky: -1 Einfluss bei Initiativen (für Gegner)
-    if (state.effectFlags[player]?.militaryInitiativePenalty) {
-      influence -= 1;
-    }
+        // Aura effects are now handled via Board-Check in the respective resolvers
+        // No more flag-based aura calculations - everything is event-driven
 
     // Alternative Fakten is applied within interventions; no direct change here
 

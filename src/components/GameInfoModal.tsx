@@ -1,5 +1,7 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { GameState } from '../types/game';
+import { Icon } from '../ui/Icon';
+import { withIcons } from '../ui/withIcons';
 
 interface GameInfoModalProps {
   gameState: GameState;
@@ -48,6 +50,16 @@ export const GameInfoModal: React.FC<GameInfoModalProps> = ({
 
   const modalRef = useRef<HTMLDivElement>(null);
 
+  // Position modal initially on the right side of the screen
+  useEffect(() => {
+    try {
+      const rightX = Math.max(16, window.innerWidth - size.width - 40);
+      setPosition({ x: rightX, y: 50 });
+    } catch (e) {
+      // fallback: keep default position
+    }
+  }, []);
+
 
 
 
@@ -74,17 +86,22 @@ export const GameInfoModal: React.FC<GameInfoModalProps> = ({
       const playerBoard = gameState.board[player];
       [...playerBoard.innen, ...playerBoard.aussen].forEach(card => {
         if (card.kind === 'pol') {
-          totalInfluence += (card as any).influence || 0;
+          const base = (card as any).influence || 0;
+          const buffs = (card as any).tempBuffs || 0;
+          const debuffs = (card as any).tempDebuffs || 0;
+          totalInfluence += base + buffs - debuffs;
         }
       });
 
       // Count influence from permanent slots
       const permanentSlots = gameState.permanentSlots[player];
       if (permanentSlots.government && permanentSlots.government.kind === 'pol') {
-        totalInfluence += (permanentSlots.government as any).influence || 0;
+        const c = permanentSlots.government as any;
+        totalInfluence += (c.influence || 0) + (c.tempBuffs||0) - (c.tempDebuffs||0);
       }
       if (permanentSlots.public && permanentSlots.public.kind === 'pol') {
-        totalInfluence += (permanentSlots.public as any).influence || 0;
+        const c = permanentSlots.public as any;
+        totalInfluence += (c.influence || 0) + (c.tempBuffs||0) - (c.tempDebuffs||0);
       }
 
       return totalInfluence;
@@ -226,31 +243,30 @@ export const GameInfoModal: React.FC<GameInfoModalProps> = ({
   // Get game phase text
   const getGamePhase = () => {
     if (gameState.passed[1] && gameState.passed[2]) {
-      return 'Rundenauswertung';
+      return 'Round Evaluation';
     }
-    return `Runde ${gameState.round}`;
+    return `Round ${gameState.round}`;
   };
 
   // Get player turn text with detailed status
   const getPlayerTurn = () => {
     if (gameState.passed[1] && gameState.passed[2]) {
-      return 'Runde beendet - Auswertung läuft';
+      return 'Round ended - Evaluation running';
     }
 
     const currentPlayer = gameState.current;
     const remainingAP = gameState.actionPoints[currentPlayer];
-    const actionsUsed = gameState.actionsUsed[currentPlayer];
 
     if (currentPlayer === 1) {
-      if (remainingAP <= 0 || actionsUsed >= 2) {
-        return 'Dein Zug beendet - Klicke weiter';
+      if (remainingAP <= 0) {
+        return 'Your turn ended - Click to continue';
       }
-      return `Dein Zug - ${remainingAP} AP übrig (${actionsUsed}/2 Aktionen)`;
+      return `Your turn - ${remainingAP} AP`;
     } else {
-      if (remainingAP <= 0 || actionsUsed >= 2) {
-        return 'Gegner beendet Zug';
+      if (remainingAP <= 0) {
+        return 'Opponent turn ended';
       }
-      return `Gegner am Zug - ${remainingAP} AP übrig`;
+      return `Opponent's turn - ${remainingAP} AP`;
     }
   };
 
@@ -276,6 +292,45 @@ export const GameInfoModal: React.FC<GameInfoModalProps> = ({
       default:
         return { ...baseStyle, color: '#e5e7eb' };
     }
+  };
+
+  // Parse recent log entries into compact icon+number summaries
+  const parseActionSummary = (entry: string) => {
+    const list: Array<{ icon: string; amount?: number }> = [];
+    const numMatch = entry.match(/([-+]?\d+)/);
+    const amount = numMatch ? parseInt(numMatch[1], 10) : undefined;
+
+    if (/draw|zieht/i.test(entry)) {
+      list.push({ icon: 'draw_cards', amount: amount ?? 1 });
+    }
+    if (/shield|Schild|grant shield/i.test(entry)) {
+      list.push({ icon: 'grant_shield', amount: amount ?? 1 });
+    }
+    if (/deactivate|deaktiv/i.test(entry)) {
+      list.push({ icon: 'deactivate_card' });
+    }
+    if (/discard|abwerfen|discarded/i.test(entry)) {
+      list.push({ icon: 'discard_cards', amount: amount ?? 1 });
+    }
+    if (/buff|buffs|erhält|gains/i.test(entry)) {
+      list.push({ icon: 'buff_strength', amount: amount ?? undefined });
+    }
+    if (/register trap|register|trap|Falle/i.test(entry)) {
+      list.push({ icon: 'register_trap' });
+    }
+    if (/ap|action point|Action Points|AP/i.test(entry)) {
+      // show AP changes as number next to AP icon
+      list.push({ icon: 'ap', amount: amount });
+    }
+    if (/influence|Einfluss/i.test(entry)) {
+      list.push({ icon: 'influence', amount: amount });
+    }
+
+    // Fallback: if nothing matched but there's a number, show it with game_log icon
+    if (list.length === 0 && amount != null) {
+      list.push({ icon: 'game_log', amount });
+    }
+    return list;
   };
 
   if (!isVisible) return null;
@@ -369,9 +424,9 @@ export const GameInfoModal: React.FC<GameInfoModalProps> = ({
               onMouseLeave={(e) => {
                 e.currentTarget.style.transform = 'scale(1)';
               }}
-              title="Beendet nur deinen Zug – die Runde läuft weiter."
+              title="Ends only your turn – the round continues."
             >
-              Zug beenden
+              End Turn
             </button>
 
             {/* Pass Button - Red */}
@@ -401,7 +456,7 @@ export const GameInfoModal: React.FC<GameInfoModalProps> = ({
                   e.currentTarget.style.transform = 'scale(1)';
                 }}
               >
-                Wirklich passen
+                Really Pass
               </button>
             ) : (
               <button
@@ -425,7 +480,7 @@ export const GameInfoModal: React.FC<GameInfoModalProps> = ({
                   e.currentTarget.style.transform = 'scale(1)';
                 }}
               >
-                Passen
+                Pass
               </button>
             )}
 
@@ -510,7 +565,7 @@ export const GameInfoModal: React.FC<GameInfoModalProps> = ({
               marginBottom: '8px',
               textShadow: '0 2px 8px rgba(0, 0, 0, 0.5)'
             }}>
-              {gameState.gameWinner === 1 ? 'DU GEWINNST!' : 'GEGNER GEWINNT!'}
+              {gameState.gameWinner === 1 ? 'YOU WIN!' : 'OPPONENT WINS!'}
             </div>
             <div style={{
               color: 'rgba(255, 255, 255, 0.9)',
@@ -520,7 +575,7 @@ export const GameInfoModal: React.FC<GameInfoModalProps> = ({
               marginBottom: '12px',
               textShadow: '0 1px 4px rgba(0, 0, 0, 0.3)'
             }}>
-              Spieler {gameState.gameWinner} ist der Sieger!
+              Player {gameState.gameWinner} is the winner!
             </div>
             <div style={{
               color: 'rgba(255, 255, 255, 0.8)',
@@ -532,14 +587,14 @@ export const GameInfoModal: React.FC<GameInfoModalProps> = ({
               borderRadius: '8px',
               backdropFilter: 'blur(4px)'
             }}>
-              Rundenstand: {gameState.roundsWon[1]} - {gameState.roundsWon[2]}
+              Round Standings: {gameState.roundsWon[1]} - {gameState.roundsWon[2]}
             </div>
           </div>
         )}
         {/* Game Phase with Matchball */}
         <div style={{ textAlign: 'center' }}>
           <div style={{ color: '#9ca3af', fontSize: '12px', marginBottom: '4px' }}>
-            Spielphase
+            Game Phase
           </div>
           <div style={{
             display: 'flex',
@@ -577,22 +632,59 @@ export const GameInfoModal: React.FC<GameInfoModalProps> = ({
             })()}
           </div>
         </div>
+        {/* Bottom Action Log Summary (icons + numbers only) */}
+        <div style={{ marginTop: '8px', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '8px', display: 'flex', gap: '8px', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}>
+          {(gameState.log.slice(-6).reverse() || []).map((entry, idx) => {
+            const summary = parseActionSummary(entry);
+            return (
+              <div key={idx} style={{ display: 'flex', gap: 6, alignItems: 'center', padding: '4px 8px', background: 'rgba(255,255,255,0.02)', borderRadius: 8 }}>
+                {summary.map((s, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <Icon name={s.icon as any} size={18} />
+                    {s.amount != null && <div style={{ color: '#e5e7eb', fontWeight: 700, fontSize: 12 }}>{s.amount}</div>}
+                  </div>
+                ))}
+              </div>
+            );
+          })}
+        </div>
 
         {/* Player Turn */}
         <div style={{ textAlign: 'center' }}>
           <div style={{ color: '#9ca3af', fontSize: '12px', marginBottom: '4px' }}>
             Status
           </div>
-          <div style={{ color: '#fbbf24', fontSize: '14px', fontWeight: '500' }}>
-            {getPlayerTurn()}
+          <div style={{
+            color: '#fbbf24',
+            fontSize: '14px',
+            fontWeight: '500',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px'
+          }}>
+            <Icon name="start_of_turn" size={14} />
+            <span>Your turn – </span>
+            <Icon name="ap" size={14} />
+            <strong>{gameState.actionPoints[1]}</strong>
+            <span> (action points)</span>
           </div>
         </div>
 
         {/* Action Points */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '8px' }}>
           <div style={{ textAlign: 'center' }}>
-            <div style={{ color: '#9ca3af', fontSize: '11px', marginBottom: '4px' }}>
-              Deine AP
+            <div style={{
+              color: '#9ca3af',
+              fontSize: '11px',
+              marginBottom: '4px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px'
+            }}>
+              <Icon name="ap" size={12} />
+              Your AP
             </div>
             <div style={{
               color: gameState.actionPoints[1] > 0 ? '#00ff88' : '#ef4444',
@@ -600,12 +692,21 @@ export const GameInfoModal: React.FC<GameInfoModalProps> = ({
               fontWeight: '700',
               textShadow: '0 0 4px currentColor'
             }}>
-              {gameState.actionPoints[1]}/2
+              {gameState.actionPoints[1]}
             </div>
           </div>
           <div style={{ textAlign: 'center' }}>
-            <div style={{ color: '#9ca3af', fontSize: '11px', marginBottom: '4px' }}>
-              Gegner AP
+            <div style={{
+              color: '#9ca3af',
+              fontSize: '11px',
+              marginBottom: '4px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px'
+            }}>
+              <Icon name="ap" size={12} />
+              Opponent AP
             </div>
             <div style={{
               color: gameState.actionPoints[2] > 0 ? '#00ff88' : '#ef4444',
@@ -613,7 +714,7 @@ export const GameInfoModal: React.FC<GameInfoModalProps> = ({
               fontWeight: '700',
               textShadow: '0 0 4px currentColor'
             }}>
-              {gameState.actionPoints[2]}/2
+              {gameState.actionPoints[2]}
             </div>
           </div>
         </div>
@@ -621,8 +722,17 @@ export const GameInfoModal: React.FC<GameInfoModalProps> = ({
         {/* Influence Points */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
           <div style={{ textAlign: 'center' }}>
-            <div style={{ color: '#9ca3af', fontSize: '11px', marginBottom: '4px' }}>
-              Dein Einfluss
+            <div style={{
+              color: '#9ca3af',
+              fontSize: '11px',
+              marginBottom: '4px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px'
+            }}>
+              <Icon name="influence" size={12} />
+              Your Influence
             </div>
             <div style={getInfluenceStyle(influenceAnimation.player)}>
               {currentInfluence.player}
@@ -630,7 +740,7 @@ export const GameInfoModal: React.FC<GameInfoModalProps> = ({
           </div>
           <div style={{ textAlign: 'center' }}>
             <div style={{ color: '#9ca3af', fontSize: '11px', marginBottom: '4px' }}>
-              Gegner Einfluss
+              Opponent Influence
             </div>
             <div style={getInfluenceStyle(influenceAnimation.opponent)}>
               {currentInfluence.opponent}
@@ -642,7 +752,7 @@ export const GameInfoModal: React.FC<GameInfoModalProps> = ({
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '8px' }}>
           <div style={{ textAlign: 'center' }}>
             <div style={{ color: '#9ca3af', fontSize: '11px', marginBottom: '4px' }}>
-              Deine Runden
+              Your Rounds
             </div>
             <div style={{
               color: gameState.roundsWon[1] >= 2 ? '#00ff88' : '#fbbf24',
@@ -664,7 +774,7 @@ export const GameInfoModal: React.FC<GameInfoModalProps> = ({
           </div>
           <div style={{ textAlign: 'center' }}>
             <div style={{ color: '#9ca3af', fontSize: '11px', marginBottom: '4px' }}>
-              Gegner Runden
+              Opponent Rounds
             </div>
             <div style={{
               color: gameState.roundsWon[2] >= 2 ? '#00ff88' : '#fbbf24',

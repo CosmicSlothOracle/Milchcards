@@ -9,11 +9,15 @@
     "@types/node": "^16.18.68",
     "@types/react": "^18.2.42",
     "@types/react-dom": "^18.2.17",
+    "@types/three": "^0.179.0",
+    "gsap": "^3.13.0",
+    "howler": "^2.2.4",
     "konva": "^9.3.22",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-konva": "^19.0.7",
     "react-scripts": "5.0.1",
+    "three": "^0.179.1",
     "typescript": "^4.9.5",
     "use-image": "^1.1.4",
     "web-vitals": "^2.1.4"
@@ -24,7 +28,8 @@
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
-    "test:ui": "node tools/ui_automator.js"
+    "test:ui": "node tools/ui_automator.js",
+    "validate:effects": "ts-node src/utils/effectKeyValidator.ts"
   },
   "eslintConfig": {
     "extends": [
@@ -56,8 +61,12 @@
   "author": "Mandate Game Team",
   "license": "MIT",
   "devDependencies": {
+    "@testing-library/react-hooks": "^8.0.1",
+    "@types/gsap": "^1.20.2",
+    "@types/howler": "^2.2.12",
     "@types/jest": "^30.0.0",
     "jsdom": "^26.1.0",
-    "ts-jest": "^29.4.1"
+    "ts-jest": "^29.4.1",
+    "ts-node": "^10.9.2"
   }
 }

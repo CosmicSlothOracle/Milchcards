@@ -19,10 +19,9 @@ class LoggingAIPlayer {
   makeTurn(gameState: GameState): GameState {
     const hand = gameState.hands[this.player];
     const availableAP = gameState.actionPoints[this.player];
-    const actionsUsed = gameState.actionsUsed[this.player];
 
-    // Check if should pass
-    if (availableAP <= 0 || actionsUsed >= 2) {
+    // Check if should pass (only based on AP, no action limit)
+    if (availableAP <= 0) {
       const newGameState = {
         ...gameState,
         passed: { ...gameState.passed, [this.player]: true }
@@ -150,11 +149,9 @@ class LoggingAIPlayer {
     newGameState.hands[this.player] = [...newGameState.hands[this.player]];
     newGameState.hands[this.player].splice(index, 1);
 
-    // Update AP and actions
+    // Update AP
     newGameState.actionPoints = { ...newGameState.actionPoints };
     newGameState.actionPoints[this.player] -= apCost;
-    newGameState.actionsUsed = { ...newGameState.actionsUsed };
-    newGameState.actionsUsed[this.player] += 1;
 
     // Add to appropriate location
     if (lane) {
@@ -301,7 +298,7 @@ export class AITestRunner {
         // Switch to next player
         gameState.current = currentPlayer === 1 ? 2 : 1;
         gameState.actionPoints[gameState.current] = 2;
-        gameState.actionsUsed[gameState.current] = 0;
+        // No action limit reset needed
       }
     }
 
@@ -335,15 +332,16 @@ export class AITestRunner {
       round: 1,
       current: 1,
       passed: { 1: false, 2: false },
-      actionPoints: { 1: 2, 2: 2 },
-      actionsUsed: { 1: 0, 2: 0 },
-      decks: { 1: shuffledP1, 2: shuffledP2 },
+              actionPoints: { 1: 2, 2: 2 },
+        actionsUsed: { 1: 0, 2: 0 },
+
+        decks: { 1: shuffledP1, 2: shuffledP2 },
       hands: { 1: p1Hand, 2: p2Hand },
       traps: { 1: [], 2: [] },
       board: emptyBoard(),
       permanentSlots: {
-        1: { government: null, public: null },
-        2: { government: null, public: null },
+        1: { government: null, public: null, initiativePermanent: null },
+        2: { government: null, public: null, initiativePermanent: null },
       },
       discard: [],
       log: [],

@@ -3,10 +3,7 @@ export const EK = {
   PROTECTED: 'protected',
   DEACTIVATED: 'deactivated',
 
-  // discounts/refunds
-  LEADERSHIP_FREE_INIT: 'leadership_free_initiative',
-  NGO_NEXT_INIT_MINUS_1: 'ngo_next_initiative_minus_1',
-  PLATFORM_REFUND_ONCE: 'platform_refund_once',
+  // Simplified AP system: No discounts or refunds
 
   // initiatives (instant)
   I_ADD_TARGET: 'i_add_target',               // Spin Doctor (+2 I / +1 Medien)

@@ -43,8 +43,8 @@ export interface GameStateSnapshot {
   deckSizes: { player1: number; player2: number };
   roundsWon: { 1: number; 2: number };
   permanentSlots: {
-    player1: { government: string | null; public: string | null };
-    player2: { government: string | null; public: string | null };
+    player1: { government: string | null; public: string | null; initiativePermanent: string | null };
+    player2: { government: string | null; public: string | null; initiativePermanent: string | null };
   };
 }
 
@@ -307,11 +307,13 @@ export class GameLogger {
       permanentSlots: {
         player1: {
           government: gameState.permanentSlots[1].government?.name || null,
-          public: gameState.permanentSlots[1].public?.name || null
+          public: gameState.permanentSlots[1].public?.name || null,
+          initiativePermanent: gameState.permanentSlots[1].initiativePermanent?.name || null
         },
         player2: {
           government: gameState.permanentSlots[2].government?.name || null,
-          public: gameState.permanentSlots[2].public?.name || null
+          public: gameState.permanentSlots[2].public?.name || null,
+          initiativePermanent: gameState.permanentSlots[2].initiativePermanent?.name || null
         }
       }
     };
@@ -329,8 +331,8 @@ export class GameLogger {
       deckSizes: { player1: 0, player2: 0 },
       roundsWon: { 1: 0, 2: 0 },
       permanentSlots: {
-        player1: { government: null, public: null },
-        player2: { government: null, public: null }
+        player1: { government: null, public: null, initiativePermanent: null },
+        player2: { government: null, public: null, initiativePermanent: null }
       }
     };
   }

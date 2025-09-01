@@ -1,0 +1,931 @@
+[
+  {
+    "name": "Vladimir Putin",
+    "category": "Regierung",
+    "gameEffect": "Nur Einfluss - keine weiteren Effekte",
+    "handlerPresent": false,
+    "issue": "OK"
+  },
+  {
+    "name": "Xi Jinping",
+    "category": "Regierung",
+    "gameEffect": "Nur Einfluss - keine weiteren Effekte",
+    "handlerPresent": false,
+    "issue": "OK"
+  },
+  {
+    "name": "Recep Tayyip Erdoğan",
+    "category": "Regierung",
+    "gameEffect": "Nur Einfluss - keine weiteren Effekte",
+    "handlerPresent": false,
+    "issue": "OK"
+  },
+  {
+    "name": "Justin Trudeau",
+    "category": "Regierung",
+    "gameEffect": "Nur Einfluss - keine weiteren Effekte",
+    "handlerPresent": false,
+    "issue": "OK"
+  },
+  {
+    "name": "Volodymyr Zelenskyy",
+    "category": "Regierung",
+    "gameEffect": "Nur Einfluss - keine weiteren Effekte",
+    "handlerPresent": false,
+    "issue": "OK"
+  },
+  {
+    "name": "Ursula von der Leyen",
+    "category": "Regierung",
+    "gameEffect": "Nur Einfluss - keine weiteren Effekte",
+    "handlerPresent": false,
+    "issue": "OK"
+  },
+  {
+    "name": "Donald Trump",
+    "category": "Regierung",
+    "gameEffect": "Nur Einfluss - keine weiteren Effekte",
+    "handlerPresent": false,
+    "issue": "OK"
+  },
+  {
+    "name": "Mohammed bin Salman",
+    "category": "Regierung",
+    "gameEffect": "Nur Einfluss - keine weiteren Effekte",
+    "handlerPresent": false,
+    "issue": "OK"
+  },
+  {
+    "name": "Benjamin Netanyahu",
+    "category": "Regierung",
+    "gameEffect": "Nur Einfluss - keine weiteren Effekte",
+    "handlerPresent": false,
+    "issue": "OK"
+  },
+  {
+    "name": "Helmut Schmidt",
+    "category": "Regierung",
+    "gameEffect": "Nur Einfluss - keine weiteren Effekte",
+    "handlerPresent": false,
+    "issue": "OK"
+  },
+  {
+    "name": "Olaf Scholz",
+    "category": "Regierung",
+    "gameEffect": "Nur Einfluss - keine weiteren Effekte",
+    "handlerPresent": false,
+    "issue": "OK"
+  },
+  {
+    "name": "Rishi Sunak",
+    "category": "Regierung",
+    "gameEffect": "Nur Einfluss - keine weiteren Effekte",
+    "handlerPresent": false,
+    "issue": "OK"
+  },
+  {
+    "name": "Pedro Sánchez",
+    "category": "Regierung",
+    "gameEffect": "Nur Einfluss - keine weiteren Effekte",
+    "handlerPresent": false,
+    "issue": "OK"
+  },
+  {
+    "name": "Keir Starmer",
+    "category": "Regierung",
+    "gameEffect": "Nur Einfluss - keine weiteren Effekte",
+    "handlerPresent": false,
+    "issue": "OK"
+  },
+  {
+    "name": "Robert Gates",
+    "category": "Regierung",
+    "gameEffect": "Nur Einfluss - keine weiteren Effekte",
+    "handlerPresent": false,
+    "issue": "OK"
+  },
+  {
+    "name": "Karl Rove",
+    "category": "Regierung",
+    "gameEffect": "Nur Einfluss - keine weiteren Effekte",
+    "handlerPresent": false,
+    "issue": "OK"
+  },
+  {
+    "name": "Narendra Modi",
+    "category": "Regierung",
+    "gameEffect": "Nur Einfluss - keine weiteren Effekte",
+    "handlerPresent": false,
+    "issue": "OK"
+  },
+  {
+    "name": "Luiz Inácio Lula da Silva",
+    "category": "Regierung",
+    "gameEffect": "Nur Einfluss - keine weiteren Effekte",
+    "handlerPresent": false,
+    "issue": "OK"
+  },
+  {
+    "name": "Sergey Lavrov",
+    "category": "Regierung",
+    "gameEffect": "Nur Einfluss - keine weiteren Effekte",
+    "handlerPresent": false,
+    "issue": "OK"
+  },
+  {
+    "name": "Wolfgang Schäuble",
+    "category": "Regierung",
+    "gameEffect": "Nur Einfluss - keine weiteren Effekte",
+    "handlerPresent": false,
+    "issue": "OK"
+  },
+  {
+    "name": "Jens Stoltenberg",
+    "category": "Regierung",
+    "gameEffect": "Nur Einfluss - keine weiteren Effekte",
+    "handlerPresent": false,
+    "issue": "OK"
+  },
+  {
+    "name": "Javier Milei",
+    "category": "Regierung",
+    "gameEffect": "Nur Einfluss - keine weiteren Effekte",
+    "handlerPresent": false,
+    "issue": "OK"
+  },
+  {
+    "name": "Joschka Fischer",
+    "category": "Regierung",
+    "gameEffect": "Nur Einfluss - keine weiteren Effekte",
+    "handlerPresent": false,
+    "issue": "OK"
+  },
+  {
+    "name": "Kamala Harris",
+    "category": "Regierung",
+    "gameEffect": "Nur Einfluss - keine weiteren Effekte",
+    "handlerPresent": false,
+    "issue": "OK"
+  },
+  {
+    "name": "Shigeru Ishiba",
+    "category": "Regierung",
+    "gameEffect": "Nur Einfluss - keine weiteren Effekte",
+    "handlerPresent": false,
+    "issue": "OK"
+  },
+  {
+    "name": "Heidemarie Wieczorek-Zeul",
+    "category": "Regierung",
+    "gameEffect": "Nur Einfluss - keine weiteren Effekte",
+    "handlerPresent": false,
+    "issue": "OK"
+  },
+  {
+    "name": "Renate Künast",
+    "category": "Regierung",
+    "gameEffect": "Nur Einfluss - keine weiteren Effekte",
+    "handlerPresent": false,
+    "issue": "OK"
+  },
+  {
+    "name": "Rudolf Scharping",
+    "category": "Regierung",
+    "gameEffect": "Nur Einfluss - keine weiteren Effekte",
+    "handlerPresent": false,
+    "issue": "OK"
+  },
+  {
+    "name": "John Ashcroft",
+    "category": "Regierung",
+    "gameEffect": "Nur Einfluss - keine weiteren Effekte",
+    "handlerPresent": false,
+    "issue": "OK"
+  },
+  {
+    "name": "Tedros Adhanom Ghebreyesus",
+    "category": "Regierung",
+    "gameEffect": "Nur Einfluss - keine weiteren Effekte",
+    "handlerPresent": false,
+    "issue": "OK"
+  },
+  {
+    "name": "Tom Ridge",
+    "category": "Regierung",
+    "gameEffect": "Nur Einfluss - keine weiteren Effekte",
+    "handlerPresent": false,
+    "issue": "OK"
+  },
+  {
+    "name": "Henry Paulson",
+    "category": "Regierung",
+    "gameEffect": "Nur Einfluss - keine weiteren Effekte",
+    "handlerPresent": false,
+    "issue": "OK"
+  },
+  {
+    "name": "Horst Köhler",
+    "category": "Regierung",
+    "gameEffect": "Nur Einfluss - keine weiteren Effekte",
+    "handlerPresent": false,
+    "issue": "OK"
+  },
+  {
+    "name": "Johannes Rau",
+    "category": "Regierung",
+    "gameEffect": "Nur Einfluss - keine weiteren Effekte",
+    "handlerPresent": false,
+    "issue": "OK"
+  },
+  {
+    "name": "John Snow",
+    "category": "Regierung",
+    "gameEffect": "Nur Einfluss - keine weiteren Effekte",
+    "handlerPresent": false,
+    "issue": "OK"
+  },
+  {
+    "name": "Karl Carstens",
+    "category": "Regierung",
+    "gameEffect": "Nur Einfluss - keine weiteren Effekte",
+    "handlerPresent": false,
+    "issue": "OK"
+  },
+  {
+    "name": "Hans Eichel",
+    "category": "Regierung",
+    "gameEffect": "Nur Einfluss - keine weiteren Effekte",
+    "handlerPresent": false,
+    "issue": "OK"
+  },
+  {
+    "name": "Walter Scheel",
+    "category": "Regierung",
+    "gameEffect": "Nur Einfluss - keine weiteren Effekte",
+    "handlerPresent": false,
+    "issue": "OK"
+  },
+  {
+    "name": "Werner Maihofer",
+    "category": "Regierung",
+    "gameEffect": "Nur Einfluss - keine weiteren Effekte",
+    "handlerPresent": false,
+    "issue": "OK"
+  },
+  {
+    "name": "Andrzej Duda",
+    "category": "Regierung",
+    "gameEffect": "Nur Einfluss - keine weiteren Effekte",
+    "handlerPresent": false,
+    "issue": "OK"
+  },
+  {
+    "name": "Anthony Albanese",
+    "category": "Regierung",
+    "gameEffect": "Nur Einfluss - keine weiteren Effekte",
+    "handlerPresent": false,
+    "issue": "OK"
+  },
+  {
+    "name": "Dick Cheney",
+    "category": "Regierung",
+    "gameEffect": "Nur Einfluss - keine weiteren Effekte",
+    "handlerPresent": false,
+    "issue": "OK"
+  },
+  {
+    "name": "Ebrahim Raisi",
+    "category": "Regierung",
+    "gameEffect": "Nur Einfluss - keine weiteren Effekte",
+    "handlerPresent": false,
+    "issue": "OK"
+  },
+  {
+    "name": "Emmanuel Macron",
+    "category": "Regierung",
+    "gameEffect": "Nur Einfluss - keine weiteren Effekte",
+    "handlerPresent": false,
+    "issue": "OK"
+  },
+  {
+    "name": "Giorgia Meloni",
+    "category": "Regierung",
+    "gameEffect": "Nur Einfluss - keine weiteren Effekte",
+    "handlerPresent": false,
+    "issue": "OK"
+  },
+  {
+    "name": "King Charles III",
+    "category": "Regierung",
+    "gameEffect": "Nur Einfluss - keine weiteren Effekte",
+    "handlerPresent": false,
+    "issue": "OK"
+  },
+  {
+    "name": "Alberto Gonzales",
+    "category": "Regierung",
+    "gameEffect": "Nur Einfluss - keine weiteren Effekte",
+    "handlerPresent": false,
+    "issue": "OK"
+  },
+  {
+    "name": "Annette Schavan",
+    "category": "Regierung",
+    "gameEffect": "Nur Einfluss - keine weiteren Effekte",
+    "handlerPresent": false,
+    "issue": "OK"
+  },
+  {
+    "name": "Edelgard Bulmahn",
+    "category": "Regierung",
+    "gameEffect": "Nur Einfluss - keine weiteren Effekte",
+    "handlerPresent": false,
+    "issue": "OK"
+  },
+  {
+    "name": "Erhard Eppler",
+    "category": "Regierung",
+    "gameEffect": "Nur Einfluss - keine weiteren Effekte",
+    "handlerPresent": false,
+    "issue": "OK"
+  },
+  {
+    "name": "Franz Josef Jung",
+    "category": "Regierung",
+    "gameEffect": "Nur Einfluss - keine weiteren Effekte",
+    "handlerPresent": false,
+    "issue": "OK"
+  },
+  {
+    "name": "Friedrich Merz",
+    "category": "Regierung",
+    "gameEffect": "Nur Einfluss - keine weiteren Effekte",
+    "handlerPresent": false,
+    "issue": "OK"
+  },
+  {
+    "name": "Georg Leber",
+    "category": "Regierung",
+    "gameEffect": "Nur Einfluss - keine weiteren Effekte",
+    "handlerPresent": false,
+    "issue": "OK"
+  },
+  {
+    "name": "Gerhart Baum",
+    "category": "Regierung",
+    "gameEffect": "Nur Einfluss - keine weiteren Effekte",
+    "handlerPresent": false,
+    "issue": "OK"
+  },
+  {
+    "name": "Hans Apel",
+    "category": "Regierung",
+    "gameEffect": "Nur Einfluss - keine weiteren Effekte",
+    "handlerPresent": false,
+    "issue": "OK"
+  },
+  {
+    "name": "Hans Dietrich Genscher",
+    "category": "Regierung",
+    "gameEffect": "Nur Einfluss - keine weiteren Effekte",
+    "handlerPresent": false,
+    "issue": "OK"
+  },
+  {
+    "name": "Otto Schily",
+    "category": "Regierung",
+    "gameEffect": "Nur Einfluss - keine weiteren Effekte",
+    "handlerPresent": false,
+    "issue": "OK"
+  },
+  {
+    "name": "Peter Struck",
+    "category": "Regierung",
+    "gameEffect": "Nur Einfluss - keine weiteren Effekte",
+    "handlerPresent": false,
+    "issue": "OK"
+  },
+  {
+    "name": "Rainer Offergeld",
+    "category": "Regierung",
+    "gameEffect": "Nur Einfluss - keine weiteren Effekte",
+    "handlerPresent": false,
+    "issue": "OK"
+  },
+  {
+    "name": "Colin Powell",
+    "category": "Regierung",
+    "gameEffect": "Nur Einfluss - keine weiteren Effekte",
+    "handlerPresent": false,
+    "issue": "OK"
+  },
+  {
+    "name": "Condoleezza Rice",
+    "category": "Regierung",
+    "gameEffect": "Nur Einfluss - keine weiteren Effekte",
+    "handlerPresent": false,
+    "issue": "OK"
+  },
+  {
+    "name": "Donald Rumsfeld",
+    "category": "Regierung",
+    "gameEffect": "Nur Einfluss - keine weiteren Effekte",
+    "handlerPresent": false,
+    "issue": "OK"
+  },
+  {
+    "name": "Christine Lagarde",
+    "category": "Regierung",
+    "gameEffect": "Nur Einfluss - keine weiteren Effekte",
+    "handlerPresent": false,
+    "issue": "OK"
+  },
+  {
+    "name": "Elon Musk",
+    "category": "Öffentlichkeit",
+    "gameEffect": "Draw 1 card. Once per turn, after you activate an initiative, gain +1 AP.",
+    "effectKey": "public.elon.draw_ap",
+    "handlerPresent": true,
+    "issue": "OK"
+  },
+  {
+    "name": "Bill Gates",
+    "category": "Öffentlichkeit",
+    "gameEffect": "Draw 1 card. Your next initiative this turn gives +1 AP.",
+    "effectKey": "public.bill_gates.next_initiative_ap1",
+    "handlerPresent": true,
+    "issue": "OK"
+  },
+  {
+    "name": "Mark Zuckerberg",
+    "category": "Öffentlichkeit",
+    "gameEffect": "Once per turn, after you activate an initiative, gain +1 AP.",
+    "effectKey": "public.zuck.once_ap_on_activation",
+    "handlerPresent": true,
+    "issue": "OK"
+  },
+  {
+    "name": "Greta Thunberg",
+    "category": "Öffentlichkeit",
+    "gameEffect": "The first time you play a Government card each turn, gain +1 AP.",
+    "effectKey": "public.greta_thunberg.first_gov_ap1",
+    "handlerPresent": true,
+    "issue": "OK"
+  },
+  {
+    "name": "George Soros",
+    "category": "Öffentlichkeit",
+    "gameEffect": "+1 AP when the opponent has an Regierungskarte.",
+    "effectKey": "public.george_soros.ap1",
+    "handlerPresent": true,
+    "issue": "OK"
+  },
+  {
+    "name": "Sam Altman",
+    "category": "Öffentlichkeit",
+    "gameEffect": "When you play an AI-related initiative: draw 1 card and gain +1 AP.",
+    "effectKey": "public.sam_altman.ai_boost",
+    "handlerPresent": true,
+    "issue": "OK"
+  },
+  {
+    "name": "Jack Ma",
+    "category": "Öffentlichkeit",
+    "gameEffect": "Beim Ausspielen: Ziehe 1 Karte. Nach einer Initiative: Optional -1 HP auf gegnerische Regierungs-Plattform.",
+    "effectKey": "public.jack_ma.draw1",
+    "handlerPresent": true,
+    "issue": "OK"
+  },
+  {
+    "name": "Jennifer Doudna",
+    "category": "Öffentlichkeit",
+    "gameEffect": "Deine Initiativen erhalten +1 Einfluss.",
+    "effectKey": "public.doudna.aura_science",
+    "handlerPresent": true,
+    "issue": "OK"
+  },
+  {
+    "name": "Oprah Winfrey",
+    "category": "Öffentlichkeit",
+    "gameEffect": "Beim Ausspielen: Beide Spieler verlieren eine zufällige Handkarte.",
+    "effectKey": "public.oprah_winfrey.deactivate_hands",
+    "handlerPresent": true,
+    "issue": "OK"
+  },
+  {
+    "name": "Tim Cook",
+    "category": "Öffentlichkeit",
+    "gameEffect": "Deine dauerhaften Initiativen kosten 1 HP weniger (nur beim Deckbau).",
+    "effectKey": "public.tim_cook.ap2",
+    "handlerPresent": true,
+    "issue": "OK"
+  },
+  {
+    "name": "Warren Buffett",
+    "category": "Öffentlichkeit",
+    "gameEffect": "Ziehe 1 Karte. Bei einer Initiative: +1 Effekt.",
+    "effectKey": "public.warren_buffett.draw2_ap1",
+    "handlerPresent": true,
+    "issue": "OK"
+  },
+  {
+    "name": "Malala Yousafzai",
+    "category": "Öffentlichkeit",
+    "gameEffect": "Wenn du eine NGO/Think-Tank spielst, ziehe 1 Karte.",
+    "effectKey": "public.malala_yousafzai.education_aura",
+    "handlerPresent": true,
+    "issue": "OK"
+  },
+  {
+    "name": "Noam Chomsky",
+    "category": "Öffentlichkeit",
+    "gameEffect": "Gegner erhalten -1 Einfluss bei Initiativen.",
+    "effectKey": "public.chomsky.aura_military_penalty",
+    "handlerPresent": true,
+    "issue": "OK"
+  },
+  {
+    "name": "Roman Abramovich",
+    "category": "Öffentlichkeit",
+    "gameEffect": "Ziehe 1 Karte, wenn eine Regierungskarte mit Einfluss 5 oder weniger ausgespielt wird.",
+    "effectKey": "public.roman_abramovich.ap1",
+    "handlerPresent": true,
+    "issue": "OK"
+  },
+  {
+    "name": "Mukesh Ambani",
+    "category": "Öffentlichkeit",
+    "gameEffect": "Ziehe 1 Karte. Gegner darf 1 Karte weniger nachziehen in der Runde.",
+    "effectKey": "public.mukesh_ambani.ap1",
+    "handlerPresent": true,
+    "issue": "OK"
+  },
+  {
+    "name": "Jeff Bezos",
+    "category": "Öffentlichkeit",
+    "gameEffect": "Draw 1 card when played. When you have a platform: +1 AP.",
+    "effectKey": "public.jeff_bezos.ap2",
+    "handlerPresent": true,
+    "issue": "OK"
+  },
+  {
+    "name": "Alisher Usmanov",
+    "category": "Öffentlichkeit",
+    "gameEffect": "+1 Schutz für eine Regierungskarte.",
+    "effectKey": "public.alisher_usmanov.draw1",
+    "handlerPresent": true,
+    "issue": "OK"
+  },
+  {
+    "name": "Zhang Yiming",
+    "category": "Öffentlichkeit",
+    "gameEffect": "Draw 1 card. Your next initiative this turn gives +1 AP.",
+    "effectKey": "public.zhang_yiming.draw1_ap1",
+    "handlerPresent": true,
+    "issue": "OK"
+  },
+  {
+    "name": "Edward Snowden",
+    "category": "Öffentlichkeit",
+    "gameEffect": "Gegner verliert 1 Karte (zufällig). Bei US-Regierungskarte: -1 Einfluss dort.",
+    "effectKey": "public.edward_sn0wden.whistleblower",
+    "handlerPresent": true,
+    "issue": "OK"
+  },
+  {
+    "name": "Julian Assange",
+    "category": "Öffentlichkeit",
+    "gameEffect": "Beim Ausspielen: +1 Karte, aber auch Gegner zieht 1. Bei NGO auf dem Feld: Ziehe 2 statt 1.",
+    "effectKey": "public.julian_assange.leak",
+    "handlerPresent": true,
+    "issue": "OK"
+  },
+  {
+    "name": "Yuval Noah Harari",
+    "category": "Öffentlichkeit",
+    "gameEffect": "Your next ongoing initiative gives +1 AP. +1 AP if a platform is also present.",
+    "effectKey": "public.yuval_noah_harari.academia",
+    "handlerPresent": true,
+    "issue": "OK"
+  },
+  {
+    "name": "Ai Weiwei",
+    "category": "Öffentlichkeit",
+    "gameEffect": "When you activate an initiative: draw 1 card and gain +1 AP.",
+    "effectKey": "public.aiweiwei.on_activate_draw_ap",
+    "handlerPresent": true,
+    "issue": "OK"
+  },
+  {
+    "name": "Alexei Navalny",
+    "category": "Öffentlichkeit",
+    "gameEffect": "Bei Auslösen einer gegnerischen Intervention: ziehe 1 Karte.",
+    "effectKey": "public.alexei_navalny.opposition",
+    "handlerPresent": true,
+    "issue": "OK"
+  },
+  {
+    "name": "Anthony Fauci",
+    "category": "Öffentlichkeit",
+    "gameEffect": "Bei einer Initiative: +1 Einfluss.",
+    "effectKey": "public.fauci.aura_health",
+    "handlerPresent": true,
+    "issue": "OK"
+  },
+  {
+    "name": "Gautam Adani",
+    "category": "Öffentlichkeit",
+    "gameEffect": "Ziehe 1 Karte. Bei einer Initiative: +1 Effekt.",
+    "effectKey": "public.gautam_adani.oligarch",
+    "handlerPresent": true,
+    "issue": "OK"
+  },
+  {
+    "name": "Shadow Lobbying",
+    "category": "Sofort-Initiative",
+    "gameEffect": "Öffentlichkeits-Effekt zählt doppelt (einmalig für diese Runde)",
+    "effectKey": "init.shadow_lobbying.buff2",
+    "handlerPresent": true,
+    "issue": "OK"
+  },
+  {
+    "name": "Spin Doctor",
+    "category": "Sofort-Initiative",
+    "gameEffect": "Beim Ausspielen: +1 Einfluss auf deine stärkste Regierungskarte.",
+    "effectKey": "init.spin_doctor.buff_strongest_gov2",
+    "handlerPresent": true,
+    "issue": "OK"
+  },
+  {
+    "name": "Digitaler Wahlkampf",
+    "category": "Sofort-Initiative",
+    "gameEffect": "Draw 2 cards. Your next initiative gives +1 AP",
+    "effectKey": "init.digital_campaign.draw2",
+    "handlerPresent": true,
+    "issue": "OK"
+  },
+  {
+    "name": "Partei-Offensive",
+    "category": "Sofort-Initiative",
+    "gameEffect": "Eine Regierungskarte des Gegners wird deaktiviert (bis Rundenende)",
+    "handlerPresent": false,
+    "issue": "MISSING_EFFECT_KEY"
+  },
+  {
+    "name": "Oppositionsblockade",
+    "category": "Sofort-Initiative",
+    "gameEffect": "Gegner kann keine Initiativen mehr spielen (bis Rundenende)",
+    "handlerPresent": false,
+    "issue": "MISSING_EFFECT_KEY"
+  },
+  {
+    "name": "Verzögerungsverfahren",
+    "category": "Sofort-Initiative",
+    "gameEffect": "When played: +1 AP.",
+    "handlerPresent": false,
+    "issue": "MISSING_EFFECT_KEY"
+  },
+  {
+    "name": "Opportunist",
+    "category": "Sofort-Initiative",
+    "gameEffect": "Beim Ausspielen: Aktiviert Mirror-Effekt. Einfluss-Boni des Gegners werden auf deine stärkste Regierungskarte gespiegelt.",
+    "effectKey": "init.opportunist.mirror_ap_effects",
+    "handlerPresent": true,
+    "issue": "OK"
+  },
+  {
+    "name": "Think-tank",
+    "category": "Sofort-Initiative",
+    "gameEffect": "Ziehe 1 Karte, nächste Regierungskarte +2 Einfluss",
+    "handlerPresent": false,
+    "issue": "MISSING_EFFECT_KEY"
+  },
+  {
+    "name": "Whataboutism",
+    "category": "Sofort-Initiative",
+    "gameEffect": "Reaktiviere eine Karte; sie erhält -1 Einfluss",
+    "handlerPresent": false,
+    "issue": "MISSING_EFFECT_KEY"
+  },
+  {
+    "name": "Influencer-Kampagne",
+    "category": "Sofort-Initiative",
+    "gameEffect": "Öffentlichkeits-Effekt zählt doppelt (einmalig)",
+    "handlerPresent": false,
+    "issue": "MISSING_EFFECT_KEY"
+  },
+  {
+    "name": "Systemrelevant",
+    "category": "Sofort-Initiative",
+    "gameEffect": "Schützt 1 Karte vor Deaktivierung (einmalig)",
+    "handlerPresent": false,
+    "issue": "MISSING_EFFECT_KEY"
+  },
+  {
+    "name": "Symbolpolitik",
+    "category": "Sofort-Initiative",
+    "gameEffect": "Ziehe 1 Karte. Effekt: Nichts. Optik: Stark.",
+    "handlerPresent": false,
+    "issue": "MISSING_EFFECT_KEY"
+  },
+  {
+    "name": "Koalitionszwang",
+    "category": "Dauerhaft-Initiative",
+    "gameEffect": "Kein Einflussverschieben erlaubt, Tier 2 Regierungskarten +1 Einfluss",
+    "handlerPresent": false,
+    "issue": "MISSING_EFFECT_KEY"
+  },
+  {
+    "name": "Zivilgesellschaft",
+    "category": "Dauerhaft-Initiative",
+    "gameEffect": "Movement cards +1 influence, NGOs give +1 AP on next initiative",
+    "handlerPresent": false,
+    "issue": "MISSING_EFFECT_KEY"
+  },
+  {
+    "name": "Milchglas Transparenz",
+    "category": "Dauerhaft-Initiative",
+    "gameEffect": "+1 Einfluss wenn keine NGO/Bewegung liegt",
+    "handlerPresent": false,
+    "issue": "MISSING_EFFECT_KEY"
+  },
+  {
+    "name": "Alternative Fakten",
+    "category": "Dauerhaft-Initiative",
+    "gameEffect": "Gegner-Interventionen -1 Wirkung (mindestens 0)",
+    "handlerPresent": false,
+    "issue": "MISSING_EFFECT_KEY"
+  },
+  {
+    "name": "Napoleon Komplex",
+    "category": "Dauerhaft-Initiative",
+    "gameEffect": "Tier 1 Regierungskarten +1 Einfluss, kein Einfluss verschieben erlaubt",
+    "effectKey": "init.napoleon_komplex.tier1_gov_plus1",
+    "handlerPresent": true,
+    "issue": "OK"
+  },
+  {
+    "name": "Konzernfreundlicher Algorithmus",
+    "category": "Dauerhaft-Initiative",
+    "gameEffect": "Bei Plattform-Karten: ziehe 1 Karte, Oligarchen +1 Einfluss",
+    "handlerPresent": false,
+    "issue": "MISSING_EFFECT_KEY"
+  },
+  {
+    "name": "Algorithmischer Diskurs",
+    "category": "Dauerhaft-Initiative",
+    "gameEffect": "Beim Ausspielen: Reduziert Einfluss basierend auf Plattform/KI-Karten in der Öffentlichkeit. Für jede Plattform/KI-Karte: -1 Einfluss auf stärkste Regierungskarte.",
+    "handlerPresent": false,
+    "issue": "MISSING_EFFECT_KEY"
+  },
+  {
+    "name": "Wirtschaftlicher Druck",
+    "category": "Dauerhaft-Initiative",
+    "gameEffect": "Wenn du eine Oligarchen-Karte spielst: +1 Einfluss auf eine Regierungskarte",
+    "handlerPresent": false,
+    "issue": "MISSING_EFFECT_KEY"
+  },
+  {
+    "name": "Fake News-Kampagne",
+    "category": "Intervention",
+    "gameEffect": "Die Öffentlichkeitskarte wird deaktiviert",
+    "handlerPresent": false,
+    "issue": "MISSING_EFFECT_KEY"
+  },
+  {
+    "name": "Whistleblower",
+    "category": "Intervention",
+    "gameEffect": "-2 Einfluss auf die Regierungskarte",
+    "effectKey": "trap.whistleblower.return_last_played",
+    "handlerPresent": true,
+    "issue": "OK"
+  },
+  {
+    "name": "Cyber-Attacke",
+    "category": "Intervention",
+    "gameEffect": "Die Öffentlichkeitskarte wird zerstört",
+    "handlerPresent": false,
+    "issue": "MISSING_EFFECT_KEY"
+  },
+  {
+    "name": "Strategische Enthüllung",
+    "category": "Intervention",
+    "gameEffect": "Eine Regierungskarte zurück auf die Hand",
+    "handlerPresent": false,
+    "issue": "MISSING_EFFECT_KEY"
+  },
+  {
+    "name": "Interne Fraktionskämpfe",
+    "category": "Intervention",
+    "gameEffect": "Die Initiative wird annulliert",
+    "handlerPresent": false,
+    "issue": "MISSING_EFFECT_KEY"
+  },
+  {
+    "name": "Boykott-Kampagne",
+    "category": "Intervention",
+    "gameEffect": "Die Karte wird deaktiviert",
+    "handlerPresent": false,
+    "issue": "MISSING_EFFECT_KEY"
+  },
+  {
+    "name": "Deepfake-Skandal",
+    "category": "Intervention",
+    "gameEffect": "Kein Einflusstransfer möglich",
+    "handlerPresent": false,
+    "issue": "MISSING_EFFECT_KEY"
+  },
+  {
+    "name": "Bestechungsskandal 2.0",
+    "category": "Intervention",
+    "gameEffect": "Du übernimmst die Regierungskarte bis Rundenende",
+    "handlerPresent": false,
+    "issue": "MISSING_EFFECT_KEY"
+  },
+  {
+    "name": "Grassroots-Widerstand",
+    "category": "Intervention",
+    "gameEffect": "Eine Öffentlichkeitskarte wird deaktiviert",
+    "handlerPresent": false,
+    "issue": "MISSING_EFFECT_KEY"
+  },
+  {
+    "name": "Massenproteste",
+    "category": "Intervention",
+    "gameEffect": "Beide Regierungskarten -1 Einfluss",
+    "handlerPresent": false,
+    "issue": "MISSING_EFFECT_KEY"
+  },
+  {
+    "name": "Berater-Affäre",
+    "category": "Intervention",
+    "gameEffect": "-2 Einfluss auf die Regierungskarte",
+    "handlerPresent": false,
+    "issue": "MISSING_EFFECT_KEY"
+  },
+  {
+    "name": "Parlament geschlossen",
+    "category": "Intervention",
+    "gameEffect": "Gegner kann keine weiteren Regierungskarten spielen (diese Runde)",
+    "handlerPresent": false,
+    "issue": "MISSING_EFFECT_KEY"
+  },
+  {
+    "name": "\"Unabhängige\" Untersuchung",
+    "category": "Intervention",
+    "gameEffect": "Die Intervention wird annulliert",
+    "handlerPresent": false,
+    "issue": "MISSING_EFFECT_KEY"
+  },
+  {
+    "name": "Soft Power-Kollaps",
+    "category": "Intervention",
+    "gameEffect": "-3 Einfluss auf die Diplomat-Karte",
+    "handlerPresent": false,
+    "issue": "MISSING_EFFECT_KEY"
+  },
+  {
+    "name": "Cancel Culture",
+    "category": "Intervention",
+    "gameEffect": "Die Öffentlichkeitskarte wird deaktiviert",
+    "effectKey": "trap.cancel_culture.deactivate_public",
+    "handlerPresent": true,
+    "issue": "OK"
+  },
+  {
+    "name": "Lobby Leak",
+    "category": "Intervention",
+    "gameEffect": "Gegner muss 1 Karte abwerfen",
+    "effectKey": "trap.lobby_leak.force_discard_on_ngo",
+    "handlerPresent": true,
+    "issue": "OK"
+  },
+  {
+    "name": "Maulwurf",
+    "category": "Intervention",
+    "gameEffect": "Du kopierst die schwächere Regierungskarte des Gegners",
+    "handlerPresent": false,
+    "issue": "MISSING_EFFECT_KEY"
+  },
+  {
+    "name": "Skandalspirale",
+    "category": "Intervention",
+    "gameEffect": "Eine der beiden Karten wird annulliert",
+    "handlerPresent": false,
+    "issue": "MISSING_EFFECT_KEY"
+  },
+  {
+    "name": "Tunnelvision",
+    "category": "Intervention",
+    "gameEffect": "Die Regierungskarte zählt nicht zur Runde",
+    "handlerPresent": false,
+    "issue": "MISSING_EFFECT_KEY"
+  },
+  {
+    "name": "Satire-Show",
+    "category": "Intervention",
+    "gameEffect": "Eine Regierungskarte des Gegners -2 Einfluss",
+    "handlerPresent": false,
+    "issue": "MISSING_EFFECT_KEY"
+  }
+]

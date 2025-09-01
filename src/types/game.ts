@@ -81,21 +81,11 @@ export type Board = {
 };
 
 export type PermanentSlots = {
-  1: { government: Card | null; public: Card | null };
-  2: { government: Card | null; public: Card | null };
+  1: { government: Card | null; public: Card | null; initiativePermanent: Card | null };
+  2: { government: Card | null; public: Card | null; initiativePermanent: Card | null };
 };
 
 export interface EffectFlags {
-  // AP system — single source of truth
-  initiativeDiscount: number;        // Discount for next initiative(s), consumes 1 per use
-  initiativeRefund: number;          // Refund-pool for initiatives, consumes 1 per use
-  govRefundAvailable: boolean;       // First government card per turn gets +1 AP refund (Greta/Movement)
-
-  // Round-scoped Initiative "Cluster 3" auras (active while round lasts)
-  initiativeInfluenceBonus: number;         // e.g., Jennifer (+1) + Fauci (+1)
-  initiativeInfluencePenaltyForOpponent: number; // Noam gives opponent -1 (we store on owner, apply against enemy)
-  initiativeOnPlayDraw1Ap1: boolean;        // Ai Weiwei
-
   // Trap system flags
   trapTriggered?: boolean;           // Set when a trap was triggered this turn
   trapProtection?: boolean;          // Trap protection active for next card
@@ -107,51 +97,44 @@ export interface EffectFlags {
   zuckOnceAp?: boolean;              // Mark Zuckerberg once-per-turn AP bonus
   zuckSpent?: boolean;               // Tracks if Mark Zuckerberg AP was spent this turn
   aiWeiweiOnActivate?: boolean;      // Ai Weiwei activation bonus flag
+  elonOnceAp?: boolean;              // Elon Musk once-per-turn AP bonus on initiative activation
+  elonOnActivate?: boolean;          // Elon Musk draw + AP on initiative activation
 
   // Aura flags for initiative bonuses
   auraScience?: number;              // Jennifer Doudna science bonus
   auraHealth?: number;               // Anthony Fauci health bonus
   auraMilitaryPenalty?: number;      // Noam Chomsky military penalty
 
+  // Legacy aura flags (for backward compatibility)
+  scienceInitiativeBonus?: boolean;  // Jennifer Doudna: +1 influence on instant initiatives
+  healthInitiativeBonus?: boolean;   // Anthony Fauci: +1 influence on instant initiatives
+  cultureInitiativeBonus?: boolean;  // Ai Weiwei: +1 card +1 AP on instant initiatives
+  militaryInitiativePenalty?: boolean; // Noam Chomsky: -1 influence on opponent instant initiatives
+
+  // NEW advanced initiative-related flags
+  initiativesLocked?: boolean;     // Opponent cannot play initiatives until end of turn
+  doublePublicAura?: boolean;      // Next Public aura effect is doubled
+
+  // AP bonus system for initiatives
+  apBonusInitiativeNext?: number;     // +AP for NEXT initiative this turn (consumed on trigger)
+  apBonusInitiativeOnce?: number;     // +AP ONCE per turn on first initiative (consumed on trigger)
+
   // Opportunist system
   opportunistActive?: boolean;       // Opportunist mirror effect active
 
-  // Legacy flags for compatibility (deprecated)
-  nextGovPlus2?: boolean;
-  diplomatInfluenceTransferUsed?: boolean;
-  influenceTransferBlocked?: boolean;
-  scienceInitiativeBonus?: boolean;
-  healthInitiativeBonus?: boolean;
-  cultureInitiativeBonus?: boolean;
-  militaryInitiativePenalty?: boolean;
-  nextInitiativeMinus1?: boolean;
-  freeInitiativeAvailable?: boolean;
-  platformRefundAvailable?: boolean;
-  platformRefundUsed?: boolean;
-  ngoInitiativeDiscount?: number;
-  platformInitiativeDiscount?: number;
-  nextGovernmentCardBonus?: number;
-  publicEffectDoubled?: boolean;
-  cannotPlayInitiatives?: boolean;
-  nextCardProtected?: boolean;
-  platformAfterInitiativeBonus?: boolean;
-  interventionEffectReduced?: boolean;
-  nextInitiativeRefund?: number;
-  nextInitiativeDiscounted?: boolean;
+  // Legacy AP system flags (for backward compatibility)
+  nextGovPlus2?: boolean;             // Next government card gets +2 influence
+  diplomatInfluenceTransferUsed?: boolean; // Diplomat influence transfer used this turn
+  influenceTransferBlocked?: boolean; // Influence transfer is blocked
+  govRefundAvailable?: boolean;       // Government refund available
+  freeInitiativeAvailable?: boolean;  // Free initiative available
+  ngoInitiativeDiscount?: number;     // NGO initiative discount
+  initiativeDiscount?: number;        // Initiative discount (legacy)
+  initiativeRefund?: number;          // Initiative refund (legacy)
 }
 
 export function createDefaultEffectFlags(): EffectFlags {
   return {
-    // AP system
-    initiativeDiscount: 0,
-    initiativeRefund: 0,
-    govRefundAvailable: false,
-
-    // Initiative auras
-    initiativeInfluenceBonus: 0,
-    initiativeInfluencePenaltyForOpponent: 0,
-    initiativeOnPlayDraw1Ap1: false,
-
     // Trap system
     trapTriggered: false,
     trapProtection: false,
@@ -164,11 +147,17 @@ export function createDefaultEffectFlags(): EffectFlags {
     zuckOnceAp: false,
     zuckSpent: false,
     aiWeiweiOnActivate: false,
+    elonOnceAp: false,
+    elonOnActivate: false,
 
     // Aura flags for initiative bonuses
     auraScience: 0,
     auraHealth: 0,
     auraMilitaryPenalty: 0,
+    initiativesLocked: false,
+    doublePublicAura: false,
+    apBonusInitiativeNext: 0,
+    apBonusInitiativeOnce: 0,
   };
 }
 
@@ -191,7 +180,6 @@ export interface GameState {
   gameWinner?: 1 | 2 | null;
   blocked?: { initiatives?: boolean };
   shields?: Set<UID>;
-  _queue?: EffectEvent[];
   _effectQueue?: EffectEvent[];
   effectFlags: {
     1: EffectFlags;
@@ -253,7 +241,7 @@ export interface SelectedState {
 }
 
 export interface AbilitySelect {
-  type: 'hardliner' | 'putin_double_intervention' | 'oligarch_influence' | 'diplomat_transfer';
+  type: 'hardliner' | 'putin_double_intervention' | 'oligarch_influence' | 'diplomat_transfer' | 'corruption_steal';
   actorCard: PoliticianCard;
   actorPlayer: 1 | 2;
   lane?: 'innen' | 'aussen';

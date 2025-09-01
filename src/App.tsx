@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { logger } from './debug/logger';
 import { GameCanvas } from './components/GameCanvas';
 import { DeckBuilder } from './components/DeckBuilder';
 import { GameInfoModal } from './components/GameInfoModal';
@@ -9,10 +10,14 @@ import UILayoutEditor from './components/UILayoutEditor';
 import CardEffectTestSuite from './test/CardEffectTestSuite';
 import { useGameState } from './hooks/useGameState';
 import { BuilderEntry, PoliticianCard, Player } from './types/game';
-import { Specials, PRESET_DECKS } from './data/gameData';
+import { Specials, PRESET_DECKS, Pols } from './data/gameData';
 import { buildDeckFromEntries } from './utils/gameUtils';
 import { copyDebugSnapshotToClipboard, downloadDebugSnapshot } from './utils/debugExport';
 import { GameProvider } from './context/GameContext';
+import { VisualEffectsProvider } from './context/VisualEffectsContext';
+import { getCardDetails } from './data/cardDetails';
+import { CardHoverInfoPanel } from './components/CardHoverInfoPanel';
+import Dice3D, { Dice3DHandle } from './components/Dice3D';
 // Temporarily disabled for build
 // import { hasAnyZeroApPlay } from './utils/ap';
 
@@ -100,7 +105,7 @@ function AppContent() {
       // Debug snapshot: Ctrl+D copies to clipboard, Shift+D downloads file
       if ((event.key === 'd' || event.key === 'D') && event.ctrlKey) {
         copyDebugSnapshotToClipboard(gameState).then(() => {
-          console.log('Debug snapshot copied to clipboard');
+          logger.info('Debug snapshot copied to clipboard');
         }).catch(() => {});
       }
       if ((event.key === 'd' || event.key === 'D') && event.shiftKey) {
@@ -114,7 +119,7 @@ function AppContent() {
   }, [gameInfoModalOpen, eventLogModalOpen, gameLogModalOpen, devMode, log, gameState, passTurn, nextTurn, currentRoute, activateInstantInitiative]);
 
   const handleCardClick = useCallback((data: any) => {
-    console.log('🔧 DEBUG: handleCardClick called with:', data);
+    logger.info('🔧 DEBUG: handleCardClick called with:', data);
     if (!data) return;
 
     // Handle game control buttons
@@ -122,7 +127,7 @@ function AppContent() {
 
     if (data.type === 'button_pass_turn') {
       const currentPlayer = gameState.current;
-      console.log(`🔧 DEBUG: button_pass_turn clicked - currentPlayer: ${currentPlayer}`);
+      logger.info(`🔧 DEBUG: button_pass_turn clicked - currentPlayer: ${currentPlayer}`);
       log(`🎯 UI: Passen-Button geklickt - Spieler ${currentPlayer} passt`);
       log(`📊 FLOW: UI → passTurn(${currentPlayer}) | Button click | Data: { type: "button_pass_turn", current: ${currentPlayer} }`);
       passTurn(currentPlayer);
@@ -131,7 +136,7 @@ function AppContent() {
 
     if (data.type === 'button_end_turn') {
       const currentPlayer = gameState.current;
-      console.log(`🔧 DEBUG: button_end_turn clicked - currentPlayer: ${currentPlayer}`);
+      logger.info(`🔧 DEBUG: button_end_turn clicked - currentPlayer: ${currentPlayer}`);
       log(`🎯 UI: Zug-beenden-Button geklickt - Spieler ${currentPlayer} beendet Zug`);
       log(`📊 FLOW: UI → nextTurn() | Button click | Data: { type: "button_end_turn", current: ${currentPlayer} }`);
       nextTurn();
@@ -150,31 +155,19 @@ function AppContent() {
       log('🎯 UI: Handkarte geklickt - ' + data.card.name + ' (Index: ' + data.index + ', Selected: ' + selectedHandIndex + ')');
       log('📊 FLOW: UI → handleCardClick | Card selection | Data: { card: "' + data.card.name + '", index: ' + data.index + ', same: ' + same + ' }');
 
-      if (same) {
-        // Double-click to open modal
-        log('🎯 UI: Handkarte doppelgeklickt - ' + data.card.name);
-        log('📊 FLOW: UI → setHandCardModalOpen(true) | Double click | Data: { card: "' + data.card.name + '" }');
+      if (!same) {
+        // Single click → Modal öffnen
+        log('🎯 UI: Handkarte einfach geklickt → öffne Modal - ' + data.card.name);
         setHandCardModalOpen(true);
+        selectHandCard(data.index);
       } else {
-        // Fallback: UI index may not match authoritative state. Prefer UID lookup.
-        const uid = data.card?.uid ?? data.card?.id;
-        const stateHand = gameState.hands?.[1] || [];
-        let idxInState = stateHand.findIndex((c: any) => (c.uid ?? c.id) === uid);
-
-        if (idxInState === -1) {
-          // Not found in authoritative state -> log diagnostic and abort selection
-          console.warn('[DIAG] hand click: card uid not found in state.hands[1]', { uid, data });
-          log('❌ ERROR: Karte nicht in Hand gefunden - UID: ' + uid);
-          (window as any).__politicardDebug = {
-            ...(window as any).__politicardDebug,
-            lastClickMismatch: { ts: Date.now(), uid, data }
-          };
-          return;
-        }
-
-        log('🎯 UI: Handkarte ausgewählt - ' + data.card.name + ' (Index: ' + idxInState + ')');
-        log('📊 FLOW: UI → selectHandCard(' + idxInState + ') | Card selection | Data: { card: "' + data.card.name + '", stateIndex: ' + idxInState + ' }');
-        selectHandCard(idxInState);
+        // Double click → Karte direkt spielen (Auto-Platzierung)
+        const card: any = data.card;
+        const currentPlayer = gameState.current;
+        const targetLane = card.kind === 'pol' ? (['Staatsoberhaupt','Regierungschef','Diplomat'].includes(card.tag) ? 'aussen' : 'aussen') : 'innen';
+        log('🎯 UI: Handkarte doppelgeklickt → direkt spielen - ' + card.name + ' in ' + targetLane);
+        playCard(currentPlayer, data.index, targetLane);
+        selectHandCard(null);
       }
       return;
     }
@@ -317,6 +310,11 @@ function AppContent() {
       const card = data.card;
       console.log('🎯 UI: Sofort-Initiative aus Slot aktiviert - ' + card.name + ' für Player ' + player);
       activateInstantInitiative(player);
+      // trigger canvas instant sprite animation (slot-key pattern)
+      try {
+        const trig = (window as any).__pc_triggerInstantAnim || (window as any).pc_triggerInstantAnim;
+        if (typeof trig === 'function') trig(`${player}.instant.0`);
+      } catch (e) {}
       return;
     }
   }, [gameState, selectedHandIndex, playCard, selectHandCard, passTurn, nextTurn, log]);
@@ -368,6 +366,13 @@ function AppContent() {
       return;
     }
 
+    // effectKey sicherstellen (Legacy-Namen → Keys)
+    try {
+      const { resolveEffectKey } = require('./effects/resolveEffectKey');
+      const k = resolveEffectKey(card.name, (card as any).effectKey);
+      if (k) (card as any).effectKey = k;
+    } catch {}
+
     console.log('🔧 DEBUG: Card found:', card.name, 'for player:', currentPlayer);
 
     if (targetSlot === 'aussen' || targetSlot === 'innen') {
@@ -387,121 +392,32 @@ function AppContent() {
 
   // Auto-run AI turn whenever it's AI's turn (nur wenn nicht im Dev Mode)
   useEffect(() => {
-    if (gameState.current === 2 && !devMode && gameState.aiEnabled?.[2]) {
-      const t = setTimeout(() => runAITurn(), 120);
+    // Debug: Log auto-AI trigger checks
+    if (gameState.current === 2) {
+      console.log('🔍 AUTO_AI_CHECK: current=2, aiEnabled=', gameState.aiEnabled);
+    }
+    if (gameState.current === 2 && !devMode && gameState.aiEnabled?.[2] && !gameState.passed?.[2]) {
+      console.log('🔔 AUTO_AI_RUN scheduled');
+      const t = setTimeout(() => {
+        console.log('🔔 AUTO_AI_RUN executing runAITurn');
+        runAITurn();
+      }, 120);
       return () => clearTimeout(t);
+    }
+
+    // If AI already passed, advance the turn (avoid AI stuck loop)
+    if (gameState.current === 2 && gameState.passed?.[2]) {
+      const t2 = setTimeout(() => {
+        console.log('🔔 AUTO: AI passed - advancing turn');
+        nextTurn();
+      }, 120);
+      return () => clearTimeout(t2);
     }
   }, [gameState, runAITurn, devMode]);
 
 
 
-  const renderTooltip = () => {
-    if (!hoveredCard || !hoveredCard.card) return null;
-
-    const card = hoveredCard.card;
-
-    if (card.kind === 'pol') {
-      const polCard = card as PoliticianCard;
-      return (
-        <div style={{
-          position: 'fixed',
-          pointerEvents: 'none',
-          background: '#0b1220',
-          border: '1px solid #2a3a4e',
-          color: '#dce8f5',
-          padding: '8px 10px',
-          borderRadius: '8px',
-          maxWidth: '340px',
-          fontSize: '12px',
-          zIndex: 30,
-          boxShadow: '0 10px 25px rgba(0,0,0,.35)',
-          left: hoveredCard.x + 12,
-          top: hoveredCard.y + 12,
-        }}>
-          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
-            <span style={{
-              fontSize: '11px',
-              padding: '3px 6px',
-              borderRadius: '999px',
-              border: '1px solid #2b3a4c',
-              background: '#101823',
-              color: '#c4d3e3',
-            }}>
-              Politiker
-            </span>
-            <span style={{
-              fontSize: '11px',
-              padding: '3px 6px',
-              borderRadius: '999px',
-              border: '1px solid #2b3a4c',
-              background: '#101823',
-              color: '#c4d3e3',
-            }}>
-              {polCard.tag}
-            </span>
-          </div>
-          <div style={{ marginTop: '4px', fontWeight: 600 }}>
-            {polCard.name}
-          </div>
-          <div>I: {polCard.influence} · T: {polCard.T} · BP: {polCard.BP}</div>
-          <div>Einfluss (aktuell): {polCard.influence}</div>
-        </div>
-      );
-    } else {
-      const base = Specials.find((s: any) => s.id === card.baseId);
-      if (!base) return null;
-
-      return (
-        <div style={{
-          position: 'fixed',
-          pointerEvents: 'none',
-          background: '#0b1220',
-          border: '1px solid #2a3a4e',
-          color: '#dce8f5',
-          padding: '8px 10px',
-          borderRadius: '8px',
-          maxWidth: '340px',
-          fontSize: '12px',
-          zIndex: 30,
-          boxShadow: '0 10px 25px rgba(0,0,0,.35)',
-          left: hoveredCard.x + 12,
-          top: hoveredCard.y + 12,
-        }}>
-          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
-            <span style={{
-              fontSize: '11px',
-              padding: '3px 6px',
-              borderRadius: '999px',
-              border: '1px solid #2b3a4c',
-              background: '#101823',
-              color: '#c4d3e3',
-            }}>
-              {base.type}
-            </span>
-            {base.speed && (
-              <span style={{
-                fontSize: '11px',
-                padding: '3px 6px',
-                borderRadius: '999px',
-                border: '1px solid #2b3a4c',
-                background: '#101823',
-                color: '#c4d3e3',
-              }}>
-                {base.speed}
-              </span>
-            )}
-          </div>
-          <div style={{ marginTop: '4px', fontWeight: 600 }}>
-            {base.name}
-          </div>
-          <div>BP: {base.bp}</div>
-          <div style={{ opacity: 0.9, marginTop: '4px' }}>
-            {base.effect}
-          </div>
-        </div>
-      );
-    }
-  };
+  // Old renderTooltip removed; using CardHoverInfoPanel component instead.
 
   return (
     <div style={{
@@ -536,6 +452,30 @@ function AppContent() {
           }}
         >
           🎮 Game
+        </button>
+        <button
+          onClick={() => {
+            // Start a quick match vs AI using default presets
+            try {
+              startMatchVsAI(PRESET_DECKS.NEOLIBERAL_TECHNOKRAT as any);
+              log('🤖 Schnellstart: Spiel vs KI gestartet');
+            } catch (e) {
+              console.error('Start vs AI failed', e);
+              log('❌ Fehler: KI-Start fehlgeschlagen');
+            }
+          }}
+          style={{
+            background: '#10b981',
+            color: 'white',
+            border: 'none',
+            padding: '8px 12px',
+            borderRadius: '6px',
+            fontSize: '12px',
+            fontWeight: 600,
+            cursor: 'pointer',
+          }}
+        >
+          🤖 Start vs KI
         </button>
         <button
           onClick={() => setCurrentRoute('ui-editor')}
@@ -582,115 +522,130 @@ function AppContent() {
           gap: 0,
           padding: 0,
         }}>
-          <div style={{
-            position: 'relative',
-            overflow: 'hidden',
-            background: '#0e141b',
-          }}>
-            <GameCanvas
-              gameState={gameState}
-              selectedHandIndex={selectedHandIndex}
-              onCardClick={handleCardClick}
-              onCardHover={handleCardHover}
-              devMode={devMode}
-            />
-
-            <DeckBuilder
-              isOpen={deckBuilderOpen}
-              onClose={() => setDeckBuilderOpen(false)}
-              onApplyDeck={handleApplyDeck}
-              onStartMatch={handleStartMatch}
-            />
-
-            {!deckBuilderOpen && (
-              <GameInfoModal
-                gameState={gameState}
-                isVisible={gameInfoModalOpen}
-                onToggle={() => setGameInfoModalOpen(!gameInfoModalOpen)}
-                onPassTurn={passTurn}
-                onToggleLog={() => setGameLogModalOpen(!gameLogModalOpen)}
-                onCardClick={handleCardClick}
-                devMode={devMode}
-              />
-            )}
-
-            {!deckBuilderOpen && (
-              <EventLogModal
-                gameState={gameState}
-                isVisible={eventLogModalOpen}
-                onToggle={() => setEventLogModalOpen(!eventLogModalOpen)}
-              />
-            )}
-
-            {!deckBuilderOpen && (
-              <HandCardModal
+          <VisualEffectsProvider>
+            <div style={{
+              position: 'relative',
+              overflow: 'hidden',
+              background: '#0e141b',
+            }}>
+              <GameCanvas
                 gameState={gameState}
                 selectedHandIndex={selectedHandIndex}
-                isVisible={handCardModalOpen}
-                onClose={() => setHandCardModalOpen(false)}
-                onPlayCard={handlePlayCardFromModal}
+                onCardClick={handleCardClick}
+                onCardHover={handleCardHover}
+                devMode={devMode}
               />
-            )}
 
-            {!deckBuilderOpen && (
-              <GameLogModal
-                gameState={gameState}
-                isVisible={gameLogModalOpen}
-                onToggle={() => setGameLogModalOpen(!gameLogModalOpen)}
+              <DeckBuilder
+                isOpen={deckBuilderOpen}
+                onClose={() => setDeckBuilderOpen(false)}
+                onApplyDeck={handleApplyDeck}
+                onStartMatch={handleStartMatch}
               />
-            )}
 
-            {renderTooltip()}
+              {!deckBuilderOpen && (
+                <GameInfoModal
+                  gameState={gameState}
+                  isVisible={gameInfoModalOpen}
+                  onToggle={() => setGameInfoModalOpen(!gameInfoModalOpen)}
+                  onPassTurn={passTurn}
+                  onToggleLog={() => setGameLogModalOpen(!gameLogModalOpen)}
+                  onCardClick={handleCardClick}
+                  devMode={devMode}
+                />
+              )}
 
-            {/* 🔧 DEV MODE Indikator */}
-            {devMode && (
-              <div style={{
-                position: 'fixed',
-                top: '10px',
-                right: '10px',
-                background: '#ff6b35',
-                color: 'white',
-                padding: '8px 12px',
-                borderRadius: '6px',
-                fontSize: '12px',
-                fontWeight: 600,
-                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
-                zIndex: 1000,
-              }}>
-                🔧 DEV MODE - KI AUS
+              {!deckBuilderOpen && (
+                <EventLogModal
+                  gameState={gameState}
+                  isVisible={eventLogModalOpen}
+                  onToggle={() => setEventLogModalOpen(!eventLogModalOpen)}
+                />
+              )}
+
+              {!deckBuilderOpen && (
+                <HandCardModal
+                  gameState={gameState}
+                  selectedHandIndex={selectedHandIndex}
+                  isVisible={handCardModalOpen}
+                  onClose={() => setHandCardModalOpen(false)}
+                  onPlayCard={handlePlayCardFromModal}
+                />
+              )}
+
+              {!deckBuilderOpen && (
+                <GameLogModal
+                  gameState={gameState}
+                  isVisible={gameLogModalOpen}
+                  onToggle={() => setGameLogModalOpen(!gameLogModalOpen)}
+                />
+              )}
+
+              <CardHoverInfoPanel hovered={hoveredCard} />
+
+              {/* Dice 3D - Dev utility */}
+              <div style={{ position: 'fixed', left: 16, bottom: 16, zIndex: 1200 }}>
+                {/* use a stable ref declared at top-level of AppContent if you need to control it */}
+                <Dice3D
+                  size={120}
+                  duration={900}
+                  onRoll={(f) => {
+                    console.log('Dice rolled', f);
+                    try { window.dispatchEvent(new CustomEvent('pc:dice_roll', { detail: { face: f } })); } catch (e) {}
+                  }}
+                />
               </div>
-            )}
 
-          {/* 🎯 Current Player Indicator (immer sichtbar im Dev Mode) */}
-          {devMode && (
-            <div style={{
-              position: 'fixed',
-              top: '60px',
-              right: '10px',
-              background: gameState.current === 1 ? '#4ade80' : '#ef4444',
-              color: 'white',
-              padding: '12px 16px',
-              borderRadius: '8px',
-              fontSize: '16px',
-              fontWeight: 700,
-              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
-              zIndex: 1000,
-              border: '2px solid rgba(255, 255, 255, 0.3)',
-            }}>
-              🎮 Player {gameState.current} am Zug
-              <div style={{
-                fontSize: '11px',
-                fontWeight: 400,
-                opacity: 0.9,
-                marginTop: '4px',
-              }}>
-                AP: {gameState.actionPoints[gameState.current]}
-              </div>
+              {/* 🔧 DEV MODE Indikator */}
+              {devMode && (
+                <div style={{
+                  position: 'fixed',
+                  top: '10px',
+                  right: '10px',
+                  background: '#ff6b35',
+                  color: 'white',
+                  padding: '8px 12px',
+                  borderRadius: '6px',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
+                  zIndex: 1000,
+                }}>
+                  🔧 DEV MODE - KI AUS
+                </div>
+              )}
+
+              {/* 🎯 Current Player Indicator (immer sichtbar im Dev Mode) */}
+              {devMode && (
+                <div style={{
+                  position: 'fixed',
+                  top: '60px',
+                  right: '10px',
+                  background: gameState.current === 1 ? '#4ade80' : '#ef4444',
+                  color: 'white',
+                  padding: '12px 16px',
+                  borderRadius: '8px',
+                  fontSize: '16px',
+                  fontWeight: 700,
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
+                  zIndex: 1000,
+                  border: '2px solid rgba(255, 255, 255, 0.3)',
+                }}>
+                  🎮 Player {gameState.current} am Zug
+                  <div style={{
+                    fontSize: '11px',
+                    fontWeight: 400,
+                    opacity: 0.9,
+                    marginTop: '4px',
+                  }}>
+                    AP: {gameState.actionPoints[gameState.current]}
+                  </div>
+                </div>
+              )}
             </div>
-          )}
+          </VisualEffectsProvider>
         </div>
-      </div>
-    )}
+      )}
     </div>
   );
 }

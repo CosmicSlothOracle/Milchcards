@@ -1,0 +1,157 @@
+{
+  "government-row": {
+    "file": "/mnt/data/politicard_svgs/government-row.svg",
+    "bg": "#ffffff",
+    "ring": "#06b6d4"
+  },
+  "public-row": {
+    "file": "/mnt/data/politicard_svgs/public-row.svg",
+    "bg": "#ffffff",
+    "ring": "#22c55e"
+  },
+  "initiative": {
+    "file": "/mnt/data/politicard_svgs/initiative.svg",
+    "bg": "#f97316",
+    "ring": "#fde047"
+  },
+  "intervention-trap": {
+    "file": "/mnt/data/politicard_svgs/intervention-trap.svg",
+    "bg": "#ef4444",
+    "ring": "#a78bfa"
+  },
+  "permanent-slot": {
+    "file": "/mnt/data/politicard_svgs/permanent-slot.svg",
+    "bg": "#6b0f4a",
+    "ring": "#ec4899"
+  },
+  "ap": {
+    "file": "/mnt/data/politicard_svgs/ap.svg",
+    "bg": "#0f172a",
+    "ring": "#38bdf8"
+  },
+  "influence": {
+    "file": "/mnt/data/politicard_svgs/influence.svg",
+    "bg": "#111827",
+    "ring": "#f59e0b"
+  },
+  "round-turn": {
+    "file": "/mnt/data/politicard_svgs/round-turn.svg",
+    "bg": "#0b1020",
+    "ring": "#67e8f9"
+  },
+  "end-turn": {
+    "file": "/mnt/data/politicard_svgs/end-turn.svg",
+    "bg": "#0b1020",
+    "ring": "#c4b5fd"
+  },
+  "pass": {
+    "file": "/mnt/data/politicard_svgs/pass.svg",
+    "bg": "#0b1020",
+    "ring": "#a7f3d0"
+  },
+  "game-log": {
+    "file": "/mnt/data/politicard_svgs/game-log.svg",
+    "bg": "#f8fafc",
+    "ring": "#94a3b8"
+  },
+  "copy-log": {
+    "file": "/mnt/data/politicard_svgs/copy-log.svg",
+    "bg": "#f8fafc",
+    "ring": "#60a5fa"
+  },
+  "clear-log": {
+    "file": "/mnt/data/politicard_svgs/clear-log.svg",
+    "bg": "#f8fafc",
+    "ring": "#fb7185"
+  },
+  "budget-money": {
+    "file": "/mnt/data/politicard_svgs/budget-money.svg",
+    "bg": "#065f46",
+    "ring": "#34d399"
+  },
+  "search": {
+    "file": "/mnt/data/politicard_svgs/search.svg",
+    "bg": "#111827",
+    "ring": "#f472b6"
+  },
+  "buff-strength": {
+    "file": "/mnt/data/politicard_svgs/buff-strength.svg",
+    "bg": "#0b1020",
+    "ring": "#34d399"
+  },
+  "draw-cards": {
+    "file": "/mnt/data/politicard_svgs/draw-cards.svg",
+    "bg": "#111827",
+    "ring": "#60a5fa"
+  },
+  "discard-cards": {
+    "file": "/mnt/data/politicard_svgs/discard-cards.svg",
+    "bg": "#111827",
+    "ring": "#f87171"
+  },
+  "return-to-hand": {
+    "file": "/mnt/data/politicard_svgs/return-to-hand.svg",
+    "bg": "#111827",
+    "ring": "#a78bfa"
+  },
+  "deactivate-card": {
+    "file": "/mnt/data/politicard_svgs/deactivate-card.svg",
+    "bg": "#111827",
+    "ring": "#94a3b8"
+  },
+  "cancel-card": {
+    "file": "/mnt/data/politicard_svgs/cancel-card.svg",
+    "bg": "#111827",
+    "ring": "#f43f5e"
+  },
+  "grant-shield": {
+    "file": "/mnt/data/politicard_svgs/grant-shield.svg",
+    "bg": "#0b1020",
+    "ring": "#60a5fa"
+  },
+  "aura-ongoing": {
+    "file": "/mnt/data/politicard_svgs/aura-ongoing.svg",
+    "bg": "#1f2937",
+    "ring": "#67e8f9"
+  },
+  "aura-science": {
+    "file": "/mnt/data/politicard_svgs/aura-science.svg",
+    "bg": "#1f2937",
+    "ring": "#a78bfa"
+  },
+  "aura-health": {
+    "file": "/mnt/data/politicard_svgs/aura-health.svg",
+    "bg": "#1f2937",
+    "ring": "#f87171"
+  },
+  "aura-military-penalty": {
+    "file": "/mnt/data/politicard_svgs/aura-military-penalty.svg",
+    "bg": "#1f2937",
+    "ring": "#fbbf24"
+  },
+  "register-trap": {
+    "file": "/mnt/data/politicard_svgs/register-trap.svg",
+    "bg": "#111827",
+    "ring": "#fb7185"
+  },
+  "initiative-activated": {
+    "file": "/mnt/data/politicard_svgs/initiative-activated.svg",
+    "bg": "#0b1020",
+    "ring": "#f472b6"
+  },
+  "start-of-turn": {
+    "file": "/mnt/data/politicard_svgs/start-of-turn.svg",
+    "bg": "#0b1020",
+    "ring": "#22d3ee"
+  },
+  "buff-strongest-gov": {
+    "file": "/mnt/data/politicard_svgs/buff-strongest-gov.svg",
+    "bg": "#0b1020",
+    "ring": "#22d3ee"
+  },
+  "subtract-ap": {
+    "file": "/mnt/data/politicard_svgs/subtract-ap.svg",
+    "bg": "#0b1020",
+    "ring": "#f87171"
+  }
+}

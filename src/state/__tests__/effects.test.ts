@@ -19,8 +19,8 @@ describe('effects engine', () => {
         2: { innen: [], aussen: [] }
       },
       permanentSlots: {
-        1: { government: null, public: null },
-        2: { government: null, public: null }
+        1: { government: null, public: null, initiativePermanent: null },
+        2: { government: null, public: null, initiativePermanent: null }
       },
       discard: [],
       log: [],

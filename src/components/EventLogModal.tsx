@@ -112,7 +112,7 @@ export const EventLogModal: React.FC<EventLogModalProps> = ({
         style={{
           position: 'fixed',
           inset: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.1)',
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
           zIndex: 40,
           pointerEvents: 'none'
         }}

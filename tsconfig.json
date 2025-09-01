@@ -22,5 +22,11 @@
   },
   "include": [
     "src"
+  ],
+  "exclude": [
+    "src/stories",
+    "src/**/*.stories.*",
+    "src/**/__tests__/**",
+    "src/**/?(*.)+(spec|test).*"
   ]
 }

@@ -25,14 +25,14 @@ const createInitialState = (): GameState => ({
   current: 1,
   passed: { 1: false, 2: false },
   actionsUsed: { 1: 0, 2: 0 },
-  permanentSlots: { 1: { government: null, public: null }, 2: { government: null, public: null } },
+      permanentSlots: { 1: { government: null, public: null, initiativePermanent: null }, 2: { government: null, public: null, initiativePermanent: null } },
   shields: new Set(),
   traps: { 1: [], 2: [] },
   activeRefresh: { 1: 0, 2: 0 },
   roundsWon: { 1: 0, 2: 0 },
   effectFlags: {
-    1: { initiativeDiscount: 0, initiativeRefund: 0, govRefundAvailable: false, initiativeInfluenceBonus: 0, initiativeInfluencePenaltyForOpponent: 0, initiativeOnPlayDraw1Ap1: false, nextGovPlus2: false, opportunistActive: false, markZuckerbergUsed: false },
-    2: { initiativeDiscount: 0, initiativeRefund: 0, govRefundAvailable: false, initiativeInfluenceBonus: 0, initiativeInfluencePenaltyForOpponent: 0, initiativeOnPlayDraw1Ap1: false, nextGovPlus2: false, opportunistActive: false, markZuckerbergUsed: false }
+    1: { opportunistActive: false, markZuckerbergUsed: false },
+    2: { opportunistActive: false, markZuckerbergUsed: false }
   },
   _effectQueue: []
 });

@@ -37,9 +37,9 @@ export const GOVERNMENT_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Vladimir Putin': {
     name: 'Vladimir Putin',
     category: 'Regierung',
-    gameEffect: 'Du darfst 2 Interventionen gleichzeitig spielen',
-    deckCost: 17,
-    subcategories: ['Leadership'],
+    gameEffect: 'Nur Einfluss - keine weiteren Effekte',
+    deckCost: 8,
+    subcategories: [],
     nationality: 'Russisch',
     birthDate: '7. Oktober 1952',
     highestPosition: 'Präsident Russlands',
@@ -52,9 +52,9 @@ export const GOVERNMENT_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Xi Jinping': {
     name: 'Xi Jinping',
     category: 'Regierung',
-    gameEffect: 'Gegnerische NGO-Effekte sind für 1 Runde deaktiviert',
-    deckCost: 17,
-    subcategories: ['Leadership'],
+    gameEffect: 'Nur Einfluss - keine weiteren Effekte',
+    deckCost: 8,
+    subcategories: [],
     nationality: 'Chinesisch',
     birthDate: '15. Juni 1953',
     highestPosition: 'Präsident der Volksrepublik China',
@@ -67,9 +67,9 @@ export const GOVERNMENT_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Recep Tayyip Erdoğan': {
     name: 'Recep Tayyip Erdoğan',
     category: 'Regierung',
-    gameEffect: 'Gegner verliert 1 Aktionspunkt beim Ausspielen einer NGO oder Bewegung',
-    deckCost: 17,
-    subcategories: ['Leadership'],
+    gameEffect: 'Nur Einfluss - keine weiteren Effekte',
+    deckCost: 8,
+    subcategories: [],
     nationality: 'Türkisch',
     birthDate: '26. Februar 1954',
     highestPosition: 'Präsident der Türkei',
@@ -82,9 +82,9 @@ export const GOVERNMENT_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Justin Trudeau': {
     name: 'Justin Trudeau',
     category: 'Regierung',
-    gameEffect: 'Erste Initiative pro Runde kostet 0 Aktionspunkte',
-    deckCost: 13,
-    subcategories: ['Leadership'],
+    gameEffect: 'Nur Einfluss - keine weiteren Effekte',
+    deckCost: 6,
+    subcategories: [],
     nationality: 'Kanadisch',
     birthDate: '25. Dezember 1971',
     highestPosition: 'Premierminister Kanadas',
@@ -97,9 +97,9 @@ export const GOVERNMENT_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Volodymyr Zelenskyy': {
     name: 'Volodymyr Zelenskyy',
     category: 'Regierung',
-    gameEffect: 'Wenn du weniger Einfluss hast als der Gegner: +2 Einfluss auf alle deine Regierungskarten',
-    deckCost: 13,
-    subcategories: ['Leadership'],
+    gameEffect: 'Nur Einfluss - keine weiteren Effekte',
+    deckCost: 6,
+    subcategories: [],
     nationality: 'Ukrainisch',
     birthDate: '25. Januar 1978',
     highestPosition: 'Präsident der Ukraine',
@@ -112,9 +112,9 @@ export const GOVERNMENT_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Ursula von der Leyen': {
     name: 'Ursula von der Leyen',
     category: 'Regierung',
-    gameEffect: 'Bei einer EU-Karte: +1 Aktionspunkt',
-    deckCost: 15,
-    subcategories: ['Leadership', 'Diplomat'],
+    gameEffect: 'Nur Einfluss - keine weiteren Effekte',
+    deckCost: 6,
+    subcategories: [],
     nationality: 'Deutsch',
     birthDate: '8. Oktober 1958',
     highestPosition: 'Präsidentin der Europäischen Kommission',
@@ -127,9 +127,9 @@ export const GOVERNMENT_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Donald Trump': {
     name: 'Donald Trump',
     category: 'Regierung',
-    gameEffect: 'Wenn Medien liegt: +1 Einfluss',
-    deckCost: 17,
-    subcategories: ['Leadership'],
+    gameEffect: 'Nur Einfluss - keine weiteren Effekte',
+    deckCost: 8,
+    subcategories: [],
     nationality: 'US-Amerikanisch',
     birthDate: '14. Juni 1946',
     highestPosition: 'Präsident der USA',
@@ -142,9 +142,9 @@ export const GOVERNMENT_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Mohammed bin Salman': {
     name: 'Mohammed bin Salman',
     category: 'Regierung',
-    gameEffect: 'Oligarch spielt → +1 Einfluss',
-    deckCost: 17,
-    subcategories: ['Leadership'],
+    gameEffect: 'Nur Einfluss - keine weiteren Effekte',
+    deckCost: 8,
+    subcategories: [],
     nationality: 'Saudisch',
     birthDate: '31. August 1985',
     highestPosition: 'Kronprinz Saudi-Arabiens',
@@ -157,9 +157,9 @@ export const GOVERNMENT_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Benjamin Netanyahu': {
     name: 'Benjamin Netanyahu',
     category: 'Regierung',
-    gameEffect: 'Bei Militär-Initiative: +1 Einfluss',
-    deckCost: 15,
-    subcategories: ['Leadership'],
+    gameEffect: 'Nur Einfluss - keine weiteren Effekte',
+    deckCost: 6,
+    subcategories: [],
     nationality: 'Israelisch',
     birthDate: '21. Oktober 1949',
     highestPosition: 'Premierminister Israels',
@@ -172,9 +172,9 @@ export const GOVERNMENT_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Helmut Schmidt': {
     name: 'Helmut Schmidt',
     category: 'Regierung',
-    gameEffect: '+1 Aktionspunkt bei Initiative mit Wirtschaftsfokus',
-    deckCost: 15,
-    subcategories: ['Leadership'],
+    gameEffect: 'Nur Einfluss - keine weiteren Effekte',
+    deckCost: 6,
+    subcategories: [],
     nationality: 'Deutsch',
     birthDate: '23. Dezember 1918',
     highestPosition: 'Bundeskanzler',
@@ -187,8 +187,8 @@ export const GOVERNMENT_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Olaf Scholz': {
     name: 'Olaf Scholz',
     category: 'Regierung',
-    gameEffect: 'Keine spezielle Fähigkeit',
-    deckCost: 7,
+    gameEffect: 'Nur Einfluss - keine weiteren Effekte',
+    deckCost: 6,
     subcategories: [],
     nationality: 'Deutsch',
     birthDate: '14. Juni 1958',
@@ -202,7 +202,7 @@ export const GOVERNMENT_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Rishi Sunak': {
     name: 'Rishi Sunak',
     category: 'Regierung',
-    gameEffect: 'Keine spezielle Fähigkeit',
+    gameEffect: 'Nur Einfluss - keine weiteren Effekte',
     deckCost: 6,
     subcategories: [],
     nationality: 'Britisch',
@@ -217,7 +217,7 @@ export const GOVERNMENT_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Pedro Sánchez': {
     name: 'Pedro Sánchez',
     category: 'Regierung',
-    gameEffect: 'Keine spezielle Fähigkeit',
+    gameEffect: 'Nur Einfluss - keine weiteren Effekte',
     deckCost: 5,
     subcategories: [],
     nationality: 'Spanisch',
@@ -232,7 +232,7 @@ export const GOVERNMENT_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Keir Starmer': {
     name: 'Keir Starmer',
     category: 'Regierung',
-    gameEffect: 'Keine spezielle Fähigkeit',
+    gameEffect: 'Nur Einfluss - keine weiteren Effekte',
     deckCost: 5,
     subcategories: [],
     nationality: 'Britisch',
@@ -247,7 +247,7 @@ export const GOVERNMENT_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Robert Gates': {
     name: 'Robert Gates',
     category: 'Regierung',
-    gameEffect: 'Keine spezielle Fähigkeit',
+    gameEffect: 'Nur Einfluss - keine weiteren Effekte',
     deckCost: 5,
     subcategories: [],
     nationality: 'US-Amerikanisch',
@@ -262,7 +262,7 @@ export const GOVERNMENT_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Karl Rove': {
     name: 'Karl Rove',
     category: 'Regierung',
-    gameEffect: 'Keine spezielle Fähigkeit',
+    gameEffect: 'Nur Einfluss - keine weiteren Effekte',
     deckCost: 5,
     subcategories: [],
     nationality: 'US-Amerikanisch',
@@ -277,7 +277,7 @@ export const GOVERNMENT_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Narendra Modi': {
     name: 'Narendra Modi',
     category: 'Regierung',
-    gameEffect: 'Oligarchen-Karten kosten 1 HP weniger beim Deckbau',
+    gameEffect: 'Nur Einfluss - keine weiteren Effekte',
     deckCost: 13,
     subcategories: ['Leadership'],
     nationality: 'Indisch',
@@ -292,7 +292,7 @@ export const GOVERNMENT_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Luiz Inácio Lula da Silva': {
     name: 'Luiz Inácio Lula da Silva',
     category: 'Regierung',
-    gameEffect: 'Wenn eine Bewegung liegt: +2 Einfluss',
+    gameEffect: 'Nur Einfluss - keine weiteren Effekte',
     deckCost: 13,
     subcategories: ['Leadership'],
     nationality: 'Brasilianisch',
@@ -307,7 +307,7 @@ export const GOVERNMENT_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Sergey Lavrov': {
     name: 'Sergey Lavrov',
     category: 'Regierung',
-    gameEffect: 'Du kannst gegnerischen Einfluss auf deine Regierungskarten umleiten (einmal pro Spiel)',
+    gameEffect: 'Nur Einfluss - keine weiteren Effekte',
     deckCost: 13,
     subcategories: ['Diplomat'],
     nationality: 'Russisch',
@@ -322,7 +322,7 @@ export const GOVERNMENT_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Wolfgang Schäuble': {
     name: 'Wolfgang Schäuble',
     category: 'Regierung',
-    gameEffect: 'Wenn eine Finanzen-Initiative liegt: -1 Aktionspunkt für deine nächste Regierungskarte',
+    gameEffect: 'Nur Einfluss - keine weiteren Effekte',
     deckCost: 13,
     subcategories: ['Leadership'],
     nationality: 'Deutsch',
@@ -337,7 +337,7 @@ export const GOVERNMENT_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Jens Stoltenberg': {
     name: 'Jens Stoltenberg',
     category: 'Regierung',
-    gameEffect: 'NATO-Buff: Wenn eine Regierungskarte mit Einfluss 7 oder höher liegt: +1 Einfluss',
+    gameEffect: 'Nur Einfluss - keine weiteren Effekte',
     deckCost: 12,
     subcategories: ['Diplomat'],
     nationality: 'Norwegisch',
@@ -352,7 +352,7 @@ export const GOVERNMENT_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Javier Milei': {
     name: 'Javier Milei',
     category: 'Regierung',
-    gameEffect: 'Wenn du passt: +1 Karte ziehen ("Anarchie-Boost")',
+    gameEffect: 'Nur Einfluss - keine weiteren Effekte',
     deckCost: 11,
     subcategories: ['Leadership'],
     nationality: 'Argentinisch',
@@ -367,7 +367,7 @@ export const GOVERNMENT_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Joschka Fischer': {
     name: 'Joschka Fischer',
     category: 'Regierung',
-    gameEffect: 'Wenn eine NGO liegt: +1 Einfluss',
+    gameEffect: 'Nur Einfluss - keine weiteren Effekte',
     deckCost: 11,
     subcategories: ['Diplomat'],
     nationality: 'Deutsch',
@@ -382,7 +382,7 @@ export const GOVERNMENT_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Kamala Harris': {
     name: 'Kamala Harris',
     category: 'Regierung',
-    gameEffect: 'Einmal pro Runde: +1 Einfluss auf eine Regierungskarte mit Einfluss 5 oder weniger',
+    gameEffect: 'Nur Einfluss - keine weiteren Effekte',
     deckCost: 11,
     subcategories: ['Leadership'],
     nationality: 'US-Amerikanisch',
@@ -397,7 +397,7 @@ export const GOVERNMENT_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Shigeru Ishiba': {
     name: 'Shigeru Ishiba',
     category: 'Regierung',
-    gameEffect: 'Keine spezielle Fähigkeit',
+    gameEffect: 'Nur Einfluss - keine weiteren Effekte',
     deckCost: 5,
     subcategories: [],
     nationality: 'Japanisch',
@@ -412,7 +412,7 @@ export const GOVERNMENT_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Heidemarie Wieczorek-Zeul': {
     name: 'Heidemarie Wieczorek-Zeul',
     category: 'Regierung',
-    gameEffect: 'Keine spezielle Fähigkeit',
+    gameEffect: 'Nur Einfluss - keine weiteren Effekte',
     deckCost: 4,
     subcategories: [],
     nationality: 'Deutsch',
@@ -427,7 +427,7 @@ export const GOVERNMENT_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Renate Künast': {
     name: 'Renate Künast',
     category: 'Regierung',
-    gameEffect: 'Keine spezielle Fähigkeit',
+    gameEffect: 'Nur Einfluss - keine weiteren Effekte',
     deckCost: 4,
     subcategories: [],
     nationality: 'Deutsch',
@@ -442,7 +442,7 @@ export const GOVERNMENT_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Rudolf Scharping': {
     name: 'Rudolf Scharping',
     category: 'Regierung',
-    gameEffect: 'Keine spezielle Fähigkeit',
+    gameEffect: 'Nur Einfluss - keine weiteren Effekte',
     deckCost: 4,
     subcategories: [],
     nationality: 'Deutsch',
@@ -457,7 +457,7 @@ export const GOVERNMENT_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'John Ashcroft': {
     name: 'John Ashcroft',
     category: 'Regierung',
-    gameEffect: 'Keine spezielle Fähigkeit',
+    gameEffect: 'Nur Einfluss - keine weiteren Effekte',
     deckCost: 4,
     subcategories: [],
     nationality: 'US-Amerikanisch',
@@ -472,7 +472,7 @@ export const GOVERNMENT_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Tedros Adhanom Ghebreyesus': {
     name: 'Tedros Adhanom Ghebreyesus',
     category: 'Regierung',
-    gameEffect: 'Keine spezielle Fähigkeit',
+    gameEffect: 'Nur Einfluss - keine weiteren Effekte',
     deckCost: 4,
     subcategories: [],
     nationality: 'Äthiopisch',
@@ -487,7 +487,7 @@ export const GOVERNMENT_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Tom Ridge': {
     name: 'Tom Ridge',
     category: 'Regierung',
-    gameEffect: 'Keine spezielle Fähigkeit',
+    gameEffect: 'Nur Einfluss - keine weiteren Effekte',
     deckCost: 4,
     subcategories: [],
     nationality: 'US-Amerikanisch',
@@ -502,7 +502,7 @@ export const GOVERNMENT_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Henry Paulson': {
     name: 'Henry Paulson',
     category: 'Regierung',
-    gameEffect: 'Keine spezielle Fähigkeit',
+    gameEffect: 'Nur Einfluss - keine weiteren Effekte',
     deckCost: 5,
     subcategories: [],
     nationality: 'US-Amerikanisch',
@@ -517,7 +517,7 @@ export const GOVERNMENT_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Horst Köhler': {
     name: 'Horst Köhler',
     category: 'Regierung',
-    gameEffect: 'Einfluss zwischen Regierungskarten verschieben',
+    gameEffect: 'Nur Einfluss - keine weiteren Effekte',
     deckCost: 6,
     subcategories: ['Diplomat'],
     nationality: 'Deutsch',
@@ -532,7 +532,7 @@ export const GOVERNMENT_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Johannes Rau': {
     name: 'Johannes Rau',
     category: 'Regierung',
-    gameEffect: 'Keine spezielle Fähigkeit',
+    gameEffect: 'Nur Einfluss - keine weiteren Effekte',
     deckCost: 5,
     subcategories: [],
     nationality: 'Deutsch',
@@ -547,7 +547,7 @@ export const GOVERNMENT_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'John Snow': {
     name: 'John Snow',
     category: 'Regierung',
-    gameEffect: 'Keine spezielle Fähigkeit',
+    gameEffect: 'Nur Einfluss - keine weiteren Effekte',
     deckCost: 3,
     subcategories: [],
     nationality: 'US-Amerikanisch',
@@ -562,7 +562,7 @@ export const GOVERNMENT_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Karl Carstens': {
     name: 'Karl Carstens',
     category: 'Regierung',
-    gameEffect: 'Keine spezielle Fähigkeit',
+    gameEffect: 'Nur Einfluss - keine weiteren Effekte',
     deckCost: 3,
     subcategories: [],
     nationality: 'Deutsch',
@@ -577,7 +577,7 @@ export const GOVERNMENT_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Hans Eichel': {
     name: 'Hans Eichel',
     category: 'Regierung',
-    gameEffect: 'Keine spezielle Fähigkeit',
+    gameEffect: 'Nur Einfluss - keine weiteren Effekte',
     deckCost: 3,
     subcategories: [],
     nationality: 'Deutsch',
@@ -592,7 +592,7 @@ export const GOVERNMENT_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Walter Scheel': {
     name: 'Walter Scheel',
     category: 'Regierung',
-    gameEffect: 'Keine spezielle Fähigkeit',
+    gameEffect: 'Nur Einfluss - keine weiteren Effekte',
     deckCost: 4,
     subcategories: ['Diplomat'],
     nationality: 'Deutsch',
@@ -607,7 +607,7 @@ export const GOVERNMENT_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Werner Maihofer': {
     name: 'Werner Maihofer',
     category: 'Regierung',
-    gameEffect: 'Keine spezielle Fähigkeit',
+    gameEffect: 'Nur Einfluss - keine weiteren Effekte',
     deckCost: 2,
     subcategories: [],
     nationality: 'Deutsch',
@@ -622,7 +622,7 @@ export const GOVERNMENT_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Andrzej Duda': {
     name: 'Andrzej Duda',
     category: 'Regierung',
-    gameEffect: 'Keine spezielle Fähigkeit',
+    gameEffect: 'Nur Einfluss - keine weiteren Effekte',
     deckCost: 13,
     subcategories: ['Leadership'],
     nationality: 'Polnisch',
@@ -637,7 +637,7 @@ export const GOVERNMENT_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Anthony Albanese': {
     name: 'Anthony Albanese',
     category: 'Regierung',
-    gameEffect: 'Keine spezielle Fähigkeit',
+    gameEffect: 'Nur Einfluss - keine weiteren Effekte',
     deckCost: 13,
     subcategories: ['Leadership'],
     nationality: 'Australisch',
@@ -652,7 +652,7 @@ export const GOVERNMENT_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Dick Cheney': {
     name: 'Dick Cheney',
     category: 'Regierung',
-    gameEffect: 'Bei eigener Intervention: +1 Einfluss (1×/Runde)',
+    gameEffect: 'Nur Einfluss - keine weiteren Effekte',
     deckCost: 13,
     subcategories: ['Leadership'],
     nationality: 'US-Amerikanisch',
@@ -667,7 +667,7 @@ export const GOVERNMENT_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Ebrahim Raisi': {
     name: 'Ebrahim Raisi',
     category: 'Regierung',
-    gameEffect: 'Keine spezielle Fähigkeit',
+    gameEffect: 'Nur Einfluss - keine weiteren Effekte',
     deckCost: 15,
     subcategories: ['Leadership'],
     nationality: 'Iranisch',
@@ -682,7 +682,7 @@ export const GOVERNMENT_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Emmanuel Macron': {
     name: 'Emmanuel Macron',
     category: 'Regierung',
-    gameEffect: 'Keine spezielle Fähigkeit',
+    gameEffect: 'Nur Einfluss - keine weiteren Effekte',
     deckCost: 15,
     subcategories: ['Leadership'],
     nationality: 'Französisch',
@@ -697,7 +697,7 @@ export const GOVERNMENT_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Giorgia Meloni': {
     name: 'Giorgia Meloni',
     category: 'Regierung',
-    gameEffect: 'Keine spezielle Fähigkeit',
+    gameEffect: 'Nur Einfluss - keine weiteren Effekte',
     deckCost: 15,
     subcategories: ['Leadership'],
     nationality: 'Italienisch',
@@ -712,7 +712,7 @@ export const GOVERNMENT_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'King Charles III': {
     name: 'King Charles III',
     category: 'Regierung',
-    gameEffect: 'Keine spezielle Fähigkeit',
+    gameEffect: 'Nur Einfluss - keine weiteren Effekte',
     deckCost: 12,
     subcategories: ['Leadership'],
     nationality: 'Britisch',
@@ -727,7 +727,7 @@ export const GOVERNMENT_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Alberto Gonzales': {
     name: 'Alberto Gonzales',
     category: 'Regierung',
-    gameEffect: 'Keine spezielle Fähigkeit',
+    gameEffect: 'Nur Einfluss - keine weiteren Effekte',
     deckCost: 4,
     subcategories: [],
     nationality: 'US-Amerikanisch',
@@ -742,7 +742,7 @@ export const GOVERNMENT_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Annette Schavan': {
     name: 'Annette Schavan',
     category: 'Regierung',
-    gameEffect: 'Keine spezielle Fähigkeit',
+    gameEffect: 'Nur Einfluss - keine weiteren Effekte',
     deckCost: 4,
     subcategories: [],
     nationality: 'Deutsch',
@@ -757,7 +757,7 @@ export const GOVERNMENT_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Edelgard Bulmahn': {
     name: 'Edelgard Bulmahn',
     category: 'Regierung',
-    gameEffect: 'Keine spezielle Fähigkeit',
+    gameEffect: 'Nur Einfluss - keine weiteren Effekte',
     deckCost: 3,
     subcategories: [],
     nationality: 'Deutsch',
@@ -772,7 +772,7 @@ export const GOVERNMENT_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Erhard Eppler': {
     name: 'Erhard Eppler',
     category: 'Regierung',
-    gameEffect: 'Keine spezielle Fähigkeit',
+    gameEffect: 'Nur Einfluss - keine weiteren Effekte',
     deckCost: 5,
     subcategories: [],
     nationality: 'Deutsch',
@@ -787,7 +787,7 @@ export const GOVERNMENT_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Franz Josef Jung': {
     name: 'Franz Josef Jung',
     category: 'Regierung',
-    gameEffect: 'Keine spezielle Fähigkeit',
+    gameEffect: 'Nur Einfluss - keine weiteren Effekte',
     deckCost: 4,
     subcategories: [],
     nationality: 'Deutsch',
@@ -802,7 +802,7 @@ export const GOVERNMENT_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Friedrich Merz': {
     name: 'Friedrich Merz',
     category: 'Regierung',
-    gameEffect: 'Keine spezielle Fähigkeit',
+    gameEffect: 'Nur Einfluss - keine weiteren Effekte',
     deckCost: 5,
     subcategories: [],
     nationality: 'Deutsch',
@@ -817,7 +817,7 @@ export const GOVERNMENT_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Georg Leber': {
     name: 'Georg Leber',
     category: 'Regierung',
-    gameEffect: 'Keine spezielle Fähigkeit',
+    gameEffect: 'Nur Einfluss - keine weiteren Effekte',
     deckCost: 4,
     subcategories: [],
     nationality: 'Deutsch',
@@ -832,7 +832,7 @@ export const GOVERNMENT_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Gerhart Baum': {
     name: 'Gerhart Baum',
     category: 'Regierung',
-    gameEffect: 'Keine spezielle Fähigkeit',
+    gameEffect: 'Nur Einfluss - keine weiteren Effekte',
     deckCost: 3,
     subcategories: [],
     nationality: 'Deutsch',
@@ -847,7 +847,7 @@ export const GOVERNMENT_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Hans Apel': {
     name: 'Hans Apel',
     category: 'Regierung',
-    gameEffect: 'Keine spezielle Fähigkeit',
+    gameEffect: 'Nur Einfluss - keine weiteren Effekte',
     deckCost: 4,
     subcategories: [],
     nationality: 'Deutsch',
@@ -862,7 +862,7 @@ export const GOVERNMENT_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Hans Dietrich Genscher': {
     name: 'Hans Dietrich Genscher',
     category: 'Regierung',
-    gameEffect: 'Bei Diplomatie-Initiative: +1 Einfluss',
+    gameEffect: 'Nur Einfluss - keine weiteren Effekte',
     deckCost: 13,
     subcategories: ['Diplomat'],
     nationality: 'Deutsch',
@@ -877,7 +877,7 @@ export const GOVERNMENT_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Otto Schily': {
     name: 'Otto Schily',
     category: 'Regierung',
-    gameEffect: 'Keine spezielle Fähigkeit',
+    gameEffect: 'Nur Einfluss - keine weiteren Effekte',
     deckCost: 5,
     subcategories: [],
     nationality: 'Deutsch',
@@ -892,7 +892,7 @@ export const GOVERNMENT_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Peter Struck': {
     name: 'Peter Struck',
     category: 'Regierung',
-    gameEffect: 'Keine spezielle Fähigkeit',
+    gameEffect: 'Nur Einfluss - keine weiteren Effekte',
     deckCost: 4,
     subcategories: [],
     nationality: 'Deutsch',
@@ -907,7 +907,7 @@ export const GOVERNMENT_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Rainer Offergeld': {
     name: 'Rainer Offergeld',
     category: 'Regierung',
-    gameEffect: 'Keine spezielle Fähigkeit',
+    gameEffect: 'Nur Einfluss - keine weiteren Effekte',
     deckCost: 3,
     subcategories: [],
     nationality: 'Deutsch',
@@ -922,7 +922,7 @@ export const GOVERNMENT_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Colin Powell': {
     name: 'Colin Powell',
     category: 'Regierung',
-    gameEffect: 'Bei Militär-Initiative: -1 Effekt für den Gegner',
+    gameEffect: 'Nur Einfluss - keine weiteren Effekte',
     deckCost: 12,
     subcategories: ['Diplomat'],
     nationality: 'US-Amerikanisch',
@@ -937,7 +937,7 @@ export const GOVERNMENT_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Condoleezza Rice': {
     name: 'Condoleezza Rice',
     category: 'Regierung',
-    gameEffect: 'Bei Diplomatie-Initiative: +1 Effekt',
+    gameEffect: 'Nur Einfluss - keine weiteren Effekte',
     deckCost: 12,
     subcategories: ['Diplomat'],
     nationality: 'US-Amerikanisch',
@@ -952,7 +952,7 @@ export const GOVERNMENT_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Donald Rumsfeld': {
     name: 'Donald Rumsfeld',
     category: 'Regierung',
-    gameEffect: 'Bei Militär-Initiative: +1 Effekt',
+    gameEffect: 'Nur Einfluss - keine weiteren Effekte',
     deckCost: 12,
     subcategories: ['Leadership'],
     nationality: 'US-Amerikanisch',
@@ -967,7 +967,7 @@ export const GOVERNMENT_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Christine Lagarde': {
     name: 'Christine Lagarde',
     category: 'Regierung',
-    gameEffect: 'Bei Finanz-Initiative: +1 Aktionspunkt',
+    gameEffect: 'Nur Einfluss - keine weiteren Effekte',
     deckCost: 13,
     subcategories: ['Diplomat'],
     nationality: 'Französisch',
@@ -985,9 +985,9 @@ export const PUBLIC_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Elon Musk': {
     name: 'Elon Musk',
     category: 'Öffentlichkeit',
-    gameEffect: 'Ziehe 1 Karte. Deine erste Initiative pro Runde kostet 1 Aktionspunkt weniger.',
+    gameEffect: 'Draw 1 card. Once per turn, after you activate an initiative, gain +1 AP.',
     deckCost: 8,
-    subcategories: ['Oligarch', 'Plattform'],
+    subcategories: ['Oligarch', 'Plattform', 'Tech'],
     nationality: 'US-Amerikanisch',
     birthDate: '28. Juni 1971',
     highestPosition: 'CEO von Tesla und SpaceX',
@@ -1000,9 +1000,9 @@ export const PUBLIC_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Bill Gates': {
     name: 'Bill Gates',
     category: 'Öffentlichkeit',
-    gameEffect: 'Ziehe 1 Karte. Deine nächste Initiative kostet 1 Aktionspunkt weniger.',
+    gameEffect: 'Draw 1 card. Your next initiative this turn gives +1 AP.',
     deckCost: 7,
-    subcategories: ['Oligarch', 'NGO/Think-Tank'],
+    subcategories: ['Oligarch', 'Tech', 'Aktivist'],
     nationality: 'US-Amerikanisch',
     birthDate: '28. Oktober 1955',
     highestPosition: 'CEO von Microsoft',
@@ -1015,9 +1015,9 @@ export const PUBLIC_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Mark Zuckerberg': {
     name: 'Mark Zuckerberg',
     category: 'Öffentlichkeit',
-    gameEffect: 'Nach einer Initiative: +1 Aktionspunkt zurück (einmal pro Runde).',
+    gameEffect: 'Once per turn, after you activate an initiative, gain +1 AP.',
     deckCost: 5,
-    subcategories: ['Plattform'],
+    subcategories: ['Oligarch', 'Tech'],
     nationality: 'US-Amerikanisch',
     birthDate: '14. Mai 1984',
     highestPosition: 'CEO von Meta (Facebook)',
@@ -1030,9 +1030,9 @@ export const PUBLIC_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Greta Thunberg': {
     name: 'Greta Thunberg',
     category: 'Öffentlichkeit',
-    gameEffect: 'Deine erste Regierungskarte pro Runde kostet 0 Aktionspunkte (einmal pro Runde).',
+    gameEffect: 'The first time you play a Government card each turn, gain +1 AP.',
     deckCost: 4,
-    subcategories: ['Bewegung'],
+    subcategories: ['Aktivist'],
     nationality: 'Schwedisch',
     birthDate: '3. Januar 2003',
     highestPosition: 'Klimaaktivistin',
@@ -1045,9 +1045,9 @@ export const PUBLIC_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'George Soros': {
     name: 'George Soros',
     category: 'Öffentlichkeit',
-    gameEffect: '+1 Aktionspunkt wenn der Gegner eine autoritäre Regierungskarte hat.',
+    gameEffect: '+1 AP when the opponent has an Regierungskarte.',
     deckCost: 7,
-    subcategories: ['Oligarch', 'NGO/Think-Tank'],
+    subcategories: ['Oligarch', 'Tech', 'Aktivist'],
     nationality: 'US-Amerikanisch (geboren in Ungarn)',
     birthDate: '12. August 1930',
     highestPosition: 'Hedgefonds-Manager und Philanthrop',
@@ -1060,9 +1060,9 @@ export const PUBLIC_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Sam Altman': {
     name: 'Sam Altman',
     category: 'Öffentlichkeit',
-    gameEffect: 'Bei einer KI-bezogenen Initiative: ziehe 1 Karte + 1 Aktionspunkt zurück.',
+    gameEffect: 'When you play an AI-related initiative: draw 1 card and gain +1 AP.',
     deckCost: 6,
-    subcategories: ['Intelligenz', 'Plattform'],
+    subcategories: ['Tech'],
     nationality: 'US-Amerikanisch',
     birthDate: '22. April 1985',
     highestPosition: 'CEO von OpenAI',
@@ -1077,7 +1077,7 @@ export const PUBLIC_CARD_DETAILS: Record<string, DetailedCardInfo> = {
     category: 'Öffentlichkeit',
     gameEffect: 'Beim Ausspielen: Ziehe 1 Karte. Nach einer Initiative: Optional -1 HP auf gegnerische Regierungs-Plattform.',
     deckCost: 7,
-    subcategories: ['Plattform', 'Oligarch'],
+    subcategories: ['Oligarch', 'Tech'],
     nationality: 'Chinesisch',
     birthDate: '10. September 1964',
     highestPosition: 'Gründer von Alibaba',
@@ -1092,7 +1092,7 @@ export const PUBLIC_CARD_DETAILS: Record<string, DetailedCardInfo> = {
     category: 'Öffentlichkeit',
     gameEffect: 'Deine Initiativen erhalten +1 Einfluss.',
     deckCost: 4,
-    subcategories: ['Intelligenz'],
+    subcategories: ['Tech'],
     nationality: 'US-Amerikanisch',
     birthDate: '19. Februar 1964',
     highestPosition: 'Biochemikerin, Nobelpreisträgerin',
@@ -1122,7 +1122,7 @@ export const PUBLIC_CARD_DETAILS: Record<string, DetailedCardInfo> = {
     category: 'Öffentlichkeit',
     gameEffect: 'Deine dauerhaften Initiativen kosten 1 HP weniger (nur beim Deckbau).',
     deckCost: 5,
-    subcategories: ['Plattform'],
+    subcategories: ['Tech'],
     nationality: 'US-Amerikanisch',
     birthDate: '1. November 1960',
     highestPosition: 'CEO von Apple',
@@ -1135,9 +1135,9 @@ export const PUBLIC_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Warren Buffett': {
     name: 'Warren Buffett',
     category: 'Öffentlichkeit',
-    gameEffect: 'Ziehe 1 Karte. Bei einer Wirtschafts-Initiative: +1 Effekt.',
+    gameEffect: 'Ziehe 1 Karte. Bei einer Initiative: +1 Effekt.',
     deckCost: 7,
-    subcategories: ['Oligarch', 'Intelligenz'],
+    subcategories: ['Oligarch', 'Denker'],
     nationality: 'US-Amerikanisch',
     birthDate: '30. August 1930',
     highestPosition: 'CEO von Berkshire Hathaway',
@@ -1152,7 +1152,7 @@ export const PUBLIC_CARD_DETAILS: Record<string, DetailedCardInfo> = {
     category: 'Öffentlichkeit',
     gameEffect: 'Wenn du eine NGO/Think-Tank spielst, ziehe 1 Karte.',
     deckCost: 4,
-    subcategories: ['Bewegung'],
+    subcategories: ['Aktivist'],
     nationality: 'Pakistanisch',
     birthDate: '12. Juli 1997',
     highestPosition: 'Bildungsaktivistin, Nobelpreisträgerin',
@@ -1167,7 +1167,7 @@ export const PUBLIC_CARD_DETAILS: Record<string, DetailedCardInfo> = {
     category: 'Öffentlichkeit',
     gameEffect: 'Gegner erhalten -1 Einfluss bei Initiativen.',
     deckCost: 5,
-    subcategories: ['Intelligenz'],
+    subcategories: ['Denker'],
     nationality: 'US-Amerikanisch',
     birthDate: '7. Dezember 1928',
     highestPosition: 'Linguist und politischer Aktivist',
@@ -1210,7 +1210,7 @@ export const PUBLIC_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Jeff Bezos': {
     name: 'Jeff Bezos',
     category: 'Öffentlichkeit',
-    gameEffect: 'Ziehe 1 Karte beim Ausspielen. Wenn eine Plattform liegt: +1 Aktionspunkt.',
+    gameEffect: 'Draw 1 card when played. When you have a platform: +1 AP.',
     deckCost: 6,
     subcategories: ['Oligarch'],
     nationality: 'US-Amerikanisch',
@@ -1240,7 +1240,7 @@ export const PUBLIC_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Zhang Yiming': {
     name: 'Zhang Yiming',
     category: 'Öffentlichkeit',
-    gameEffect: 'Ziehe 1 Karte. Bei Medien auf dem Feld: -1 Aktionspunkt auf deine nächste Initiative.',
+    gameEffect: 'Draw 1 card. Your next initiative this turn gives +1 AP.',
     deckCost: 6,
     subcategories: ['Oligarch'],
     nationality: 'Chinesisch',
@@ -1257,7 +1257,7 @@ export const PUBLIC_CARD_DETAILS: Record<string, DetailedCardInfo> = {
     category: 'Öffentlichkeit',
     gameEffect: 'Gegner verliert 1 Karte (zufällig). Bei US-Regierungskarte: -1 Einfluss dort.',
     deckCost: 5,
-    subcategories: ['Intelligenz'],
+    subcategories: ['Aktivist'],
     nationality: 'US-Amerikanisch',
     birthDate: '21. Juni 1983',
     highestPosition: 'Whistleblower und ehemaliger NSA-Mitarbeiter',
@@ -1272,7 +1272,7 @@ export const PUBLIC_CARD_DETAILS: Record<string, DetailedCardInfo> = {
     category: 'Öffentlichkeit',
     gameEffect: 'Beim Ausspielen: +1 Karte, aber auch Gegner zieht 1. Bei NGO auf dem Feld: Ziehe 2 statt 1.',
     deckCost: 5,
-    subcategories: ['Intelligenz'],
+    subcategories: ['Aktivist'],
     nationality: 'Australisch',
     birthDate: '3. Juli 1971',
     highestPosition: 'Gründer von WikiLeaks',
@@ -1285,9 +1285,9 @@ export const PUBLIC_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Yuval Noah Harari': {
     name: 'Yuval Noah Harari',
     category: 'Öffentlichkeit',
-    gameEffect: 'Deine nächste dauerhafte Initiative kostet 1 Aktionspunkt weniger. +1 Aktionspunkt, wenn auch Plattform liegt.',
+    gameEffect: 'Your next ongoing initiative gives +1 AP. +1 AP if a platform is also present.',
     deckCost: 5,
-    subcategories: ['Intelligenz'],
+    subcategories: ['Denker', 'Wissenschaft'],
     nationality: 'Israelisch',
     birthDate: '24. Februar 1976',
     highestPosition: 'Historiker und Autor',
@@ -1300,9 +1300,9 @@ export const PUBLIC_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Ai Weiwei': {
     name: 'Ai Weiwei',
     category: 'Öffentlichkeit',
-    gameEffect: 'Bei einer Initiative: ziehe 1 Karte + 1 Aktionspunkt zurück.',
+    gameEffect: 'When you activate an initiative: draw 1 card and gain +1 AP.',
     deckCost: 5,
-    subcategories: ['Intelligenz', 'Bewegung'],
+    subcategories: ['Aktivist', 'Medien', 'Denker'],
     nationality: 'Chinesisch',
     birthDate: '28. August 1957',
     highestPosition: 'Künstler und Aktivist',
@@ -1317,7 +1317,7 @@ export const PUBLIC_CARD_DETAILS: Record<string, DetailedCardInfo> = {
     category: 'Öffentlichkeit',
     gameEffect: 'Bei Auslösen einer gegnerischen Intervention: ziehe 1 Karte.',
     deckCost: 5,
-    subcategories: ['Bewegung', 'Intelligenz'],
+    subcategories: ['Aktivist', 'Denker'],
     nationality: 'Russisch',
     birthDate: '4. Juni 1976',
     highestPosition: 'Oppositioneller und Aktivist',
@@ -1332,7 +1332,7 @@ export const PUBLIC_CARD_DETAILS: Record<string, DetailedCardInfo> = {
     category: 'Öffentlichkeit',
     gameEffect: 'Bei einer Initiative: +1 Einfluss.',
     deckCost: 5,
-    subcategories: ['Intelligenz', 'NGO/Think-Tank'],
+    subcategories: ['NGO/Think-Tank', 'Wissenschaft'],
     nationality: 'US-Amerikanisch',
     birthDate: '24. Dezember 1940',
     highestPosition: 'Direktor des NIAID',
@@ -1345,7 +1345,7 @@ export const PUBLIC_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Gautam Adani': {
     name: 'Gautam Adani',
     category: 'Öffentlichkeit',
-    gameEffect: 'Ziehe 1 Karte. Bei einer Infrastruktur-Initiative: +1 Effekt.',
+    gameEffect: 'Ziehe 1 Karte. Bei einer Initiative: +1 Effekt.',
     deckCost: 6,
     subcategories: ['Oligarch'],
     nationality: 'Indisch',
@@ -1364,7 +1364,7 @@ export const SPECIAL_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Shadow Lobbying': {
     name: 'Shadow Lobbying',
     category: 'Sofort-Initiative',
-    gameEffect: 'Öffentlichkeits-Effekt zählt doppelt (einmalig für diese Runde)',
+    gameEffect: '+1 Einfluss auf deine stärkste Regierungskarte für jede eigene [ICON:oligarch] Oligarch-Karte (max. +3, einmalig diese Runde).',
     deckCost: 2,
     subcategories: ['Mittel'],
     cardType: 'Sofort-Initiative',
@@ -1388,13 +1388,13 @@ export const SPECIAL_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Digitaler Wahlkampf': {
     name: 'Digitaler Wahlkampf',
     category: 'Sofort-Initiative',
-    gameEffect: 'Ziehe 2 Karten. Plattform senkt Aktionspunkt-Kosten der nächsten Initiative um 1',
+    gameEffect: 'Ziehe 1 Karte für jede eigene [ICON:medien] Medien-Karte auf dem Feld. (einmalig)',
     deckCost: 3,
     subcategories: ['Groß'],
     cardType: 'Sofort-Initiative',
     tier: 'T3',
-    usage: 'Für Kartenfluss und Tempo',
-    example: 'Du ziehst 2 Karten, nächste Initiative ist billiger',
+    usage: 'For card flow and tempo',
+    example: 'You draw 2 cards, next initiative gives +1 AP',
   },
 
   'Partei-Offensive': {
@@ -1424,13 +1424,13 @@ export const SPECIAL_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Verzögerungsverfahren': {
     name: 'Verzögerungsverfahren',
     category: 'Sofort-Initiative',
-    gameEffect: 'Beim Ausspielen: +1 Aktionspunkt.',
+    gameEffect: 'When played: +1 AP.',
     deckCost: 1,
     subcategories: ['Klein'],
     cardType: 'Sofort-Initiative',
     tier: 'T1',
-    usage: 'Für mehr Aktionspunkte',
-    example: 'Du erhältst sofort +1 AP',
+    usage: 'For more action points',
+    example: 'You immediately gain +1 AP',
   },
 
   'Opportunist': {
@@ -1522,14 +1522,14 @@ export const SPECIAL_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Zivilgesellschaft': {
     name: 'Zivilgesellschaft',
     category: 'Dauerhaft-Initiative',
-    gameEffect: 'Bewegung-Karten +1 Einfluss, NGOs machen Initiativen billiger (-1 AP)',
+    gameEffect: 'Movement cards +1 influence, NGOs give +1 AP on next initiative',
     deckCost: 2,
     subcategories: ['Öffentlichkeit'],
     cardType: 'Dauerhaft-Initiative',
     tier: 'T2',
     slot: 'Öffentlichkeit',
-    usage: 'Mit Bewegungs- und NGO-Strategien',
-    example: 'Greta Thunberg +1 Einfluss, Bill Gates macht Initiativen billiger'
+    usage: 'With movement and NGO strategies',
+    example: 'Greta Thunberg +1 influence, Bill Gates gives +1 AP on next initiative'
   },
 
   'Milchglas Transparenz': {
@@ -1614,12 +1614,12 @@ export const SPECIAL_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Fake News-Kampagne': {
     name: 'Fake News-Kampagne',
     category: 'Intervention',
-    gameEffect: 'Die Medien-Karte wird deaktiviert',
+    gameEffect: 'Die Öffentlichkeitskarte wird deaktiviert',
     deckCost: 2,
     subcategories: ['Standard'],
     cardType: 'Intervention',
     tier: 'T2',
-    trigger: 'Gegner spielt eine Medien-Karte',
+    trigger: 'Gegner spielt eine Öffentlichkeitskarte',
     example: 'Gegner spielt Oprah Winfrey → sie ist deaktiviert'
   },
 
@@ -1631,19 +1631,19 @@ export const SPECIAL_CARD_DETAILS: Record<string, DetailedCardInfo> = {
     subcategories: ['Standard'],
     cardType: 'Intervention',
     tier: 'T3',
-    trigger: 'Gegner spielt eine Tier 2 Regierungskarte',
+    trigger: 'Gegner spielt eine Regierungskarte',
     example: 'Gegner spielt Vladimir Putin → er verliert 2 Einfluss'
   },
 
   'Cyber-Attacke': {
     name: 'Cyber-Attacke',
     category: 'Intervention',
-    gameEffect: 'Die Plattform-Karte wird zerstört',
+    gameEffect: 'Die Öffentlichkeitskarte wird zerstört',
     deckCost: 3,
     subcategories: ['Standard'],
     cardType: 'Intervention',
     tier: 'T3',
-    trigger: 'Gegner spielt eine Plattform-Karte',
+    trigger: 'Gegner spielt eine Öffentlichkeitskarte',
     example: 'Gegner spielt Mark Zuckerberg → er ist weg'
   },
 
@@ -1679,7 +1679,7 @@ export const SPECIAL_CARD_DETAILS: Record<string, DetailedCardInfo> = {
     subcategories: ['Standard'],
     cardType: 'Intervention',
     tier: 'T2',
-    trigger: 'Gegner spielt eine NGO/Bewegung-Karte',
+    trigger: 'Gegner spielt eine NGO/Öffentlichkeitskarte',
     example: 'Gegner spielt Greta Thunberg → sie ist deaktiviert'
   },
 
@@ -1739,7 +1739,7 @@ export const SPECIAL_CARD_DETAILS: Record<string, DetailedCardInfo> = {
     subcategories: ['Standard'],
     cardType: 'Intervention',
     tier: 'T2',
-    trigger: 'Gegner spielt eine Tier 1 Regierungskarte',
+    trigger: 'Gegner spielt eine Regierungskarte',
     example: 'Gegner spielt schwache Regierung → sie verliert 2 Einfluss'
   },
 
@@ -1799,7 +1799,7 @@ export const SPECIAL_CARD_DETAILS: Record<string, DetailedCardInfo> = {
     subcategories: ['Standard'],
     cardType: 'Intervention',
     tier: 'T2',
-    trigger: 'Gegner spielt eine NGO-Karte',
+    trigger: 'Gegner spielt eine Öffentlichkeitskarte',
     example: 'Gegner spielt Bill Gates → muss 1 Karte abwerfen'
   },
 
@@ -1816,14 +1816,14 @@ export const SPECIAL_CARD_DETAILS: Record<string, DetailedCardInfo> = {
 
   'Skandalspirale': {
     name: 'Skandalspirale',
-    category: 'Intervention',
-    gameEffect: 'Eine der beiden Karten wird annulliert',
+    category: 'Sofort-Initiative',
+    gameEffect: 'Bei Aktivierung: Der Spieler mit dem geringeren Gesamt-Einfluss muss einen W6 würfeln. Bei 4-6 passiert nichts; bei 1-3 verliert er entsprechend der Augenzahl -1/-2/-3 Einfluss auf seine stärkste Regierungskarte.',
     deckCost: 2,
     subcategories: ['Standard'],
-    cardType: 'Intervention',
+    cardType: 'Sofort-Initiative',
     tier: 'T2',
-    trigger: 'Gegner spielt Initiative + Öffentlichkeitskarte',
-    example: 'Gegner spielt Initiative + Elon Musk → eine wird annulliert'
+    usage: 'Comeback-Chance für den zurückliegenden Spieler',
+    example: 'P2 liegt hinten, würfelt eine 2 → stärkste Regierungskarte -2 Einfluss'
   },
 
   'Tunnelvision': {

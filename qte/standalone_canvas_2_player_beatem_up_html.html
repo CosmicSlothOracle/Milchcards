@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Canvas Beat’em Up – 2 Spieler</title>
+  <style>
+    body{margin:0;display:flex;justify-content:center;align-items:center;height:100vh;background:#0b0f14;color:white;font-family:sans-serif}
+    canvas{background:#111;border:2px solid #444;border-radius:8px}
+  </style>
+</head>
+<body>
+  <canvas id="game" width="960" height="540"></canvas>
+  <!-- Quick-start control for the QTE demo -->
+  <div style="position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:999;">
+    <button id="start-qte-btn" style="padding:6px 10px;font-size:14px;border-radius:6px;">Start QTE</button>
+  </div>
+  <script>
+  function createGame(canvasId = 'game'){
+    const canvas = document.getElementById(canvasId);
+    if(!canvas) throw new Error('Canvas not found: '+canvasId);
+    const WIDTH = canvas.width, HEIGHT = canvas.height;
+    const ctx = canvas.getContext('2d');
+
+    function clamp(v,min,max){return v<min?min:v>max?max:v}
+    function aabb(a,b){return !(a.x+a.w<b.x||b.x+b.w<a.x||a.y+a.h<b.y||b.y+b.h<a.y)}
+
+    // Sprite animator that supports per-state sprite images (each frame horizontally)
+    class SpriteAnimator{
+      constructor(defaultImage,frameW,frameH,animations){
+        this.defaultImage=defaultImage||null;
+        this.frameW=frameW;this.frameH=frameH;this.animations=animations||{};
+        // preload images for animations when src provided
+        for(const k of Object.keys(this.animations)){
+          const a=this.animations[k];
+          if(a.src){ a.image = new Image(); a.image.src = a.src }
+        }
+        this.state='idle';this.frame=0;this.acc=0;this.fps=12;this.loop=true;
+      }
+      setState(s){
+        if(this.state===s) return;
+        this.state=s;this.frame=0;this.acc=0;
+        const a=this.animations[s];
+        if(a){this.fps=a.fps||12;this.loop=!!a.loop}
+      }
+      update(dt){
+        const a=this.animations[this.state];
+        if(!a) return;
+        this.acc+=dt;
+        const frameTime=1/(a.fps||this.fps);
+        while(this.acc>=frameTime){
+          this.acc-=frameTime;this.frame++;
+          if(this.frame>=a.frames){
+            if(a.loop) this.frame=0; else this.frame=a.frames-1;
+          }
+        }
+      }
+      draw(ctx,x,y,w,h,flip=false){
+        const a=this.animations[this.state];
+        const img = (a && a.image) || this.defaultImage;
+        const fw = (a && a.frameW) || this.frameW;
+        const fh = (a && a.frameH) || this.frameH;
+        const frames = (a && a.frames) || 1;
+        // guard: ensure image is loaded and valid (naturalWidth>0). Some browsers set complete=true for broken images,
+        // so check naturalWidth to detect a failed load and fall back.
+        if(!a || !img || !img.complete || (img.naturalWidth === 0 && img.naturalHeight === 0)){
+          // fallback box
+          ctx.fillStyle='#666';ctx.fillRect(x,y,w,h);
+          return;
+        }
+        const sx = this.frame * fw;
+        ctx.save();
+        if(flip){ctx.translate(x+w,0);ctx.scale(-1,1);x=0}
+        ctx.drawImage(img,sx,0,fw,fh,x,y,w,h);
+        ctx.restore();
+      }
+    }
+
+    class Fighter{
+      constructor(x,y,color,keys,name, spriteConfig){
+        this.x=x;this.y=y;this.w=256;this.h=256;this.vx=0;this.vy=0;
+        this.color=color;this.hp=100;this.onGround=false;
+        this.state='idle';this.keys=keys;this.name=name;this.attacking=false;this.parrying=false;this.attackLaunched=false;
+        this.facing=1; // 1 = right, -1 = left
+        // sprite support
+        if(spriteConfig){
+          const img=new Image();img.src=spriteConfig.src;
+          this.anim=new SpriteAnimator(img,spriteConfig.frameW,spriteConfig.frameH,spriteConfig.animations);
+          this.anim.setState('idle');
+        } else this.anim=null;
+        // Parry / stun state
+        this.parryTimer = 0;
+        this.parryDurationDefault = 0.4; // seconds
+        this.parryWindowLength = this.parryDurationDefault * 0.25; // first 25% is the parry window
+        this.parryConsumed = false; // one successful parry per parry activation
+        this.parryFreezeTimer = 0; // freeze animator briefly when parry succeeds
+        this.stunTimer = 0; // seconds attacker is stunned
+        this.stunned = false;
+      }
+      rect(){return{x:this.x,y:this.y,w:this.w,h:this.h}}
+      update(dt,input){
+        // Movement
+        if(input[this.keys.left]){this.vx=-150;this.facing=-1} else if(input[this.keys.right]){this.vx=150;this.facing=1} else this.vx=0;
+        if(this.onGround && input[this.keys.up]){this.vy=-350;this.onGround=false}
+        this.vy+=900*dt;
+        this.x+=this.vx*dt;this.y+=this.vy*dt;
+        // Ground
+        if(this.y+this.h>=HEIGHT-40){this.y=HEIGHT-40-this.h;this.vy=0;this.onGround=true}
+
+        // Actions: spawn & loose (instant state)
+        if(input[this.keys.spawn]){this.state='spawn';if(this.anim) this.anim.setState('spawn')}
+        if(input[this.keys.loose]){this.state='loose';if(this.anim) this.anim.setState('loose')}
+
+        // Parry
+        if(input[this.keys.parry] && !this.parrying){
+          this.parrying=true;this.state='parry';
+          if(this.anim) this.anim.setState('parry');
+          // initialize parry timing and window (first 25% of animation)
+          this.parryTimer = this.parryDurationDefault; this.parryConsumed = false; this.parryFreezeTimer = 0;
+        }
+        if(this.parrying){ this.parryTimer -= dt; if(this.parryTimer <= 0){ this.parrying = false; } }
+
+        // If stunned, lock movement/actions until stunTimer expires
+        if(this.stunTimer > 0){
+          this.stunTimer -= dt;
+          if(this.stunTimer <= 0){ this.stunTimer = 0; this.stunned = false; }
+          // freeze movement and actions while stunned
+          this.vx = 0; this.attacking = false; this.parrying = false;
+          // do not progress other actions during stun
+          return;
+        }
+
+        // Attack
+        if(input[this.keys.attack] && !this.attacking){
+          this.attacking=true;this.state='attack';if(this.anim) this.anim.setState('attack');this.attackTimer=0.35;
+          this.attackLaunched = false;
+        }
+        if(this.attacking){
+          // spawn projectile at a specific attack frame
+          if(this.anim && this.anim.state==='attack' && this.anim.frame===2 && !this.attackLaunched){
+            this.attackLaunched = true;
+            const startX = this.facing>0 ? this.x + this.w - 48 : this.x - 16;
+            const startY = this.y + this.h*0.45;
+            const speed = 600; // px/s
+            const vx = this.facing>0 ? speed : -speed;
+            const vy = 0;
+            const proj = new Projectile(startX, startY, vx, vy, this, 'src/ui/sprites/Cybord_projectile_256x256_6.png', 6);
+            const distanceToEdge = this.facing>0 ? (WIDTH - startX) : (startX + 0);
+            proj.lifespan = Math.min(1.2, Math.abs(distanceToEdge / speed));
+            projectiles.push(proj);
+          }
+          this.attackTimer-=dt; if(this.attackTimer<=0){this.attacking=false;}
+        }
+
+        // Movement-based animation/state (only when not in special actions)
+        if(!this.attacking && !this.parrying && this.state!=='spawn' && this.state!=='loose'){
+          if(!this.onGround){
+            if(this.state!=='jump'){ this.state='jump'; if(this.anim) this.anim.setState('jump'); }
+          } else if(Math.abs(this.vx)>1){
+            if(this.state!=='walk'){ this.state='walk'; if(this.anim) this.anim.setState('walk'); }
+          } else {
+            if(this.state!=='idle'){ this.state='idle'; if(this.anim) this.anim.setState('idle'); }
+          }
+        }
+
+        // Update animator (respect parry freeze)
+        if(this.parryFreezeTimer > 0){ this.parryFreezeTimer -= dt; }
+        else if(this.anim) this.anim.update(dt);
+      }
+      draw(){
+        // background body if no sprite
+        if(this.anim){
+          this.anim.draw(ctx,this.x,this.y,this.w,this.h,this.facing<0);
+        } else {
+          ctx.fillStyle=this.color;ctx.fillRect(this.x,this.y,this.w,this.h);
+          ctx.fillStyle='#eee';ctx.fillRect(this.x+10,this.y-20,20,20);
+        }
+        // debug attack hitbox
+        if(this.state==='attack'){
+          ctx.fillStyle='rgba(255,255,0,0.6)';
+          const aw=60,ah=40;
+          const ax=this.facing>0 ? (this.x+this.w-10) : (this.x-(aw-10));
+          const ay=this.y + this.h*0.55 - ah*0.5;
+          ctx.fillRect(ax,ay,aw,ah);
+        }
+      }
+      hitbox(){
+        if(this.state==='attack'){
+          const aw=60,ah=40;
+          const ax=this.facing>0 ? (this.x+this.w-10) : (this.x-(aw-10));
+          const ay=this.y + this.h*0.55 - ah*0.5;
+          return{x:ax,y:ay,w:aw,h:ah};
+        }
+        return null;
+      }
+    }
+
+    // Background image (fallback to procedural)
+    const bgImg = new Image(); bgImg.src = 'ui/background/ninjastage0.png';
+    function drawBackground(time){
+      if(bgImg.complete){
+        ctx.drawImage(bgImg,0,0,WIDTH,HEIGHT);
+        return;
+      }
+      // fallback procedural gradient
+      const g=ctx.createLinearGradient(0,0,0,HEIGHT);
+      g.addColorStop(0,'#071428');g.addColorStop(1,'#0f1f2b');
+      ctx.fillStyle=g;ctx.fillRect(0,0,WIDTH,HEIGHT);
+      ctx.fillStyle='rgba(255,255,255,0.02)';
+      for(let i=0;i<30;i++){
+        const x=(i*73 + (time*0.02*i))%WIDTH; const y=80+((i*37)%120);
+        ctx.fillRect(x,y,200,12);
+      }
+    }
+
+    // Projectile class (simple straight projectile with fade)
+    class Projectile{
+      constructor(x,y,vx,vy,owner,imgSrc,frames){
+        this.x = x; this.y = y; this.vx = vx; this.vy = vy; this.owner = owner; this.alive = true; this.age = 0;
+        this.displayW = 64; this.displayH = 64;
+        this.img = new Image(); this.img.src = imgSrc;
+        this.anim = new SpriteAnimator(null,256,256,{fly:{src:imgSrc,frames:frames,fps:12,loop:true,frameW:256,frameH:256}});
+        this.anim.setState('fly');
+        this.lifespan = 1.0; // will be set by spawner to reach edge
+      }
+      update(dt){ this.age += dt; this.x += this.vx * dt; this.y += this.vy * dt; this.anim.update(dt); if(this.age >= this.lifespan) this.alive = false; }
+      draw(ctx){ ctx.save(); const alpha = Math.max(0, 1 - (this.age / this.lifespan)); ctx.globalAlpha = alpha; this.anim.draw(ctx,this.x,this.y,this.displayW,this.displayH,this.vx<0); ctx.restore(); ctx.globalAlpha = 1; }
+      rect(){ return { x: this.x, y: this.y, w: this.displayW, h: this.displayH }; }
+    }
+
+    // Blast effect (plays once)
+    class Blast{
+      constructor(x,y,imgSrc,frames){
+        this.x = x; this.y = y; this.alive = true; this.timer = frames / 12; // fps=12
+        this.img = new Image(); this.img.src = imgSrc;
+        this.anim = new SpriteAnimator(null,256,256,{boom:{src:imgSrc,frames:frames,fps:12,loop:false,frameW:256,frameH:256}});
+        this.anim.setState('boom');
+        this.w = 64; this.h = 64;
+      }
+      update(dt){ this.timer -= dt; this.anim.update(dt); if(this.timer <= 0) this.alive = false; }
+      draw(ctx){ this.anim.draw(ctx,this.x - this.w*0.5 + 28,this.y - this.h*0.5 + 28,this.w,this.h,false); }
+    }
+
+    const projectiles = [];
+    const blasts = [];
+
+    const input={};
+    window.addEventListener('keydown',e=>input[e.code]=true);
+    window.addEventListener('keyup',e=>input[e.code]=false);
+
+    // Gamepad support (PlayStation/Xbox-standard mapping)
+    // Mapping (per user spec): X/Cross (button 0) = Jump, R1 (button 5) = Attack, L1 (button 4) = Parry, D-Pad for walk
+    function readGamepadInputs(){
+      const gpInput={};
+      const pads=(navigator.getGamepads&&navigator.getGamepads())||[];
+      const dead=0.35;
+      // Helper to map a single pad to virtual key codes
+      function mapPadToKeys(pad, mapping){
+        if(!pad) return;
+        const b=pad.buttons, a=pad.axes;
+        const left  = (b[14]&&b[14].pressed) || (a && a[0] < -dead);
+        const right = (b[15]&&b[15].pressed) || (a && a[0] >  dead);
+        const up    = (b[12]&&b[12].pressed) || (a && a[1] < -0.6) || (b[0]&&b[0].pressed); // D-pad up or X/Cross
+        const attack= (b[5]&&b[5].pressed); // R1 / Right Bumper
+        const parry = (b[4]&&b[4].pressed); // L1 / Left Bumper
+        if(left)  gpInput[mapping.left]=true;
+        if(right) gpInput[mapping.right]=true;
+        if(up)    gpInput[mapping.up]=true;
+        if(attack)gpInput[mapping.attack]=true;
+        if(parry) gpInput[mapping.parry]=true;
+      }
+      // Pad 0 -> Player 1 keyboard bindings
+      mapPadToKeys(pads[0], {left:'KeyA', right:'KeyD', up:'KeyW', attack:'KeyF', parry:'KeyG'});
+      // Pad 1 -> Player 2 keyboard bindings
+      mapPadToKeys(pads[1], {left:'ArrowLeft', right:'ArrowRight', up:'ArrowUp', attack:'Slash', parry:'ShiftRight'});
+      return gpInput;
+    }
+
+    // Define keys per player
+    const p1Keys={left:'KeyA',right:'KeyD',up:'KeyW',attack:'KeyF',parry:'KeyG',spawn:'KeyE',loose:'KeyQ'};
+    const p2Keys={left:'ArrowLeft',right:'ArrowRight',up:'ArrowUp',attack:'Slash',parry:'ShiftRight',spawn:'Enter',loose:'Numpad0'};
+
+    // Sprite configs using your Player1 folder images (frames are horizontal in each file)
+    const p1Sprite={frameW:256,frameH:256,animations:{
+      idle:{src:'ui/Player1/idle_256x256_6.png',frames:6,fps:6,loop:true,frameW:256,frameH:256},
+      walk:{src:'ui/Player1/walk_256x256_6.png',frames:6,fps:10,loop:true,frameW:256,frameH:256},
+      jump:{src:'ui/Player1/jump_256x256_8.png',frames:8,fps:12,loop:false,frameW:256,frameH:256},
+      attack:{src:'ui/Player1/attack_256x256_7.png',frames:7,fps:12,loop:false,frameW:256,frameH:256},
+      parry:{src:'ui/Player1/parry_256x256_6.png',frames:6,fps:10,loop:false,frameW:256,frameH:256},
+      spawn:{src:'ui/Player1/spawn_256x256_6.png',frames:6,fps:8,loop:false,frameW:256,frameH:256},
+      loose:{src:'ui/Player1/DEFEAT_256x256_4.png',frames:4,fps:6,loop:false,frameW:256,frameH:256}
+    }};
+    // For now use same set for player 2 (you can swap to another folder later)
+    const p2Sprite=JSON.parse(JSON.stringify(p1Sprite));
+
+    // Place players with room for 256px sprites
+    const p1=new Fighter(100,HEIGHT-40-256,'#4aa3ff',p1Keys,'P1',p1Sprite);
+    const p2=new Fighter(WIDTH-100-256,HEIGHT-40-256,'#ff7a7a',p2Keys,'P2',p2Sprite);
+    // Simple AI marker and flip p2 to face left
+    p2.facing = -1;
+    p2.aiAttackCooldown = 0;
+
+    function drawHUD(){
+      const barW=300, barH=20;
+      ctx.fillStyle='#444';ctx.fillRect(40,20,barW,barH);
+      ctx.fillStyle='#4aa3ff';ctx.fillRect(40,20,barW*(p1.hp/100),barH);
+      ctx.strokeStyle='white';ctx.strokeRect(40,20,barW,barH);
+      ctx.fillStyle='white';ctx.fillText(p1.name+": "+Math.round(p1.hp),40,15);
+
+      ctx.fillStyle='#444';ctx.fillRect(WIDTH-40-barW,20,barW,barH);
+      ctx.fillStyle='#ff7a7a';ctx.fillRect(WIDTH-40-barW+(barW*(1-p2.hp/100)),20,barW*(p2.hp/100),barH);
+      ctx.strokeStyle='white';ctx.strokeRect(WIDTH-40-barW,20,barW,barH);
+      ctx.fillStyle='white';ctx.fillText(p2.name+": "+Math.round(p2.hp),WIDTH-40-barW,15);
+    }
+
+    // Simple AI: stands still and attacks when in range
+    function computeSimpleAI(self, opponent, dt){
+      if(self.aiAttackCooldown===undefined) self.aiAttackCooldown=0;
+      self.aiAttackCooldown = Math.max(0, self.aiAttackCooldown - dt);
+      const inputAI = {};
+      const dx = opponent.x - self.x; const dist = Math.abs(dx);
+      // stand in place; only attack when within range
+      if(dist <= 180){
+        if(self.aiAttackCooldown <= 0){ inputAI[self.keys.attack] = true; self.aiAttackCooldown = 1.2; }
+      }
+      return inputAI;
+    }
+
+    let last=performance.now();
+    function loop(now){
+      const dt = Math.min(0.05,(now-last)/1000); last=now;
+      // Merge keyboard input with gamepad input per frame and AI input for player 2
+      const gp = readGamepadInputs();
+      const mergedInput={};
+      function get(code){ return !!( (code&&input[code]) || (code&&gp[code]) ); }
+      // AI drives p2 when not controlled
+      const aiInputP2 = computeSimpleAI(p2, p1, dt);
+      // Only fill the keys we actually read in Fighter.update
+      [p1Keys.left,p1Keys.right,p1Keys.up,p1Keys.attack,p1Keys.parry,p1Keys.spawn,p1Keys.loose]
+        .forEach(k=>{ if(k) mergedInput[k]=get(k) });
+      // merge AI/player2 inputs into mergedInput (player input still wins if present)
+      [p2Keys.left,p2Keys.right,p2Keys.up,p2Keys.attack,p2Keys.parry,p2Keys.spawn,p2Keys.loose]
+        .forEach(k=>{ if(k) mergedInput[k] = mergedInput[k] || get(k) || !!aiInputP2[k]; });
+      drawBackground(now*0.001);
+      // ground
+      ctx.fillStyle='#333';ctx.fillRect(0,HEIGHT-40,WIDTH,40);
+      // Apply AI input for p2 and player inputs
+      p1.update(dt,mergedInput);p2.update(dt,mergedInput);
+      // Update projectiles
+      for(const pr of projectiles){ pr.update(dt); }
+      for(const b of blasts){ b.update(dt); }
+      // cleanup dead
+      for(let i=projectiles.length-1;i>=0;i--){ if(!projectiles[i].alive) projectiles.splice(i,1); }
+      for(let i=blasts.length-1;i>=0;i--){ if(!blasts[i].alive) blasts.splice(i,1); }
+
+      p1.draw();p2.draw();
+      // draw projectiles and blasts
+      for(const pr of projectiles){ pr.draw(ctx); }
+      for(const b of blasts){ b.draw(ctx); }
+      // collisions
+      const h1=p1.hitbox(),h2=p2.hitbox();
+      // Check hits with parry/window handling and projectile collisions
+      if(h1&&aabb(h1,p2.rect())){
+        // h1 is p1 attacking p2
+        // If p2 is parrying and within parry window and hasn't consumed parry -> parry success
+        if(p2.parrying && !p2.parryConsumed && p2.parryTimer > (p2.parryDurationDefault - p2.parryWindowLength)){
+          // successful parry: prevent damage, freeze p2's animator for the remainder of that frame and stun attacker
+          p2.parryConsumed = true;
+          p2.parryFreezeTimer = 0.12; // brief freeze to emphasize parry
+          p1.stunTimer = 1.0; // stun attacker for 1s
+        } else {
+          // normal hit
+          p2.hp=clamp(p2.hp-1,0,100);
+        }
+      }
+      if(h2&&aabb(h2,p1.rect())){
+        if(p1.parrying && !p1.parryConsumed && p1.parryTimer > (p1.parryDurationDefault - p1.parryWindowLength)){
+          p1.parryConsumed = true;
+          p1.parryFreezeTimer = 0.12;
+          p2.stunTimer = 1.0;
+        } else {
+          p1.hp=clamp(p1.hp-1,0,100);
+        }
+      }
+      // projectile collisions
+      for(const pr of projectiles){
+        if(!pr.alive) continue;
+        if(pr.owner !== p1 && aabb(pr.rect(), p1.rect())){ p1.hp = clamp(p1.hp - 10, 0, 100); pr.alive = false; blasts.push(new Blast(pr.x, pr.y, 'src/ui/sprites/Cybord_blast_256x256_4.png', 4)); }
+        if(pr.owner !== p2 && aabb(pr.rect(), p2.rect())){ p2.hp = clamp(p2.hp - 10, 0, 100); pr.alive = false; blasts.push(new Blast(pr.x, pr.y, 'src/ui/sprites/Cybord_blast_256x256_4.png', 4)); }
+      }
+
+      // Auto-defeat and animation when HP reaches 0
+      if(p1.hp<=0 && p1.state!=='loose'){ p1.state='loose'; p1.attacking=false; p1.parrying=false; p1.vx=0; p1.vy=0; if(p1.anim) p1.anim.setState('loose'); }
+      if(p2.hp<=0 && p2.state!=='loose'){ p2.state='loose'; p2.attacking=false; p2.parrying=false; p2.vx=0; p2.vy=0; if(p2.anim) p2.anim.setState('loose'); }
+      drawHUD();
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+
+    // return API to integrate as QTE later
+    return {canvas,ctx,p1,p2};
+  }
+
+  // auto-start when loaded in this standalone page
+  try{ window.game = createGame('game') } catch(e){console.error(e)}
+  </script>
+  <script src="qte/qte_core.js"></script>
+  <script>
+    // QTE integration: press R to start demo QTE
+    window.addEventListener('load',()=>{ const g = window.game;
+      function drawQTEOverlay(state){
+        const ctx=g.ctx, W=g.canvas.width, H=g.canvas.height;
+        // simple overlay
+        ctx.clearRect(W/2-160,6,320,48);
+        if(!state) return;
+        ctx.save(); ctx.fillStyle='rgba(0,0,0,0.6)'; ctx.fillRect(W/2-150,10,300,40);
+        ctx.fillStyle='white'; ctx.font='16px sans-serif';
+        for(let i=0;i<state.steps.length;i++){
+          const s=state.steps[i];
+          const txt = (s.status==='hit'?'✔': s.status==='miss'?'✖':'·') + ' ' + s.key.replace('Key','');
+          ctx.fillText(txt, W/2-130 + i*50, 36);
+        }
+        ctx.restore();
+      }
+      window.addEventListener('keydown',e=>{
+        if(e.code==='KeyR'){
+          const seq = { id:'demo', timeout:4.0, steps:[
+            {time:0.8,key:'KeyF',window:[-0.3,0.5],weight:1},
+            {time:1.8,key:'KeyG',window:[-0.3,0.5],weight:1},
+            {time:2.6,key:'Space',window:[-0.4,0.5],weight:2}
+          ]};
+          window.QTE.triggerQTE(seq,{ onUpdate:drawQTEOverlay, onStepHit:(s)=>console.log('hit',s), onStepMiss:(s)=>console.log('miss',s) })
+            .then(res=>{ console.log('QTE result',res); setTimeout(()=>{drawQTEOverlay(null)},800) });
+        }
+      });
+
+      // wire up Start QTE button
+      const startBtn = document.getElementById('start-qte-btn');
+      if(startBtn){ startBtn.addEventListener('click', ()=>{
+        const seq = { id:'demo', timeout:4.0, steps:[
+          {time:0.8,key:'KeyF',window:[-0.3,0.5],weight:1},
+          {time:1.8,key:'KeyG',window:[-0.3,0.5],weight:1},
+          {time:2.6,key:'Space',window:[-0.4,0.5],weight:2}
+        ]};
+        window.QTE.triggerQTE(seq,{ onUpdate:drawQTEOverlay, onStepHit:(s)=>console.log('hit',s), onStepMiss:(s)=>console.log('miss',s) })
+          .then(res=>{ console.log('QTE result',res); setTimeout(()=>{drawQTEOverlay(null)},800) });
+      }) }
+    });
+  </script>
+</body>
+</html>

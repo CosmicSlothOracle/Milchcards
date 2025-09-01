@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <style>
+      .ring1 { fill: none; stroke: #a78bfa; stroke-width: 8; }
+      .ring2 { fill: none; stroke: #5b4c89; stroke-width: 4; }
+      .disc  { fill: #ef4444; }
+      .fgstroke { stroke: #ffffff; fill: none; stroke-width: 6; stroke-linecap: round; stroke-linejoin: round; }
+      .fgfill   { fill: #ffffff; stroke: none; }
+      .fgmix    { fill: #ffffff; stroke: #ffffff; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+      text { fill: #ffffff; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Arial, 'Apple Color Emoji','Segoe UI Emoji'; font-weight: 700; }
+    </style>
+  </defs>
+  <circle cx="64" cy="64" r="60" class="ring1"/>
+  <circle cx="64" cy="64" r="52" class="ring2"/>
+  <circle cx="64" cy="64" r="46" class="disc"/>
+  <g transform="translate(0,0)">
+  
+    <g class="fgstroke">
+      <polygon points="64,26 100,94 28,94" class="fgstroke" fill="none"/>
+      <line x1="64" y1="46" x2="64" y2="72" class="fgstroke"/>
+      <circle cx="64" cy="82" r="3" class="fgfill"/>
+    </g>
+    
+  </g>
+</svg>

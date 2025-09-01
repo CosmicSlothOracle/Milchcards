@@ -238,7 +238,6 @@ export class ActiveAbilitiesManager {
 
     // Deduct AP cost
     newState.actionPoints[select.actorPlayer] -= (ability.cost || 0);
-    newState.actionsUsed[select.actorPlayer] += 1;
 
     return newState;
   }
@@ -280,7 +279,6 @@ export class ActiveAbilitiesManager {
     // Mark Putin as used and deduct AP
     putin._activeUsed = true;
     newState.actionPoints[player] -= 2;
-    newState.actionsUsed[player] += 1;
 
     log(`Putin setzt doppelte Intervention: ${interventions.map(i => i.name).join(' & ')}`);
 

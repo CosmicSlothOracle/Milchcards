@@ -3,26 +3,19 @@ import { GameState, Player } from '../types/game';
 import { isInstantInitiative, cap } from '../utils/initiative';
 
 // influence mods for instant initiatives (Doudna/Fauci/Chomsky)
+// DEPRECATED: This function is no longer used - aura effects are now calculated on-demand
 export function applyInstantInfluenceMods(state: GameState, player: Player, base: number) {
-  let influence = base;
-  const rs: string[] = [];
-  if (state.effectFlags[player].scienceInitiativeBonus) { influence += 1; rs.push('Doudna +1'); }
-  if (state.effectFlags[player].healthInitiativeBonus)  { influence += 1; rs.push('Fauci +1'); }
-  if (state.effectFlags[player].militaryInitiativePenalty) { influence -= 1; rs.push('Chomsky −1'); }
-  return { influence, reasons: rs };
+  // This function is deprecated - aura effects are now calculated on-demand via Board-Check
+  // No more flag-based aura calculations - everything is event-driven
+  return { influence: base, reasons: [] };
 }
 
 // Ai Weiwei: +1 card +1 AP on instant initiative
+// DEPRECATED: This function is no longer used - Ai Weiwei effects are now handled via INITIATIVE_ACTIVATED events
 export function maybeAiWeiweiBonus(state: GameState, player: Player, log: (s: string)=>void) {
-  if (!state.effectFlags[player].cultureInitiativeBonus) return;
-  const draw = state.decks[player].shift();
-  if (draw) {
-    state.hands[player].push(draw);
-    log(`Ai Weiwei: +1 Karte gezogen (${draw.name})`);
-  }
-  const before = state.actionPoints[player];
-  state.actionPoints[player] = cap(before + 1, 0, 4);
-  log(`Ai Weiwei: +1 AP (${before}→${state.actionPoints[player]})`);
+  // This function is deprecated - Ai Weiwei effects are now handled via INITIATIVE_ACTIVATED events
+  // No more direct state mutations - everything is event-driven
+  log('DEPRECATED: Ai Weiwei effect now handled via INITIATIVE_ACTIVATED events');
 }
 
 // activate & resolve the card that currently sits in the player's instant slot

@@ -9,6 +9,16 @@ import {
   logInitiativeAura, logAiWeiwei, logPlattformBonus, logOpportunist
 } from './logs';
 import { getGlobalRNG } from '../services/rng';
+import { logger } from '../debug/logger';
+// Helper to find strongest government uid for new intents
+function strongestGovernmentUid(state: GameState, p: Player): number | null {
+  const govRow = state.board[p]?.aussen as PoliticianCard[];
+  if (!govRow || govRow.length === 0) return null;
+  const alive = govRow.filter(g => !(g as any).deactivated);
+  if (!alive.length) return null;
+  const sorted = alive.slice().sort((a,b) => (b.influence + (b.tempBuffs||0) - (b.tempDebuffs||0)) - (a.influence + (a.tempBuffs||0) - (a.tempDebuffs||0)));
+  return sorted[0].uid;
+}
 
 function other(p: Player): Player { return p === 1 ? 2 : 1; }
 function logPush(state: GameState, msg: string) { state.log.push(msg); }
@@ -40,12 +50,36 @@ function findCardByUidOnBoard(state: GameState, uid: number): Card | null {
   return null;
 }
 
+// Find the slot location for a card uid on the board
+function findCardSlotByUid(state: GameState, uid: number): { player: Player; lane: string; index: number } | null {
+  for (const p of [1,2] as const) {
+    for (const lane of ['innen','aussen','sofort'] as const) {
+      const arr = state.board[p][lane];
+      const idx = arr.findIndex(c => c.uid === uid);
+      if (idx !== -1) return { player: p, lane, index: idx };
+    }
+  }
+  // check permanent slots
+  const permGov = state.permanentSlots[1].government as any;
+  if (permGov && permGov.uid === uid) return { player: 1, lane: 'permanent.government', index: 0 };
+  const permPub = state.permanentSlots[1].public as any;
+  if (permPub && permPub.uid === uid) return { player: 1, lane: 'permanent.public', index: 0 };
+  const permGov2 = state.permanentSlots[2].government as any;
+  if (permGov2 && permGov2.uid === uid) return { player: 2, lane: 'permanent.government', index: 0 };
+  const permPub2 = state.permanentSlots[2].public as any;
+  if (permPub2 && permPub2.uid === uid) return { player: 2, lane: 'permanent.public', index: 0 };
+  return null;
+}
+
 export function resolveQueue(state: GameState, events: EffectEvent[]) {
   const rng = getGlobalRNG();
 
   // Single pass FIFO
   while (events.length) {
     const ev = events.shift()!;
+    logger.dbg(`DQ ${ev.type}`, ev);
+    // Capture small snapshot for delta calc
+    const beforeAP = { ...state.actionPoints };
 
     switch (ev.type) {
       case 'LOG': {
@@ -57,11 +91,21 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
         const cur = state.actionPoints[ev.player];
         const next = Math.max(0, cur + ev.amount);
         state.actionPoints[ev.player] = next;
+        logger.dbg(`ADD_AP before=${cur} amount=${ev.amount} after=${state.actionPoints[ev.player]}`);
+
+        // Opportunist AP-Spiegelung (falls aktiv beim Gegner)
+        if (state.effectFlags[other(ev.player)]?.opportunistActive && ev.amount > 0) {
+          const mirror = { type: 'ADD_AP', player: other(ev.player), amount: ev.amount } as EffectEvent;
+          events.unshift(mirror);
+          logPush(state, `Opportunist: AP +${ev.amount} gespiegelt.`);
+        }
+
         logPush(state, logAP(ev.player, cur, next));
         break;
       }
 
       case 'DRAW_CARDS': {
+        const handBefore = state.hands[ev.player].length;
         for (let i = 0; i < ev.amount; i++) {
           const top = state.decks[ev.player].shift();
           if (top) {
@@ -69,6 +113,8 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
             logPush(state, logDraw(ev.player, top.name));
           }
         }
+        const handAfter = state.hands[ev.player].length;
+        logger.dbg(`DRAW_CARDS player=${ev.player} before=${handBefore} after=${handAfter}`);
         break;
       }
 
@@ -87,10 +133,17 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
         // Deaktivieren von Handkarten (nicht entfernen)
         const hand = state.hands[ev.player];
         const activeCards = hand.filter(c => !(c as any).deactivated);
+        logger.dbg(`DEACTIVATE_RANDOM_HAND: P${ev.player} handSize=${hand.length} activeCandidates=${activeCards.length}`);
+        if (activeCards.length === 0) {
+          logPush(state, `Oprah: no active hand cards to deactivate for P${ev.player}`);
+          break;
+        }
         for (let i = 0; i < ev.amount && activeCards.length > 0; i++) {
           const card = rng.pick(activeCards);
+          logger.dbg(`DEACTIVATE_RANDOM_HAND: picked=${card ? card.name : 'undefined'} for P${ev.player}`);
           if (card) {
             (card as any).deactivated = true;
+            (card as any)._deactivatedBy = 'OPRAH';
             logPush(state, logDeactivateRandom(ev.player, card.name));
             // Entferne aus activeCards für nächste Iteration
             const idx = activeCards.indexOf(card);
@@ -106,9 +159,10 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
 
       case 'GRANT_SHIELD': {
         if (!state.shields) state.shields = new Set();
-        const targetUid = ev.targetUid || 0;
-        state.shields.add(targetUid);
-        logPush(state, logShield(targetUid));
+        // Wenn kein spezifischer targetUid angegeben ist, verwende Platzhalter pro Spieler (-1 oder -2)
+        const uid = ev.targetUid !== undefined ? ev.targetUid : (ev.player === 1 ? -1 : -2);
+        state.shields.add(uid);
+        logPush(state, logShield(uid));
         break;
       }
 
@@ -117,6 +171,14 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
         if (card) {
           (card as any).deactivated = true;
           logPush(state, logDeactivateCard(card.name));
+
+          // Falls die Karte eine Shield-Aura ist, entferne Spielerschilde
+          if ((card as any).effectKey === 'init.intelligence_liaison.shield_aura') {
+            if (state.shields) {
+              const placeholder = ev.player === 1 ? -1 : -2;
+              state.shields.delete(placeholder);
+            }
+          }
         }
         break;
       }
@@ -175,12 +237,56 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
         break;
       }
 
+      // UI-only event: instruct frontend to play hit animation on a specific slot
+      case 'UI_TRIGGER_HIT_ANIM': {
+        // UI signal: play hit animation on the given slot. Do not mutate game state.
+        // Preferred local handling: push into VisualEffectsContext.playAnimsRef so the canvas picks it up.
+        try {
+          const ply = ev.player as Player;
+          const lane = (ev as any).lane as string;
+          const index = (ev as any).index as number;
+          const key = `hit:${ply}.${lane}.${index}`;
+          if (typeof window !== 'undefined' && (window as any).__pc_visual_effects && (window as any).__pc_visual_effects.playAnimsRef) {
+            const now = (typeof performance !== 'undefined') ? performance.now() : Date.now();
+            try { (window as any).__pc_visual_effects.playAnimsRef.current.push({ uid: key, started: now, duration: 25 * 30 }); } catch (e) {}
+          } else if (typeof window !== 'undefined' && (window as any).dispatchEvent) {
+            // fallback: dispatch DOM event for legacy listeners
+            const detail = { player: ply, lane, index };
+            try { window.dispatchEvent(new CustomEvent('pc:ui_trigger_hit_anim', { detail })); } catch (e) {}
+          }
+        } catch (e) {}
+        break;
+      }
+
       case 'BUFF_STRONGEST_GOV':
       case 'ADJUST_INFLUENCE': { // Alias auf BUFF_STRONGEST_GOV
         const player = ev.player;
-        const amount = (ev as any).amount;
+        let amount = (ev as any).amount;
+        const reason = (ev as any).reason as string | undefined;
+
+        // Special intent: Oprah media buff - compute amount based on media cards on own board
+        if (reason === 'OPRAH_MEDIA_BUFF_INTENT') {
+          const ownBoard = [
+            ...state.board[player].innen,
+            ...state.board[player].aussen,
+          ];
+          const cd = require('../data/cardDetails') as any;
+          const mediaNames = ['Oprah Winfrey', 'Mark Zuckerberg', 'Tim Cook', 'Sam Altman'];
+          const mediaCount = ownBoard.filter(c => {
+            const sub = cd.getCardDetails?.(c.name)?.subcategories as string[] | undefined;
+            const legacy = (c as any).tag === 'Media' || (c as any).tag === 'Medien';
+            return (Array.isArray(sub) && sub.includes('Medien')) || legacy || mediaNames.includes(c.name);
+          }).length;
+          amount = Math.min(mediaCount, 3);
+          if (amount > 0) {
+            events.unshift({ type: 'LOG', msg: `Oprah Winfrey: Media buff calculated +${amount} (max 3).` });
+          } else {
+            events.unshift({ type: 'LOG', msg: `Oprah Winfrey: No media cards on board - no buff.` });
+          }
+        }
+
         const tgt = getStrongestGovernment(state, player);
-        if (tgt) {
+        if (tgt && amount !== 0) {
           if (amount >= 0) {
             (tgt as PoliticianCard).tempBuffs = ((tgt as PoliticianCard).tempBuffs || 0) + amount;
           } else {
@@ -198,28 +304,251 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
         break;
       }
 
-      case 'INITIATIVE_ACTIVATED': {
-        const p = ev.player;
-        const flags = state.effectFlags[p] || {};
-
-        if (flags.zuckOnceAp && !flags.zuckSpent) {
-          events.unshift({ type: 'ADD_AP', player: p, amount: 1 } as EffectEvent);
-          flags.zuckSpent = true;
-          logPush(state, 'Mark Zuckerberg: +1 AP on activation (once per turn).');
+      case 'DEBUFF_CARD': {
+        const card = findCardByUidOnBoard(state, ev.targetUid);
+        if (card && card.kind === 'pol') {
+          const tgt = card as any;
+          tgt.tempDebuffs = (tgt.tempDebuffs || 0) + Math.abs((ev as any).amount);
+          logPush(state, `🔻 ${tgt.name}: -${Math.abs((ev as any).amount)} Influence`);
         }
-
-        if (flags.aiWeiweiOnActivate) {
-          events.unshift({ type: 'DRAW_CARDS', player: p, amount: 1 } as EffectEvent);
-          events.unshift({ type: 'ADD_AP', player: p, amount: 1 } as EffectEvent);
-          logPush(state, 'Ai Weiwei: +1 card & +1 AP on activation.');
-        }
-
-        state.effectFlags[p] = flags;
         break;
       }
 
+      // ===== New intent event handlers =====
+
+      case 'DEACTIVATE_STRONGEST_ENEMY_GOV': {
+        const opp: Player = ev.player === 1 ? 2 : 1;
+        const uid = strongestGovernmentUid(state, opp);
+        if (uid !== null) {
+          events.unshift({ type: 'DEACTIVATE_CARD', player: opp, targetUid: uid });
+          events.unshift({ type: 'LOG', msg: 'Party Offensive: strongest enemy Government deactivated.' });
+        } else {
+          events.unshift({ type: 'LOG', msg: 'Party Offensive: no enemy Government to deactivate.' });
+        }
+        break;
+      }
+
+      case 'LOCK_OPPONENT_INITIATIVES_EOT': {
+        const opp: Player = ev.player === 1 ? 2 : 1;
+        state.effectFlags[opp].initiativesLocked = true;
+        events.unshift({ type: 'LOG', msg: 'Opposition Blockade: opponent initiatives locked until end of turn.' });
+        break;
+      }
+
+      case 'SET_DOUBLE_PUBLIC_AURA': {
+        state.effectFlags[ev.player].doublePublicAura = true;
+        events.unshift({ type: 'LOG', msg: 'Influencer Campaign: next Public aura will be doubled.' });
+        break;
+      }
+
+      case 'SET_OPPORTUNIST_ACTIVE': {
+        const { player, active } = ev as { type: 'SET_OPPORTUNIST_ACTIVE'; player: Player; active: boolean };
+        state.effectFlags[player].opportunistActive = active;
+        if (active) {
+          events.unshift({ type: 'LOG', msg: 'Opportunist: AP effects will be mirrored until end of turn.' });
+        }
+        break;
+      }
+
+      // === CORRUPTION: Bestechungsskandal 2.0 ===
+      case 'CORRUPTION_STEAL_GOV_START': {
+        // Signal UI that player must select opponent government card & roll dice
+        (state as any).pendingAbilitySelect = {
+          type: 'corruption_steal',
+          actorPlayer: ev.player
+        } as any;
+
+        events.unshift({ type: 'LOG', msg: 'Bribery Scandal 2.0: Wähle eine gegnerische Regierungskarte und würfle einen W6.' });
+        // Trigger UI hook to highlight targets
+        if (typeof window !== 'undefined') {
+          try {
+            window.dispatchEvent(new CustomEvent('pc:corruption_select_target', { detail: { player: ev.player } }));
+          } catch(e) {}
+        }
+        break;
+      }
+
+      case 'CORRUPTION_STEAL_GOV_RESOLVE': {
+        const { player: actor, targetUid, roll } = ev as any;
+        const victim: Player = actor === 1 ? 2 : 1;
+
+        // Locate target card
+        const targetIdx = state.board[victim].aussen.findIndex(c => c.uid === targetUid);
+        if (targetIdx === -1) {
+          events.unshift({ type: 'LOG', msg: 'Bribery Scandal 2.0: Zielkarte nicht gefunden.' });
+          break;
+        }
+        const target = state.board[victim].aussen[targetIdx] as any;
+
+        // Oligarch bonus
+        const oligarchCount = state.board[actor as Player].innen.filter((c: any) => {
+          const sub = (require('../data/cardDetails') as any).getCardDetails?.(c.name)?.subcategories as string[] | undefined;
+          const hasNewTag = Array.isArray(sub) && sub.includes('Oligarch');
+          const legacy = (c as any).tag === 'Oligarch';
+          return hasNewTag || legacy;
+        }).length;
+
+        const total = roll + oligarchCount;
+        const targetInfluence = target.influence + (target.tempBuffs||0) - (target.tempDebuffs||0);
+
+        events.unshift({ type: 'LOG', msg: `Bribery Scandal 2.0: Roll ${roll} +${oligarchCount} Bonus = ${total} vs ${targetInfluence} (${target.name}).` });
+
+        if (total >= targetInfluence) {
+          const maxSlots = 3;
+          if (state.board[actor as Player].aussen.length < maxSlots) {
+            // Transfer card
+            state.board[victim].aussen.splice(targetIdx,1);
+            state.board[actor as Player].aussen.push(target as any);
+            events.unshift({ type: 'LOG', msg: `Bribery Scandal 2.0: Erfolg! ${target.name} übernommen.` });
+          } else {
+            state.board[victim].aussen.splice(targetIdx,1);
+            state.discard.push(target as any);
+            events.unshift({ type: 'LOG', msg: `Bribery Scandal 2.0: Erfolg, aber kein Slot frei – ${target.name} entfernt.` });
+          }
+        } else {
+          events.unshift({ type: 'LOG', msg: 'Bribery Scandal 2.0: Wurf zu niedrig – keine Übernahme.' });
+        }
+
+        // Clear pending selection
+        (state as any).pendingAbilitySelect = undefined;
+        break;
+      }
+
+      case 'INITIATIVE_ACTIVATED': {
+        // Initiative activation event - trigger reactions from public cards
+        logPush(state, 'Initiative activated.');
+
+        // Check for public cards that react to initiative activation
+        const publicCards = state.board[ev.player]?.innen || [];
+
+        // Shadow Lobbying: +1 influence per own Oligarch-tag on board (max +3)
+        // Detect if the activating initiative was Shadow Lobbying by checking the last played instant in slot
+        const instantSlot = state.board[ev.player]?.sofort || [];
+        const lastInstant = instantSlot[0] as any;
+        if (lastInstant && (lastInstant.effectKey === 'init.shadow_lobbying.per_oligarch' || lastInstant.name === 'Shadow Lobbying')) {
+          const ownBoard = [
+            ...state.board[ev.player].innen,
+            ...state.board[ev.player].aussen,
+          ];
+          const oligarchCount = ownBoard.filter(c => {
+            const details = (c as any).name ? require('../data/cardDetails') as any : null;
+            // Fallback: try BaseSpecial tag if available
+            const sub = (require('../data/cardDetails') as any).getCardDetails?.((c as any).name)?.subcategories as string[] | undefined;
+            const hasNewTag = Array.isArray(sub) && sub.includes('Oligarch');
+            const legacyTag = (c as any).tag === 'Oligarch';
+            return hasNewTag || legacyTag;
+          }).length;
+          const amt = Math.min(oligarchCount, 3);
+          if (amt > 0) {
+            events.unshift({ type: 'BUFF_STRONGEST_GOV', player: ev.player, amount: amt });
+            events.unshift({ type: 'LOG', msg: `Shadow Lobbying: stärkste Regierung +${amt} Einfluss (pro Oligarch, max 3).` });
+          } else {
+            events.unshift({ type: 'LOG', msg: `Shadow Lobbying: Keine Oligarchen – kein Einfluss-Buff.` });
+          }
+        }
+
+        // Elon Musk: +1 AP on initiative activation
+        const elonMusk = publicCards.find(card =>
+          card.kind === 'spec' && (card as any).name === 'Elon Musk'
+        );
+        if (elonMusk) {
+          events.unshift({ type: 'ADD_AP', player: ev.player, amount: 1 });
+          events.unshift({ type: 'LOG', msg: 'Elon Musk: +1 AP on initiative activation.' });
+        }
+
+        // Mark Zuckerberg: +1 AP on initiative activation (once per turn)
+        const markZuckerberg = publicCards.find(card =>
+          card.kind === 'spec' && (card as any).name === 'Mark Zuckerberg'
+        );
+        if (markZuckerberg && !state.effectFlags[ev.player]?.markZuckerbergUsed) {
+          events.unshift({ type: 'ADD_AP', player: ev.player, amount: 1 });
+          events.unshift({ type: 'LOG', msg: 'Mark Zuckerberg: +1 AP on initiative activation.' });
+          if (!state.effectFlags[ev.player]) {
+            state.effectFlags[ev.player] = { markZuckerbergUsed: false };
+          }
+          state.effectFlags[ev.player].markZuckerbergUsed = true;
+        }
+
+        // Ai Weiwei: +1 card +1 AP on initiative activation
+        const aiWeiwei = publicCards.find(card =>
+          card.kind === 'spec' && (card as any).name === 'Ai Weiwei'
+        );
+        if (aiWeiwei) {
+          events.unshift({ type: 'DRAW_CARDS', player: ev.player, amount: 1 });
+          events.unshift({ type: 'ADD_AP', player: ev.player, amount: 1 });
+          events.unshift({ type: 'LOG', msg: 'Ai Weiwei: +1 card +1 AP on initiative activation.' });
+        }
+
+        // Sam Altman: +1 card +1 AP on AI-related initiative activation
+        const samAltman = publicCards.find(card =>
+          card.kind === 'spec' && (card as any).name === 'Sam Altman'
+        );
+        if (samAltman) {
+          // Check if the activated initiative is AI-related (would need to be passed as context)
+          // For now, this is handled via the initiative card's tag check in the activation flow
+          events.unshift({ type: 'LOG', msg: 'Sam Altman: AI initiative detected - bonus ready.' });
+        }
+
+        // Digitaler Wahlkampf: draw 1 card per own Media-tag on board
+        if (lastInstant && (lastInstant.effectKey === 'init.digital_campaign.per_media' || lastInstant.name === 'Digitaler Wahlkampf')) {
+          const ownBoard = [
+            ...state.board[ev.player].innen,
+            ...state.board[ev.player].aussen,
+          ];
+          const mediaCount = ownBoard.filter(c => {
+            const sub = (require('../data/cardDetails') as any).getCardDetails?.((c as any).name)?.subcategories as string[] | undefined;
+            const legacy = (c as any).tag === 'Medien' || (c as any).tag === 'Media';
+            return (Array.isArray(sub) && sub.includes('Medien')) || legacy || (Array.isArray(sub) && sub.includes('Medien')) || (Array.isArray(sub) && sub.includes('Medien'));
+          }).length;
+          if (mediaCount > 0) {
+            events.unshift({ type: 'DRAW_CARDS', player: ev.player, amount: mediaCount });
+            events.unshift({ type: 'LOG', msg: `Digitaler Wahlkampf: ziehe ${mediaCount} Karte(n) (pro Medien-Karte).` });
+          } else {
+            events.unshift({ type: 'LOG', msg: `Digitaler Wahlkampf: Keine Medien-Karten auf dem Feld.` });
+          }
+        }
+
+        // After handling public reactions, enqueue a UI-only event to trigger hit animation on opponent's effected slots
+        // We'll compute effected slots conservatively: all opponent's government and public slots that are occupied.
+        try {
+          const opp: Player = ev.player === 1 ? 2 : 1;
+          const effectedSlots: Array<{ player: Player; lane: string; index: number } > = [];
+          (state.board[opp].aussen || []).forEach((c, idx) => { if (c) effectedSlots.push({ player: opp, lane: 'aussen', index: idx }); });
+          (state.board[opp].innen || []).forEach((c, idx) => { if (c) effectedSlots.push({ player: opp, lane: 'innen', index: idx }); });
+
+          // enqueue one LOG and one UI_TRIGGER per slot (UI_TRIGGER is handled by the frontend canvas to play hit animation)
+          effectedSlots.forEach(s => {
+            events.unshift({ type: 'UI_TRIGGER_HIT_ANIM', player: s.player, lane: s.lane, index: s.index } as any);
+          });
+        } catch (e) {
+          // ignore UI enqueue failures
+        }
+
+        break;
+      }
+
+      // ONCE_AP_ON_ACTIVATION removed - use standard ADD_AP events instead
+
+      // ON_ACTIVATE_DRAW_AP removed - use standard ADD_AP and DRAW_CARDS events instead
+
+      // Simplified AP system: No initiative-specific bonuses
+      // All AP bonuses are now immediate ADD_AP events
 
 
     }
+    // generic after snapshot diff for AP
+    if (state.actionPoints[1] !== beforeAP[1] || state.actionPoints[2] !== beforeAP[2]) {
+      logger.dbg(`AP delta P1 ${beforeAP[1]}->${state.actionPoints[1]} | P2 ${beforeAP[2]}->${state.actionPoints[2]}`);
+    }
+  }
+  // Ensure React viewers see mutated hand arrays by creating shallow copies
+  try {
+    state.hands = {
+      1: state.hands[1] ? [...state.hands[1]] : [],
+      2: state.hands[2] ? [...state.hands[2]] : []
+    } as any;
+    logger.dbg('resolveQueue: hand arrays shallow-copied to trigger UI updates');
+  } catch (e) {
+    logger.dbg('resolveQueue: failed to shallow-copy hands', e);
   }
 }

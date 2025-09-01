@@ -54,10 +54,7 @@ export function getNetApCost(
   card: Card,
   lane?: 'innen' | 'aussen' | 'sofort'
 ): { cost: number; refund: number; net: number; reasons: string[] } {
-  // The net cost is always equal to the fixed cost. Refund-style abilities
-  // should enqueue ADD_AP events separately; therefore refund is **always 0**
-  // here.
-
+  // Simplified AP system: All cards cost exactly 1 AP
   const cost = BASE_AP_COST;
   const refund = 0;
   const net = cost; // always 1
@@ -76,7 +73,8 @@ export function wouldBeNetZero(
   card: Card,
   lane?: 'innen' | 'aussen' | 'sofort'
 ): boolean {
-  return getNetApCost(state, player, card, lane).net <= 0;
+  // Simplified AP system: No free cards
+  return false;
 }
 
 export const isInitiativeCard = isInitiative;
@@ -91,7 +89,6 @@ export const hasGretaOnBoard = (state: GameState, p: Player) =>
   state.board[p].innen.some(
     (c) => (c as any)?.kind === 'pol' && (c as any)?.name === 'Greta Thunberg' && !(c as any)?.deactivated
   );
-export const hasAnyZeroApPlay = (state: GameState, p: Player) =>
-  (state.hands[p] ?? []).some((c) => wouldBeNetZero(state, p, c));
-export function resetTurnApRefundFlags(state: GameState, p: Player) {}
-export function applyApRefundsAfterPlay(_state: GameState, _p: Player, _card: Card) {}
+export const hasAnyZeroApPlay = (state: GameState, p: Player) => false; // Simplified AP system: No free cards
+export function resetTurnApRefundFlags(state: GameState, p: Player) {} // Simplified AP system: No refunds
+export function applyApRefundsAfterPlay(_state: GameState, _p: Player, _card: Card) {} // Simplified AP system: No refunds

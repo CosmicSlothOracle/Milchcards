@@ -20,9 +20,9 @@ export const CARD_CONFIG = {
 // Special Cards - From Karten_Initiativen_Interventionen.md
 export const Specials: BaseSpecial[] = [
   // Sofort-Initiativen (Immediate Initiatives)
-  {id:1, key:'Shadow_Lobbying', name:'Shadow Lobbying', type:'Sofort-Initiative', speed:'Schnell', bp:2, tier:2, impl:'shadow_lobbying'},
+  {id:1, key:'Shadow_Lobbying', name:'Shadow Lobbying', type:'Sofort-Initiative', speed:'Schnell', bp:2, tier:2, impl:'shadow_lobbying', effectKey:'init.shadow_lobbying.per_oligarch'},
   {id:2, key:'Spin_Doctor', name:'Spin Doctor', type:'Sofort-Initiative', speed:'Schnell', bp:2, tier:2, impl:'spin_doctor', effectKey:EK.SPIN_DOCTOR},
-  {id:3, key:'Digitaler_Wahlkampf', name:'Digitaler Wahlkampf', type:'Sofort-Initiative', speed:'Schnell', bp:3, tier:3, impl:'digital_campaign'},
+  {id:3, key:'Digitaler_Wahlkampf', name:'Digitaler Wahlkampf', type:'Sofort-Initiative', speed:'Schnell', bp:3, tier:3, impl:'digital_campaign', effectKey:'init.digital_campaign.per_media'},
   {id:4, key:'Partei_Offensive', name:'Partei-Offensive', type:'Sofort-Initiative', speed:'Schnell', bp:3, tier:3, impl:'party_offensive'},
   {id:5, key:'Oppositionsblockade', name:'Oppositionsblockade', type:'Sofort-Initiative', speed:'Schnell', bp:4, tier:3, impl:'opposition_block'},
   {id:6, key:'Verzoegerungsverfahren', name:'Verzögerungsverfahren', type:'Sofort-Initiative', speed:'Schnell', bp:1, tier:1, impl:'delay_procedure', effectKey:EK.AP_PLUS_1},
@@ -51,7 +51,7 @@ export const Specials: BaseSpecial[] = [
   {id:25, key:'Boykott_Kampagne', name:'Boykott-Kampagne', type:'Intervention', speed:'Bei NGO/Bewegung', bp:2, tier:2, impl:'boycott_campaign'},
   {id:26, key:'Deepfake_Skandal', name:'Deepfake-Skandal', type:'Intervention', speed:'Bei Diplomat', bp:2, tier:2, impl:'deepfake_scandal'},
   {id:27, key:'Cyber_Attacke', name:'Cyber-Attacke', type:'Intervention', speed:'Bei Plattform', bp:3, tier:3, impl:'cyber_attack'},
-  {id:28, key:'Bestechungsskandal_2_0', name:'Bestechungsskandal 2.0', type:'Intervention', speed:'Bei REG M≤5', bp:3, tier:3, impl:'bribery_scandal_2'},
+  {id:28, key:'Bestechungsskandal_2_0', name:'Bestechungsskandal 2.0', type:'Sofort-Initiative', speed:'Schnell', bp:3, tier:3, impl:'corruption_bribery_v2', effectKey:'corruption.bribery_v2.steal_gov_w6', tag:'Corruption'},
   {id:29, key:'Grassroots_Widerstand', name:'Grassroots-Widerstand', type:'Intervention', speed:'Bei >2 ÖFF', bp:2, tier:2, impl:'grassroots_resistance'},
   {id:30, key:'Massenproteste', name:'Massenproteste', type:'Intervention', speed:'Bei 2 REG/Runde', bp:2, tier:2, impl:'mass_protests'},
   {id:31, key:'Berater_Affaere', name:'Berater-Affäre', type:'Intervention', speed:'Bei Tier 1 REG', bp:2, tier:2, impl:'advisor_affair'},
@@ -61,7 +61,7 @@ export const Specials: BaseSpecial[] = [
   {id:35, key:'Cancel_Culture', name:'Cancel Culture', type:'Intervention', speed:'Bei ÖFF-Karte', bp:2, tier:2, impl:'cancel_culture'},
   {id:36, key:'Lobby_Leak', name:'Lobby Leak', type:'Intervention', speed:'Bei NGO', bp:2, tier:2, impl:'lobby_leak'},
   {id:37, key:'Maulwurf', name:'Maulwurf', type:'Intervention', speed:'Bei REG-Karte', bp:3, tier:3, impl:'mole'},
-  {id:38, key:'Skandalspirale', name:'Skandalspirale', type:'Intervention', speed:'Bei Initiative + ÖFF', bp:2, tier:2, impl:'scandal_spiral'},
+  {id:38, key:'Skandalspirale', name:'Skandalspirale', type:'Sofort-Initiative', speed:'Schnell', bp:2, tier:2, impl:'skandalspirale', effectKey:'init.skandalspirale.w6_check'},
   {id:39, key:'Tunnelvision', name:'Tunnelvision', type:'Intervention', speed:'Bei REG M≤4', bp:2, tier:2, impl:'tunnel_vision'},
   {id:40, key:'Satire_Show', name:'Satire-Show', type:'Intervention', speed:'Bei mehr Einfluss Gegner', bp:2, tier:2, impl:'satire_show'},
 
@@ -290,7 +290,7 @@ export const FILENAME_MAPPING: Record<string, string> = {
   'Boykott_Kampagne': 'Intervention_T2_Boykott-Kampagne.png',
   'Deepfake_Skandal': 'Intervention_T2_Deepfake-Skandal.png',
   'Cyber_Attacke': 'Intervention_T3_Cyberattack.png',
-  'Bestechungsskandal_2_0': 'Intervention_T3_Bestechungsskandal_2.0.png',
+  'Bestechungsskandal_2_0': 'Corruption_T3_Bestechungsskandal_2.0.png',
   'Grassroots_Widerstand': 'Intervention_T2_Grassroots-Widerstand.png',
   'Massenproteste': 'Intervention_T2_Massenproteste.png',
   'Berater_Affaere': 'Intervention_T2_Berater_Affäre.png',
@@ -358,7 +358,7 @@ export const PRESET_DECKS = {
 
     // Support-Karten (2 Karten) - Zum Testen der Kombinationen
     { kind: 'spec' as const, baseId: 69, count: 1 }, // George Soros (7 BP) - Autoritär-Bonus
-    { kind: 'spec' as const, baseId: 70, count: 1 }, // Greta Thunberg (4 BP) - Gov kostet 0 AP
+    { kind: 'spec' as const, baseId: 70, count: 1 }, // Greta Thunberg (4 BP) - +1 AP
   ],
 
   TEST_DECK_WITH_DRAW_EFFECTS: [
@@ -374,9 +374,9 @@ export const PRESET_DECKS = {
     { kind: 'spec' as const, baseId: 78, count: 1 }, // Jeff Bezos (6 BP) - ZIEHE 1 KARTE + bei Plattform +1 AP
     { kind: 'spec' as const, baseId: 87, count: 1 }, // Warren Buffett (7 BP) - ZIEHE 1 KARTE + bei Wirtschafts-Initiative +1 Effect
     { kind: 'spec' as const, baseId: 88, count: 1 }, // Gautam Adani (6 BP) - ZIEHE 1 KARTE + bei Infrastruktur-Initiative +1 Effect
-    { kind: 'spec' as const, baseId: 80, count: 1 }, // Zhang Yiming (6 BP) - ZIEHE 1 KARTE + bei Medien -1 AP nächste Initiative
-    { kind: 'spec' as const, baseId: 69, count: 1 }, // George Soros (7 BP) - AP BEI AUTORITÄR EFFEKT (für NGO-Synergie)
-    { kind: 'spec' as const, baseId: 86, count: 1 }, // Anthony Fauci (5 BP) - Gesundheits-Initiative +1 Effect (für NGO-Synergie)
+    { kind: 'spec' as const, baseId: 80, count: 1 }, // Zhang Yiming (6 BP) - ZIEHE 1 KARTE + bei Medien +1 AP
+    { kind: 'spec' as const, baseId: 69, count: 1 }, // George Soros (7 BP) - +1 AP bei autoritärer Regierung
+    { kind: 'spec' as const, baseId: 86, count: 1 }, // Anthony Fauci (5 BP) - Gesundheits-Initiative +1 Effect
 
     // Initiativen (1 Karte) - Shadow Lobbying für Effekt-Testing
     { kind: 'spec' as const, baseId: 1, count: 1 }, // Shadow Lobbying (2 BP) - ÖFFENTLICHKEITS-EFFEKTE ZÄHLEN DOPPELT

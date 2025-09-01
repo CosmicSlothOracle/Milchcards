@@ -45,19 +45,7 @@ export const CARD_TAG_REGISTRY: Record<string, CardTags> = {
     public: [CARD_TAGS.PUBLIC.MEDIA]
   },
 
-  // Government cards - Leadership/Diplomat keywords
-  'Justin Trudeau': {
-    government: [CARD_TAGS.GOVERNMENT.LEADERSHIP]
-  },
-  'Emmanuel Macron': {
-    government: [CARD_TAGS.GOVERNMENT.LEADERSHIP]
-  },
-  'Ursula von der Leyen': {
-    government: [CARD_TAGS.GOVERNMENT.LEADERSHIP, CARD_TAGS.GOVERNMENT.DIPLOMAT]
-  },
-  'Joschka Fischer': {
-    government: [CARD_TAGS.GOVERNMENT.DIPLOMAT]
-  },
+  // Government cards - ENTFERNT (nur Einfluss, keine Tags)
 };
 
 // Efficient lookup functions

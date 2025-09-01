@@ -35,6 +35,7 @@ export function makeSpecInstance(base: BaseSpecial): SpecialCard {
     type: base.type,
     impl: base.impl,
     bp: base.bp,
+    ...(base.effectKey && { effectKey: base.effectKey }),
     ...(base.tag && { tag: base.tag }), // 🔥 TAG ÜBERTRAGUNG FÜR NGO/PLATTFORM DETECTION!
     uid: NEXT_UID++,
     deactivated: false,

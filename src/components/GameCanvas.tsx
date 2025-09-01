@@ -1,8 +1,20 @@
 import React, { useRef, useEffect, useCallback } from 'react';
+import { useVisualEffects, useVisualEffectsSafe } from '../context/VisualEffectsContext';
 import { GameState, Card, PoliticianCard, Player, Lane } from '../types/game';
 import { LAYOUT, getZone, computeSlotRects, getUiTransform, getLaneCapacity, getPublicRects, getGovernmentRects, getSofortRect } from '../ui/layout';
 import { drawCardImage, sortHandCards } from '../utils/gameUtils';
 import { getNetApCost } from '../utils/ap';
+import { getCardImagePath } from '../data/gameData';
+import influenceIconUrl from '../assets/icons/influence.svg';
+import publicSymbolUrl from '../assets/icons/public_symbol.png';
+import sofortSymbolUrl from '../assets/icons/sofort_initiative_symbol.png';
+import dauerhaftSymbolUrl from '../assets/icons/dauerhaft_initative.png';
+import governmentSymbolUrl from '../assets/icons/government_symbol.png';
+import interventionSymbolUrl from '../assets/icons/intervention_symbol.png';
+import govPlaceGifUrl from '../assets/effect_gif/place_card_gov_256x256.gif';
+import govPlaceSpritesheetUrl from '../ui/sprites/playcard_gov_256x256_14.png';
+import instantSpritesheetUrl from '../ui/sprites/activate_trap_hit_target_256x256_16x2.png';
+import hitSpritesheetUrl from '../ui/sprites/activate_inititive_hit_target_256x256_16_2rows.png';
 
 interface GameCanvasProps {
   gameState: GameState;
@@ -12,7 +24,11 @@ interface GameCanvasProps {
   devMode?: boolean; // 🔧 DEV MODE: Show P2 hand when true
 }
 
-
+// Helper: is corruption target selection active
+function isCorruptionSelection(state: GameState, player: Player) {
+  const sel: any = (state as any).pendingAbilitySelect;
+  return sel && sel.type === 'corruption_steal' && sel.actorPlayer === player;
+}
 
 export const GameCanvas: React.FC<GameCanvasProps> = ({
   gameState,
@@ -21,10 +37,89 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
   onCardHover,
   devMode = false,
 }) => {
+  // listen for dice roll requests from resolver and trigger Dice3D
+  useEffect(() => {
+    const handler = (ev: any) => {
+      try {
+        const player = ev.detail?.player;
+        // find Dice3D canvas on page and trigger click (it rolls on click)
+        const dice = document.querySelector('canvas') as HTMLCanvasElement | null;
+        // better: dispatch global event so App-level Dice3D component can roll programmatically
+        window.dispatchEvent(new CustomEvent('pc:ui_request_dice_roll', { detail: { player } }));
+      } catch (e) {}
+    };
+    window.addEventListener('pc:request_dice_roll', handler as EventListener);
+    return () => window.removeEventListener('pc:request_dice_roll', handler as EventListener);
+  }, []);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const visualEffects = useVisualEffectsSafe();
   const clickZonesRef = useRef<Array<{ x: number; y: number; w: number; h: number; data: any }>>([]);
+  // Smooth vertical scroll for P1 hand when it has more than visible slots
+  const handScrollTargetRef = useRef<number>(0);
+  const handScrollCurrentRef = useRef<number>(0);
+  const handScrollEnabledRef = useRef<boolean>(true);
+  // Touch handling refs
+  const touchStartYRef = useRef<number | null>(null);
+  const lastTouchYRef = useRef<number | null>(null);
+  const isTouchingRef = useRef<boolean>(false);
   const backgroundImageRef = useRef<HTMLImageElement | null>(null);
+  const imageCacheRef = useRef<Map<string, HTMLImageElement>>(new Map());
+  const influenceImgRef = useRef<HTMLImageElement | null>(null);
+  // Animation state for visual influence changes: Map<uid, Array<Anim>>
+  const influenceAnimRef = useRef<Map<string, Array<{ start: number; duration: number; amount: number }>>>(new Map());
+  // Previous per-card influence snapshot to detect increases
+  const prevInfluencesRef = useRef<Record<string, number>>({});
+  // Slot symbol images
+  const slotSymbolImgsRef = useRef<Map<string, HTMLImageElement>>(new Map());
+  // Map of canonical slot positions for animations: key -> {x,y,w,h,cx,cy}
+  const slotPositionsRef = useRef<Record<string, { x: number; y: number; w: number; h: number; cx: number; cy: number }>>({});
+  // Temporary test GIF for government slots
+  const govGifRef = useRef<HTMLImageElement | null>(null);
+  const govSpritesRef = useRef<HTMLImageElement | null>(null);
+  // hit (target) spritesheet (25 frames)
+  const hitSpritesRef = useRef<HTMLImageElement | null>(null);
+  // sprite animation state keyed by slot-key (player.lane.index)
+  const govSpriteStateRef = useRef<Record<string, { started: number; frameCount: number; frameDuration: number }>>({});
+  const instantSpritesRef = useRef<HTMLImageElement | null>(null);
+  const instantSpriteStateRef = useRef<Record<string, { started: number; frameCount: number; frameDuration: number }>>({});
 
+  const hitSpriteStateRef = useRef<Record<string, { started: number; frameCount: number; frameDuration: number }>>({});
+
+  // Helper: draw slot icons with uniform pulsing opacity and a light reflection
+  const drawSlotIconWithPulse = useCallback((ctx: CanvasRenderingContext2D, img: HTMLImageElement | undefined, x: number, y: number, w: number, h: number, phase = 0) => {
+    if (!img || !img.complete) return;
+    try {
+      const now = performance.now();
+      const base = 0.10; // base opacity
+      const pulseRange = 0.08; // pulse amplitude (-> up to base + pulseRange)
+      const period = 700; // ms
+      const pulse = base + pulseRange * (0.5 + 0.5 * Math.sin(now / period + phase));
+
+      // draw icon with pulsing alpha
+      ctx.save();
+      ctx.globalAlpha = pulse;
+      ctx.drawImage(img, x, y, w, h);
+
+      // subtle reflection: gradient overlay on top half
+      const grad = ctx.createLinearGradient(x, y, x, y + h * 0.5);
+      grad.addColorStop(0, `rgba(255,255,255,${0.18 * pulse})`);
+      grad.addColorStop(1, `rgba(255,255,255,0)`);
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.fillStyle = grad as any;
+      ctx.fillRect(x, y, w, h * 0.5);
+
+      ctx.restore();
+    } catch (e) {
+      // silent fallback
+    }
+  }, []);
+
+  // Load influence icon once
+  useEffect(() => {
+    const img = new Image();
+    img.src = influenceIconUrl;
+    influenceImgRef.current = img;
+  }, []);
 
 
   const drawCardAt = useCallback((
@@ -37,6 +132,18 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     showAPCost: boolean = false,
     player?: Player
   ) => {
+    // Apply per-card fade-in if a play animation is active for this uid
+    let extraAlpha = 1;
+    try {
+      const uid = (card as any).uid ?? (card as any).id;
+      const list = (visualEffects && visualEffects.playAnimsRef && visualEffects.playAnimsRef.current) || (window as any).__pc_play_anims || [];
+      const anim = list.find((a: any) => a.uid === uid);
+      if (anim) {
+        const p = Math.min(1, Math.max(0, (performance.now() - anim.started) / anim.duration));
+        // ease-out
+        extraAlpha = Math.pow(p, 2);
+      }
+    } catch (e) {}
     let dx = x, dy = y, s = size;
     if (selected) {
       s = Math.floor(size * 1.05);
@@ -44,16 +151,41 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       dy = y - Math.floor((s - size) / 2);
     }
 
-    drawCardImage(ctx, card, dx, dy, s, 'ui');
+    // Note: pulse overlay is drawn at top layer after all cards are rendered
+
+    // Draw card image with caching to prevent flicker in continuous loop
+    const src = getCardImagePath(card, 'ui');
+    const cached = imageCacheRef.current.get(src);
+    ctx.save();
+    ctx.globalAlpha = extraAlpha;
+    if (cached && cached.complete && cached.naturalWidth > 0) {
+      ctx.drawImage(cached, dx, dy, s, s);
+    } else {
+      const img = new Image();
+      img.onload = () => {
+        imageCacheRef.current.set(src, img);
+        // Note: onload happens async; draw will occur on next frame
+        // don't draw here into stale ctx
+      };
+      img.src = src;
+      imageCacheRef.current.set(src, img);
+    }
+
+    ctx.restore();
 
     // Status-Indikatoren (für alle Board-Karten)
-    // Einfluss-Wert unten links – nur für Politiker
+    // Einfluss-Wert dauerhaft anzeigen (oben links) – nur für Regierungskarten
     if ((card as any).kind === 'pol') {
-      ctx.fillStyle = 'rgba(0,0,0,0.5)';
-      ctx.fillRect(dx, dy + s - 22, s, 22);
-      ctx.fillStyle = '#D7E7F8';
-      ctx.font = 'bold 16px sans-serif';
-      ctx.fillText(`${(card as any).influence ?? 0}`, dx + 8, dy + s - 6);
+      const barH = Math.max(20, Math.floor(s * 0.12) + 6);
+      ctx.fillStyle = 'rgba(0,0,0,0.6)';
+      ctx.fillRect(dx, dy + s - barH, s, barH);
+
+      ctx.fillStyle = '#ffffff';
+      const fontSize = Math.floor(s * 0.12);
+      ctx.font = `bold ${fontSize}px sans-serif`;
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(`${(card as any).influence ?? 0}`, dx + 8, dy + s - barH / 2);
     }
     // Schutz-Status (blauer Punkt)
     if ((card as any).protected || ((card as any).shield ?? 0) > 0) {
@@ -66,42 +198,39 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       ctx.fillRect(dx + s - 22, dy + 26, 16, 16);
     }
 
-    // Netto-AP Badge anzeigen (modern) - nur für Handkarten
-    if (showAPCost && player) {
-      const apInfo = getNetApCost(gameState, player, card, 'innen'); // Default auf innen
-      const netText = `⚡${apInfo.net}`;
-
-      // Badge-Größe berechnen
+    // Einfluss-Badge für Handkarten oben rechts (nur Regierungskarten)
+    if (showAPCost && player && (card as any).kind === 'pol') {
       const badgeHeight = Math.max(16, Math.floor(s * 0.12));
       const badgeWidth = badgeHeight * 2;
       const badgeX = dx + s - badgeWidth - 6;
       const badgeY = dy + 6;
 
-      // Badge-Hintergrund (grün für 0 AP, gelb für > 0)
-      const bgColor = apInfo.net === 0 ? '#E7F8EF' : '#FFF7E6';
-      const borderColor = apInfo.net === 0 ? '#10b981' : '#f59e0b';
-
-      ctx.fillStyle = bgColor;
+      // Semi-transparent dunkler Hintergrund
+      ctx.fillStyle = 'rgba(0,0,0,0.6)';
       ctx.beginPath();
       ctx.roundRect(badgeX, badgeY, badgeWidth, badgeHeight, badgeHeight / 2);
       ctx.fill();
 
-      // Badge-Rand
-      ctx.strokeStyle = borderColor;
-      ctx.lineWidth = 1;
-      ctx.stroke();
+      // Influence icon (90% opacity) links im Badge
+      if (influenceImgRef.current && influenceImgRef.current.complete) {
+        ctx.globalAlpha = 0.9;
+        ctx.drawImage(influenceImgRef.current, badgeX + 2, badgeY + 2, badgeHeight - 4, badgeHeight - 4);
+        ctx.globalAlpha = 1;
+      }
 
-      // Text
-      ctx.fillStyle = apInfo.net === 0 ? '#065f46' : '#92400e';
+      // Influence number rechts im Badge
+      ctx.fillStyle = '#ffffff';
       ctx.font = `bold ${Math.floor(badgeHeight * 0.5)}px sans-serif`;
-      ctx.textAlign = 'center';
+      ctx.textAlign = 'right';
       ctx.textBaseline = 'middle';
-      ctx.fillText(netText, badgeX + badgeWidth / 2, badgeY + badgeHeight / 2);
+      ctx.fillText(`${(card as any).influence ?? 0}`, badgeX + badgeWidth - 4, badgeY + badgeHeight / 2);
 
-      // Reset text align
+      // Reset align
       ctx.textAlign = 'start';
       ctx.textBaseline = 'alphabetic';
     }
+
+    // NOTE: influence overlays (pulse + labels) are drawn in a separate pass
 
     // Auswahl-Rahmen
     if (selected) {
@@ -234,13 +363,20 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     if (!zone) return;
 
     const slots = computeSlotRects(zone);
+    // Apply smooth offset (lerp towards target)
+    const target = handScrollTargetRef.current;
+    handScrollCurrentRef.current += (target - handScrollCurrentRef.current) * 0.15; // easing
+    const offsetY = Math.round(handScrollCurrentRef.current);
     slots.forEach((s: { x: number; y: number; w: number; h: number }, i: number) => {
       const card = hand[i];
       if (!card) return;
       // Find original index in unsorted hand for click handling
       const originalIndex = gameState.hands[1].findIndex(c => c.uid === card.uid);
       const isSel = selectedHandIndex === originalIndex;
-      const clickZone = drawCardAt(ctx, card, s.x, s.y, s.w, isSel, true, 1); // Show AP cost for player 1 hand
+      // apply vertical offset
+      const sx = s.x;
+      const sy = s.y + offsetY;
+      const clickZone = drawCardAt(ctx, card, sx, sy, s.w, isSel, true, 1); // Show AP cost for player 1 hand
       clickZonesRef.current.push({ ...clickZone, data: { type: 'hand_p1', index: originalIndex, card } });
     });
   }, [gameState.hands, selectedHandIndex, drawCardAt]);
@@ -381,8 +517,8 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
 
       clickZonesRef.current.push({ ...clickZone, data: { type: 'slot_card', slot: clickType, card } });
 
-      // 🔧 NEU: Sofort-Initiative-Slots sind klickbar für Aktivierung
-      if (clickType === 'instant' && gameState.current === player) {
+      // 🔧 NEU: Sofort-Initiative-Slots sind immer klickbar für Aktivierung (handled by activateInstantInitiative)
+      if (clickType === 'instant') {
         clickZonesRef.current.push({
           x, y, w, h,
           data: { type: 'activate_instant', player, card }
@@ -567,12 +703,86 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     }
   }, [getActiveKeywordsAndSubcategories]);
 
+  // Move diagnostics to draw callback to ensure they run after canvas is actually rendered
+  const runDiagnostics = useCallback(() => {
+    try {
+      const handZones = clickZonesRef.current.filter(z => z.data && z.data.type === 'hand_p1');
+      const uiUIDs = handZones.map(z => (z.data.card && (z.data.card.uid ?? z.data.card.id)) ).filter(Boolean);
+      const stateHand = gameState.hands && gameState.hands[1] ? gameState.hands[1] : [];
+      const stateUIDs = stateHand.map((c: any) => c.uid ?? c.id).filter(Boolean);
+
+      const missingInState = uiUIDs.filter((u: any) => !stateUIDs.includes(u));
+      const missingInUI = stateUIDs.filter((u: any) => !uiUIDs.includes(u));
+
+      // Only warn if there are cards in UI that don't exist in state (real error)
+      // Don't warn about missing UI cards due to limited slot capacity
+      if (missingInState.length > 0) {
+        const mismatch = {
+          ts: Date.now(),
+          uiCount: uiUIDs.length,
+          stateCount: stateUIDs.length,
+          uiUIDs,
+          stateUIDs,
+          missingInState,
+          missingInUI,
+          stack: (new Error('mismatch-stack')).stack
+        };
+        (window as any).__politicardDebug = {
+          ...(window as any).__politicardDebug,
+          mismatch: [ ...(window as any).__politicardDebug?.mismatch || [] ].slice(-19).concat([mismatch])
+        };
+        // Clear, then log to console so user can copy/paste trace
+        console.warn('POLITICARD DIAGNOSTIC: hand mismatch detected', mismatch);
+      }
+    } catch (e) {
+      // swallow diagnostic errors to avoid breaking rendering
+      console.error('Diagnostic error', e);
+    }
+  }, [gameState.hands]);
+
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
+
+    // Detect influence increases and start animations
+    try {
+      const currSnapshot: Record<string, number> = {};
+      const collect = (c: any) => {
+        if (!c) return;
+        if ((c as any).kind !== 'pol') return;
+        const uid = c.uid ?? (c.id != null ? String(c.id) : null);
+        if (!uid) return;
+        currSnapshot[uid] = (c.influence ?? 0) as number;
+      };
+      // board rows
+      (gameState.board[1].aussen || []).forEach(collect);
+      (gameState.board[2].aussen || []).forEach(collect);
+      (gameState.board[1].innen || []).forEach(collect);
+      (gameState.board[2].innen || []).forEach(collect);
+      // permanent slots
+      collect(gameState.permanentSlots[1].government as any);
+      collect(gameState.permanentSlots[2].government as any);
+      collect(gameState.permanentSlots[1].public as any);
+      collect(gameState.permanentSlots[2].public as any);
+
+      const now = performance.now();
+      Object.keys(currSnapshot).forEach(uid => {
+        const curr = currSnapshot[uid] ?? 0;
+        const prev = prevInfluencesRef.current[uid] ?? curr;
+        if (curr > prev) {
+          const delta = curr - prev;
+          const list = influenceAnimRef.current.get(uid) || [];
+          list.push({ start: now, duration: 900, amount: delta });
+          influenceAnimRef.current.set(uid, list);
+        }
+        prevInfluencesRef.current[uid] = curr;
+      });
+    } catch (e) {
+      // ignore
+    }
 
     // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -610,6 +820,11 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       if (card) {
         drawCardAt(ctx, card, s.x, s.y, s.w, false, false, 2);
       }
+      else {
+        // draw placeholder symbol for empty public slot
+        const img = slotSymbolImgsRef.current.get('public');
+        drawSlotIconWithPulse(ctx, img, s.x, s.y, s.w, s.h, 0.4);
+      }
     });
 
     // Draw opponent government slots
@@ -618,10 +833,39 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       if (card) {
         drawCardAt(ctx, card, s.x, s.y, s.w, false, false, 2);
       }
+      else {
+        const img = slotSymbolImgsRef.current.get('government');
+        drawSlotIconWithPulse(ctx, img, s.x, s.y, s.w, s.h, 0.1);
+      }
     });
 
-    // Draw opponent permanent slots
-    drawPermanentSlotsP2(ctx);
+    // Draw opponent permanent slots (show icons even when not current)
+    try {
+      const permGovZoneOpp = getZone('slot.permanent.government.opponent');
+      if (permGovZoneOpp) {
+        const card = gameState.permanentSlots[2].government;
+        const [ox, oy, ow, oh] = permGovZoneOpp.rectPx;
+        if (card) {
+          drawSingleSlot(ctx, 'slot.permanent.government.opponent', card, 'permanent_government', 2);
+        } else {
+          const img = slotSymbolImgsRef.current.get('dauerhaft');
+          drawSlotIconWithPulse(ctx, img, ox, oy, ow, oh, 0.3);
+        }
+      }
+    } catch (e) {}
+    try {
+      const permPubZoneOpp = getZone('slot.permanent.public.opponent');
+      if (permPubZoneOpp) {
+        const card = gameState.permanentSlots[2].public;
+        const [ox2, oy2, ow2, oh2] = permPubZoneOpp.rectPx;
+        if (card) {
+          drawSingleSlot(ctx, 'slot.permanent.public.opponent', card, 'permanent_public', 2);
+        } else {
+          const img = slotSymbolImgsRef.current.get('dauerhaft');
+          drawSlotIconWithPulse(ctx, img, ox2, oy2, ow2, oh2, 0.7);
+        }
+      }
+    } catch (e) {}
 
     // Draw player board (middle rows)
     // Draw player board using new layout system
@@ -638,7 +882,10 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
           data: { type: 'row_slot', player: 1, lane: 'innen', index: idx }
         });
       } else {
-        // Empty slot click zone
+        // Empty slot click zone and draw public symbol
+        // Draw unified pulsing icon for empty public slot
+        const img = slotSymbolImgsRef.current.get('public');
+        drawSlotIconWithPulse(ctx, img, s.x, s.y, s.w, s.h, 0.4);
         clickZonesRef.current.push({
           x: s.x, y: s.y, w: s.w, h: s.h,
           data: { type: 'row_slot', player: 1, lane: 'innen', index: idx }
@@ -656,7 +903,9 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
           data: { type: 'row_slot', player: 1, lane: 'aussen', index: idx }
         });
       } else {
-        // Empty slot click zone
+        // Empty slot click zone and draw government symbol
+        const img = slotSymbolImgsRef.current.get('government');
+        drawSlotIconWithPulse(ctx, img, s.x, s.y, s.w, s.h, 0.1);
         clickZonesRef.current.push({
           x: s.x, y: s.y, w: s.w, h: s.h,
           data: { type: 'row_slot', player: 1, lane: 'aussen', index: idx }
@@ -664,14 +913,212 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       }
     });
 
-    // Draw player permanent slots
-    drawPermanentSlotsP1(ctx);
+    // --- GOV PLACEMENT SPRITESHEET OVERLAY (frame-based) ---
+    try {
+      const sprites = govSpritesRef.current;
+      const gif = govGifRef.current;
+      const anims = (visualEffects && visualEffects.playAnimsRef && visualEffects.playAnimsRef.current) || [];
 
-    // Draw instant slots (both players)
-    drawInstantSlots(ctx);
+      // Start sprite animation when a playAnim for a gov-card is active and maps to a slot
+      const now = performance.now();
+      // handle specialized 'hit:' playAnims which indicate target-hit sprites by slot key
+      anims.forEach((a: { uid: string | number; started: number; duration: number; lane?: string }) => {
+        try {
+          if (typeof a.uid === 'string' && a.uid.indexOf('hit:') === 0) {
+            const inner = a.uid.slice(4); // '1.aussen.0'
+            if (!hitSpriteStateRef.current[inner]) {
+              hitSpriteStateRef.current[inner] = { started: now, frameCount: 25, frameDuration: 30 };
+            }
+            return; // don't treat as gov anim
+          }
+        } catch (e) {}
+
+        // existing gov/instant handling follows
+      });
+
+      // now run the original anims loop for gov/instant that depend on card uids
+      anims.forEach((a: { uid: string | number; started: number; duration: number; lane?: string }) => {
+        // find the zone/slot for this uid
+        const zone = clickZonesRef.current.find(z => z.data && z.data.card && ((z.data.card.uid ?? String(z.data.card.id)) === a.uid));
+        if (!zone) return;
+        // determine if gov slot
+        let isGov = false;
+        let isInstant = false;
+        try {
+          const dt = zone.data || {};
+          if (dt.type === 'row_slot' && dt.lane === 'aussen') isGov = true;
+          if (dt.type === 'board_card' && dt.lane === 'aussen') isGov = true;
+          if (dt.slot && typeof dt.slot === 'string' && dt.slot.includes('government')) isGov = true;
+          if (dt.type === 'activate_instant' || (dt.slot && typeof dt.slot === 'string' && dt.slot.includes('instant'))) isInstant = true;
+        } catch (e) {}
+        if (!isGov && !isInstant) return;
+
+        const player = zone.data.player ?? 1;
+        const lane = zone.data.lane ?? 'aussen';
+        const idx = zone.data.index ?? 0;
+        const key = `${player}.${lane}.${idx}`;
+
+        // initialize sprite state if not present
+        if (isGov) {
+          if (!govSpriteStateRef.current[key]) {
+            govSpriteStateRef.current[key] = { started: now, frameCount: 14, frameDuration: 40 }; // 14 frames @ ~40ms -> ~560ms
+          }
+        }
+        if (isInstant) {
+          const instKey = `${player}.instant.${idx}`;
+          if (!instantSpriteStateRef.current[instKey]) {
+            instantSpriteStateRef.current[instKey] = { started: now, frameCount: 14, frameDuration: 40 };
+          }
+        }
+      });
+
+      // draw running sprite animations per gov slot
+      Object.keys(govSpriteStateRef.current).forEach(k => {
+        const st = govSpriteStateRef.current[k];
+        const elapsed = now - st.started;
+        const total = st.frameCount * st.frameDuration;
+        if (elapsed > total) {
+          // animation finished; remove state
+          delete govSpriteStateRef.current[k];
+          return;
+        }
+        const frame = Math.floor(elapsed / st.frameDuration);
+
+        // parse key -> player.lane.index
+        const parts = k.split('.');
+        const player = Number(parts[0]) || 1;
+        const lane = parts[1] || 'aussen';
+        const index = Number(parts[2] || 0);
+
+        // compute slot rect for this gov slot (player or opponent board)
+        const rect = player === 1 ? playerGovRects[index] : opponentGovRects[index];
+        if (!rect) return;
+
+        // spritesheet: frame N located at x = N*256, y = 0
+        if (sprites && sprites.complete) {
+          const sx = frame * 256;
+          const sy = 0;
+          const sw = 256;
+          const sh = 256;
+          // draw exactly matching the slot rect size to avoid scaling mismatches
+          const dx = rect.x;
+          const dy = rect.y;
+          ctx.drawImage(sprites, sx, sy, sw, sh, dx, dy, rect.w, rect.h);
+        } else if (gif && gif.complete) {
+          // fallback to static gif if spritesheet missing
+          ctx.drawImage(gif, rect.x, rect.y, rect.w, rect.h);
+        }
+      });
+      // --- INSTANT INITIATIVE SPRITESHEET (draw on instant slot) ---
+      try {
+        const spritesI = instantSpritesRef.current;
+        const nowI = performance.now();
+        Object.keys(instantSpriteStateRef.current).forEach(k => {
+          const st = instantSpriteStateRef.current[k];
+          const elapsed = nowI - st.started;
+          const total = st.frameCount * st.frameDuration;
+          if (elapsed > total) { delete instantSpriteStateRef.current[k]; return; }
+          const frame = Math.floor(elapsed / st.frameDuration);
+          const parts = k.split('.');
+          const player = Number(parts[0]) || 1;
+          const index = Number(parts[2] || 0);
+          const rects = getSofortRect(player ? 'player' : 'opponent');
+          // getSofortRect returns one rect; map by player/context — fallback to zone
+          const instantRect = getZone('slot.instant.player').rectPx;
+          const [ix, iy, iw, ih] = instantRect;
+          if (spritesI && spritesI.complete) {
+            const sx = frame * 256; const sy = 0; const sw = 256; const sh = 256;
+            ctx.drawImage(spritesI, sx, sy, sw, sh, ix, iy, iw, ih);
+          }
+        });
+      } catch (e) {}
+      // --- HIT / TARGET SPRITESHEET (draw as overlay on targeted slot) ---
+      try {
+        const spritesH = hitSpritesRef.current;
+        const nowH = performance.now();
+        Object.keys(hitSpriteStateRef.current).forEach(k => {
+          const st = hitSpriteStateRef.current[k];
+          const elapsed = nowH - st.started;
+          const total = st.frameCount * st.frameDuration;
+          if (elapsed > total) { delete hitSpriteStateRef.current[k]; return; }
+          const frame = Math.floor(elapsed / st.frameDuration);
+
+          // parse key -> player.lane.index
+          const parts = k.split('.');
+          const player = Number(parts[0]) || 1;
+          const lane = parts[1] || 'aussen';
+          const index = Number(parts[2] || 0);
+
+          // compute slot rect for this gov slot (attempt gov then public)
+          const rect = (player === 1 ? playerGovRects : opponentGovRects)[index] || (player === 1 ? playerPublicRects : opponentPublicRects)[index];
+          if (!rect) return;
+
+          if (spritesH && spritesH.complete) {
+            const sx = frame * 256;
+            const sy = 0;
+            const sw = 256;
+            const sh = 256;
+            const dx = rect.x;
+            const dy = rect.y;
+            ctx.drawImage(spritesH, sx, sy, sw, sh, dx, dy, rect.w, rect.h);
+          }
+        });
+      } catch (e) {}
+    } catch (e) {}
+
+    // Draw player permanent slots (draw symbols if empty)
+    // permanent government
+    const permGovZone = getZone('slot.permanent.government.player');
+    if (permGovZone) {
+      const card = gameState.permanentSlots[1].government;
+      const [x, y, w, h] = permGovZone.rectPx;
+      if (card) {
+        drawSingleSlot(ctx, 'slot.permanent.government.player', card, 'permanent_government', 1);
+      } else {
+        // Draw all slot icons using unified helper (so 'dauerhaft' used visually for empty permanent gov slot)
+        const img = slotSymbolImgsRef.current.get('dauerhaft');
+        drawSlotIconWithPulse(ctx, img, x, y, w, h, 0.2);
+      }
+    }
+    // permanent public
+    const permPubZone = getZone('slot.permanent.public.player');
+    if (permPubZone) {
+      const card = gameState.permanentSlots[1].public;
+      const [x2, y2, w2, h2] = permPubZone.rectPx;
+      if (card) {
+        drawSingleSlot(ctx, 'slot.permanent.public.player', card, 'permanent_public', 1);
+      } else {
+        // Draw all slot icons using unified helper (so 'dauerhaft' used visually for empty permanent public slot)
+        const img = slotSymbolImgsRef.current.get('dauerhaft');
+        drawSlotIconWithPulse(ctx, img, x2, y2, w2, h2, 0.9);
+      }
+    }
+
+    // Draw instant slots (both players) and placeholder if empty
+    const instantPlayerZone = getZone('slot.instant.player');
+    if (instantPlayerZone) {
+      const card = gameState.board[1].sofort[0];
+      const [x, y, w, h] = instantPlayerZone.rectPx;
+      if (card) drawSingleSlot(ctx, 'slot.instant.player', card, 'instant', 1);
+      else {
+        // Use unified icon draw helper for instant slot
+        const img = slotSymbolImgsRef.current.get('sofort');
+        drawSlotIconWithPulse(ctx, img, x, y, w, h, 0.0);
+      }
+    }
 
     // Draw interventions strip (player)
-    drawInterventionsP1(ctx);
+    // We draw symbol if empty
+    const interventionsZone = getZone('interventions.player');
+    if (interventionsZone) {
+      const [zx, zy, zw, zh] = interventionsZone.rectPx;
+      const card = gameState.traps[1] && gameState.traps[1][0];
+      if (card) drawInterventionsP1(ctx);
+      else {
+        const img = slotSymbolImgsRef.current.get('intervention');
+        drawSlotIconWithPulse(ctx, img, zx, zy, zw, zh, 0.6);
+      }
+    }
 
     // Draw interventions strip (opponent) - nur im Dev Mode
     if (devMode) {
@@ -689,6 +1136,245 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     // Draw info panels
     drawInfoPanels(ctx);
 
+    // --- VISUAL EFFECTS: Particle bursts, card pop scale, initiative ripple & AP pop ---
+    try {
+      const now = performance.now();
+      const { particlesRef, popsRef, ripplesRef, apLabelsRef, reducedMotion } = (visualEffects || {}) as any;
+
+      const parts: any[] = particlesRef.current || [];
+      if (!reducedMotion) {
+        for (let i = parts.length - 1; i >= 0; i--) {
+          const p = parts[i];
+          const age = now - p.start;
+          if (age > p.life) {
+            parts.splice(i, 1);
+            continue;
+          }
+          p.vy += (p.gravity || 0.09);
+          p.x += p.vx;
+          p.y += p.vy;
+          const t = 1 - age / p.life;
+          ctx.save();
+          ctx.globalAlpha = Math.max(0, Math.min(1, t));
+          ctx.fillStyle = p.color || '#ffd166';
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, (p.size || 4) * t, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+        particlesRef.current = parts;
+
+        const pops: any[] = popsRef.current || [];
+        pops.forEach((pop) => {
+          const p = Math.min(1, Math.max(0, (now - pop.started) / pop.duration));
+          const eased = 1 + 0.12 * (1 - Math.pow(1 - p, 3));
+          const zone = clickZonesRef.current.find(z => z.data && z.data.card && ((z.data.card.uid ?? String(z.data.card.id)) === pop.uid));
+          if (!zone) return;
+          ctx.save();
+          ctx.translate(zone.x + zone.w / 2, zone.y + zone.h / 2);
+          ctx.scale(eased, eased);
+          ctx.globalAlpha = 0.12 * (1 - p);
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(-zone.w / 2, -zone.h / 2, zone.w, zone.h);
+          ctx.restore();
+        });
+
+        const ripples: any[] = ripplesRef.current || [];
+        for (let i = ripples.length - 1; i >= 0; i--) {
+          const r = ripples[i];
+          const p = Math.min(1, Math.max(0, (now - r.started) / r.duration));
+          if (p >= 1) { ripples.splice(i, 1); continue; }
+          const radius = r.radius * (0.8 + 1.8 * p);
+          ctx.save();
+          const g = ctx.createRadialGradient(r.cx, r.cy, radius * 0.1, r.cx, r.cy, radius);
+          g.addColorStop(0, `rgba(255,255,255,${0.12 * (1 - p)})`);
+          g.addColorStop(1, `rgba(255,255,255,0)`);
+          ctx.fillStyle = g as any;
+          ctx.beginPath();
+          ctx.arc(r.cx, r.cy, radius, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+
+          if (r.showAp && !r._apSpawned) {
+            apLabelsRef.current = apLabelsRef.current || [];
+            apLabelsRef.current.push({ x: r.apX, y: r.apY, started: now, duration: 800, text: '+1' });
+            r._apSpawned = true;
+          }
+        }
+        ripplesRef.current = ripples;
+
+        const apl: any[] = apLabelsRef.current || [];
+        for (let i = apl.length - 1; i >= 0; i--) {
+          const l = apl[i];
+          const p = Math.min(1, Math.max(0, (now - l.started) / l.duration));
+          if (p >= 1) { apl.splice(i, 1); continue; }
+          ctx.save();
+          ctx.globalAlpha = 1 - p;
+          ctx.fillStyle = '#ffdd57';
+          ctx.font = 'bold 22px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText(l.text, l.x, l.y - 20 * p);
+          ctx.restore();
+        }
+        apLabelsRef.current = apl;
+      } else {
+        const apl: any[] = apLabelsRef.current || [];
+        for (let i = apl.length - 1; i >= 0; i--) {
+          const l = apl[i];
+          const p = Math.min(1, Math.max(0, (now - l.started) / l.duration));
+          if (p >= 1) { apl.splice(i, 1); continue; }
+          ctx.save();
+          ctx.globalAlpha = 1 - p;
+          ctx.fillStyle = '#ffdd57';
+          ctx.font = 'bold 18px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText(l.text, l.x, l.y - 10 * p);
+          ctx.restore();
+        }
+        apLabelsRef.current = apl;
+      }
+    } catch (e) {}
+
+    // --- Overlay pass: draw influence pulse ring and +N labels on top of all cards ---
+    try {
+      const now = performance.now();
+      // iterate over stored anims
+      influenceAnimRef.current.forEach((anims, uid) => {
+        // find card position by scanning clickZones
+        const zone = clickZonesRef.current.find(z => z.data && ((z.data.card && ((z.data.card.uid ?? String(z.data.card.id)) === uid)) || (z.data.card && z.data.card.uid === uid)) );
+        if (!zone) return;
+        const cx = zone.x + zone.w / 2;
+        const cy = zone.y + zone.h / 2;
+        // calculate aggregate pulse for this uid
+        let maxPulse = 0;
+        let totalAmount = 0;
+        const remaining: Array<{ start: number; duration: number; amount: number }> = [];
+        anims.forEach(a => {
+          const p = Math.min(1, Math.max(0, (now - a.start) / a.duration));
+          const pulse = Math.pow(Math.max(0, 1 - p), 2);
+          if (pulse > maxPulse) maxPulse = pulse;
+          if (p < 1) {
+            remaining.push(a);
+            totalAmount += a.amount;
+          }
+        });
+
+        // update list
+        if (remaining.length > 0) influenceAnimRef.current.set(uid, remaining);
+        else influenceAnimRef.current.delete(uid);
+
+        if (maxPulse > 0.001) {
+          // draw a soft ring to the right-bottom of influence number
+          const ringRadius = Math.max(8, zone.w * 0.08) * (1 + maxPulse * 0.6);
+          const ringX = zone.x + zone.w - 28; // near bottom-right where influence text lives
+          const ringY = zone.y + zone.h - 20;
+
+          ctx.save();
+          ctx.beginPath();
+          ctx.strokeStyle = `rgba(46, 204, 113, ${0.9 * maxPulse})`;
+          ctx.lineWidth = Math.max(2, Math.ceil(6 * maxPulse));
+          ctx.arc(ringX, ringY, ringRadius, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        if (totalAmount > 0) {
+          // floating +N to the right of influence number
+          const labelX = zone.x + zone.w - 12;
+          const labelY = zone.y + zone.h - 32 - (Math.random() * 6); // slight jitter
+          ctx.save();
+          ctx.fillStyle = '#2ecc71';
+          ctx.font = 'bold 16px sans-serif';
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(`+${totalAmount}`, labelX, labelY);
+          ctx.restore();
+        }
+      });
+    } catch (e) {
+      // ignore overlay errors
+    }
+
+    // --- Outline pass: draw a subtle, slightly pulsing 257x257 square around 256x256 slots ---
+    try {
+      const now2 = performance.now();
+      clickZonesRef.current.forEach((z, i) => {
+        if (!z) return;
+        const w = z.w || 0;
+        const h = z.h || 0;
+        // only target 256x256 slot-sized zones (covers the icons)
+        if (Math.abs(w - 256) > 0.1 || Math.abs(h - 256) > 0.1) return;
+        const x = z.x;
+        const y = z.y;
+
+        // Color palette (rgb)
+        const rgbTeal = '20,184,166';
+        const rgbBurg = '127,29,29';
+        const rgbPurple = '139,92,246';
+        const rgbYellow = '250,204,21';
+        const rgbOrange = '251,146,60';
+
+        // Determine slot semantic
+        let slotType: 'government' | 'public' | 'permanent' | 'instant' | 'intervention' | 'default' = 'default';
+        try {
+          const dt = z.data || {};
+          if (dt.slot && typeof dt.slot === 'string') {
+            if (dt.slot.includes('government')) slotType = 'government';
+            else if (dt.slot.includes('public')) slotType = 'public';
+            else if (dt.slot.includes('permanent')) slotType = 'permanent';
+            else if (dt.slot.includes('instant')) slotType = 'instant';
+          }
+          if (dt.type === 'row_slot' && dt.lane === 'aussen') slotType = 'government';
+          if (dt.type === 'row_slot' && dt.lane === 'innen') slotType = 'public';
+          if (dt.type === 'trap_p1' || dt.type === 'trap_p2' || (dt.card && dt.card.kind === 'trap')) slotType = 'intervention';
+          if (dt.type === 'activate_instant' || dt.slot === 'instant') slotType = 'instant';
+          if (dt.slot === 'permanent_government' || dt.slot === 'permanent_public' || dt.slot === 'permanent') slotType = 'permanent';
+        } catch (e) {}
+
+        const pulse = 0.5 + 0.5 * Math.sin(now2 / 350 + i);
+        const alpha = 0.06 + 0.12 * pulse; // subtle alpha
+        const lw = 1 + 2 * pulse; // line width between 1 and 3
+
+        // Create gradient based on slot type
+        let grad: CanvasGradient | null = null;
+        try {
+          grad = ctx.createLinearGradient(x, y, x + w, y + h);
+          if (slotType === 'government') {
+            grad.addColorStop(0, `rgba(${rgbTeal},1)`);
+            grad.addColorStop(1, `rgba(${rgbBurg},1)`);
+          } else if (slotType === 'public') {
+            grad.addColorStop(0, `rgba(${rgbBurg},1)`);
+            grad.addColorStop(1, `rgba(${rgbTeal},1)`);
+          } else if (slotType === 'permanent') {
+            grad.addColorStop(0, `rgba(${rgbPurple},1)`);
+            grad.addColorStop(1, `rgba(${rgbPurple},1)`);
+          } else if (slotType === 'instant') {
+            grad.addColorStop(0, `rgba(${rgbYellow},1)`);
+            grad.addColorStop(1, `rgba(${rgbYellow},1)`);
+          } else if (slotType === 'intervention') {
+            grad.addColorStop(0, `rgba(${rgbOrange},1)`);
+            grad.addColorStop(1, `rgba(${rgbOrange},1)`);
+          } else {
+            grad.addColorStop(0, `rgba(255,255,255,1)`);
+            grad.addColorStop(1, `rgba(255,255,255,1)`);
+          }
+        } catch (e) {
+          grad = null;
+        }
+
+        ctx.save();
+        if (grad) ctx.strokeStyle = grad as any;
+        else ctx.strokeStyle = `rgba(255,255,255,${alpha.toFixed(3)})`;
+        ctx.globalAlpha = alpha;
+        ctx.lineWidth = lw;
+        // draw 257x257 centered so that it encloses the 256 slot
+        ctx.strokeRect(x - 0.5, y - 0.5, w + 1, h + 1);
+        ctx.restore();
+      });
+    } catch (e) {
+      // ignore outline errors
+    }
+
     ctx.restore();
 
     // expose zones for debug snapshot
@@ -699,50 +1385,166 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       clickZones: clickZonesRef.current.slice(0, 1000)
     };
 
-    // Diagnostics: verify UI hand click zones match authoritative gameState.hands[1]
+    // Build canonical slotPositions map for animations/debugging
     try {
-      const handZones = clickZonesRef.current.filter(z => z.data && z.data.type === 'hand_p1');
-      const uiUIDs = handZones.map(z => (z.data.card && (z.data.card.uid ?? z.data.card.id)) ).filter(Boolean);
-      const stateHand = gameState.hands && gameState.hands[1] ? gameState.hands[1] : [];
-      const stateUIDs = stateHand.map((c: any) => c.uid ?? c.id).filter(Boolean);
-
-      const missingInState = uiUIDs.filter((u: any) => !stateUIDs.includes(u));
-      const missingInUI = stateUIDs.filter((u: any) => !uiUIDs.includes(u));
-
-      if (uiUIDs.length !== stateUIDs.length || missingInState.length > 0 || missingInUI.length > 0) {
-        const mismatch = {
-          ts: Date.now(),
-          uiCount: uiUIDs.length,
-          stateCount: stateUIDs.length,
-          uiUIDs,
-          stateUIDs,
-          missingInState,
-          missingInUI,
-          stack: (new Error('mismatch-stack')).stack
-        };
-        (window as any).__politicardDebug = {
-          ...(window as any).__politicardDebug,
-          mismatch: [ ...(window as any).__politicardDebug?.mismatch || [] ].slice(-19).concat([mismatch])
-        };
-        // Clear, then log to console so user can copy/paste trace
-        console.warn('POLITICARD DIAGNOSTIC: hand mismatch detected', mismatch);
-      }
+      const map: Record<string, { x: number; y: number; w: number; h: number; cx: number; cy: number }> = {};
+      clickZonesRef.current.forEach(z => {
+        const d = z.data || {};
+        // support row_slot, board_card, slot_card shapes
+        if (d.type === 'row_slot' || d.type === 'board_card' || d.type === 'slot_card' || d.type === 'hand_p1' || d.type === 'hand_p2') {
+          const player = d.player ?? (d.type === 'hand_p2' ? 2 : 1);
+          const lane = d.lane ?? (typeof d.slot === 'string' ? d.slot : (d.type === 'hand_p2' ? 'hand' : 'unknown'));
+          let index: number;
+          if (d.index != null) {
+            index = d.index;
+          } else if (d.card) {
+            // prefer explicit slotIndex, fallback to card.index, otherwise 0
+            index = (d.card.slotIndex != null) ? d.card.slotIndex : ((d.card.index != null) ? d.card.index : 0);
+          } else {
+            index = 0;
+          }
+          const key = `${player}.${lane}.${index}`;
+          map[key] = { x: z.x, y: z.y, w: z.w, h: z.h, cx: z.x + z.w / 2, cy: z.y + z.h / 2 };
+        }
+      });
+      slotPositionsRef.current = map;
+      (window as any).__politicardDebug = { ...(window as any).__politicardDebug, slotPositions: slotPositionsRef.current };
     } catch (e) {
-      // swallow diagnostic errors to avoid breaking rendering
-      console.error('Diagnostic error', e);
+      // don't let debug mapping break rendering
     }
-  }, [drawLane, drawHandP1, drawHandP2, drawInterventionsP1, drawInterventionsP2, drawPermanentSlotsP1, drawPermanentSlotsP2, drawInstantSlots, drawInfoPanels, devMode, gameState.hands]);
+
+    // Run diagnostics after canvas is fully rendered
+    runDiagnostics();
+  }, [drawLane, drawHandP1, drawHandP2, drawInterventionsP1, drawInterventionsP2, drawPermanentSlotsP1, drawPermanentSlotsP2, drawInstantSlots, drawInfoPanels, devMode, runDiagnostics]);
 
   const DRAW_LAYOUT_OVERLAY = false; // force off per new layout system
 
-  // Load background image if configured
+  // Load slot symbol images once
   useEffect(() => {
-    if (LAYOUT.background?.enabled && LAYOUT.background?.src) {
+    const load = (key: string, src: string) => {
       const img = new Image();
-      img.onload = () => { backgroundImageRef.current = img; requestAnimationFrame(draw); };
-      img.onerror = () => { console.warn('Failed to load background image', LAYOUT.background?.src); };
-      img.src = LAYOUT.background.src as string;
-    }
+      img.onload = () => { slotSymbolImgsRef.current.set(key, img); };
+      img.onerror = () => { console.warn('Failed to load slot icon', src); };
+      img.src = src;
+    };
+    // load all slot icons
+    load('public', publicSymbolUrl);
+    load('sofort', sofortSymbolUrl);
+    load('dauerhaft', dauerhaftSymbolUrl);
+    load('government', governmentSymbolUrl);
+    load('intervention', interventionSymbolUrl);
+
+    // load test GIF for gov overlay
+    try {
+      const img = new Image();
+      img.onload = () => { govGifRef.current = img; };
+      img.onerror = () => { console.warn('Failed to load gov overlay gif', govPlaceGifUrl); };
+      img.src = govPlaceGifUrl;
+    } catch (e) {}
+    // load spritesheet for placement animation
+    try {
+      const s = new Image();
+      s.onload = () => { govSpritesRef.current = s; };
+      s.onerror = () => { console.warn('Failed to load gov spritesheet', govPlaceSpritesheetUrl); };
+      s.src = govPlaceSpritesheetUrl;
+    } catch (e) {}
+    // load spritesheet for instant initiative activation
+    try {
+      const si = new Image();
+      si.onload = () => { instantSpritesRef.current = si; };
+      si.onerror = () => { console.warn('Failed to load instant spritesheet', instantSpritesheetUrl); };
+      si.src = instantSpritesheetUrl;
+    } catch (e) {}
+
+    // load spritesheet for hit/target animation (25 frames)
+    try {
+      const h = new Image();
+      h.onload = () => { hitSpritesRef.current = h; };
+      h.onerror = () => { console.warn('Failed to load hit spritesheet', hitSpritesheetUrl); };
+      h.src = hitSpritesheetUrl;
+    } catch (e) {}
+
+    // ensure first draw
+    requestAnimationFrame(draw);
+  }, [draw]);
+
+  // Expose debug trigger to manually start gov sprite animation by slot-key or uid
+  useEffect(() => {
+    (window as any).__pc_triggerGovAnim = (id: any) => {
+      try {
+        const now = performance.now();
+        // if id is slot key like '1.aussen.2'
+        if (typeof id === 'string' && id.indexOf('.') >= 0) {
+          govSpriteStateRef.current[id] = { started: now, frameCount: 14, frameDuration: 40 };
+          return;
+        }
+
+        // otherwise try to resolve as uid/id to a clickZone
+        const uid = id;
+        const zone = clickZonesRef.current.find(z => z.data && (z.data.card && ((z.data.card.uid ?? String(z.data.card.id)) === uid || (z.data.card.id === uid))));
+        if (!zone) {
+          console.warn('pc_triggerGovAnim: no slot found for uid', uid);
+          return;
+        }
+        const player = zone.data.player ?? 1;
+        const lane = zone.data.lane ?? (zone.data.slot && typeof zone.data.slot === 'string' ? zone.data.slot : 'aussen');
+        const index = zone.data.index ?? 0;
+        const key = `${player}.${lane}.${index}`;
+        govSpriteStateRef.current[key] = { started: now, frameCount: 14, frameDuration: 40 };
+      } catch (e) {
+        console.warn('pc_triggerGovAnim error', e);
+      }
+    };
+    // expose easy alias
+    try { (window as any).pc_triggerGovAnim = (window as any).__pc_triggerGovAnim; } catch (e) {}
+    return () => { delete (window as any).__pc_triggerGovAnim; };
+  }, []);
+
+  // Expose debug trigger for hit animation (key: '1.aussen.0' or uid)
+  useEffect(() => {
+    (window as any).__pc_triggerHitAnim = (id: any) => {
+      try {
+        const now = performance.now();
+        // if id is slot key like '1.aussen.2'
+        if (typeof id === 'string' && id.indexOf('.') >= 0) {
+          hitSpriteStateRef.current[id] = { started: now, frameCount: 25, frameDuration: 30 };
+          return;
+        }
+
+        // otherwise try to resolve as uid/id to a clickZone
+        const uid = id;
+        const zone = clickZonesRef.current.find(z => z.data && (z.data.card && ((z.data.card.uid ?? String(z.data.card.id)) === uid || (z.data.card.id === uid))));
+        if (!zone) {
+          console.warn('pc_triggerHitAnim: no slot found for uid', uid);
+          return;
+        }
+        const player = zone.data.player ?? 1;
+        const lane = zone.data.lane ?? (zone.data.slot && typeof zone.data.slot === 'string' ? zone.data.slot : 'aussen');
+        const index = zone.data.index ?? 0;
+        const key = `${player}.${lane}.${index}`;
+        hitSpriteStateRef.current[key] = { started: now, frameCount: 25, frameDuration: 30 };
+      } catch (e) {
+        console.warn('pc_triggerHitAnim error', e);
+      }
+    };
+    try { (window as any).pc_triggerHitAnim = (window as any).__pc_triggerHitAnim; } catch (e) {}
+    return () => { delete (window as any).__pc_triggerHitAnim; };
+  }, []);
+
+  // Redraw when game state or selection changes
+  useEffect(() => {
+    requestAnimationFrame(draw);
+  }, [gameState, selectedHandIndex, draw]);
+
+  // Continuous render loop to keep canvas updated without relying on external state refs
+  useEffect(() => {
+    let frame: number;
+    const loop = () => {
+      draw();
+      frame = requestAnimationFrame(loop);
+    };
+    frame = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(frame);
   }, [draw]);
 
   const handleCardClick = useCallback((data: any) => {
@@ -789,7 +1591,23 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     const my = (e.clientY - rect.top - offsetY) / scale;
 
     const hit = clickZonesRef.current.find(z => mx >= z.x && mx <= z.x + z.w && my >= z.y && my <= z.y + z.h);
-    if (hit) handleCardClick(hit.data);
+    if (hit) {
+      console.debug('[CanvasClick] mx,my,hit:', mx, my, hit.data);
+      try {
+        // If user clicked a drawn card in an instant slot, normalize to activate_instant
+        const d = hit.data || {};
+        if (d.type === 'slot_card' && d.slot === 'instant') {
+          handleCardClick({ type: 'activate_instant', player: d.player || 1, card: d.card });
+          return;
+        }
+        // Fallback: if there's an explicit activate_instant zone, pass through
+        if (d.type === 'activate_instant') {
+          handleCardClick(d);
+          return;
+        }
+      } catch (err) {}
+      handleCardClick(hit.data);
+    }
   }, [handleCardClick]);
 
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -803,11 +1621,99 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
 
     const hit = clickZonesRef.current.find(z => mx >= z.x && mx <= z.x + z.w && my >= z.y && my <= z.y + z.h);
     if (hit) {
+      console.log('[hover]', hit.data.type, hit.data.card?.name);
       onCardHover({ ...hit.data, x: e.clientX, y: e.clientY });
     } else {
       onCardHover(null);
     }
   }, [onCardHover]);
+
+  const handleWheel = useCallback((e: React.WheelEvent<HTMLCanvasElement>) => {
+    // only enable when player1 has more slots than visible
+    const handLen = (gameState.hands && gameState.hands[1]) ? gameState.hands[1].length : 0;
+    const zone = getZone('hand.player');
+    if (!zone) return;
+    if (handLen <= 5) return; // nothing to scroll
+
+    // Prevent page scrolling when over canvas
+    e.preventDefault();
+
+    // accumulate target offset (invert so wheel down moves cards up)
+    // Each wheel step moves by 48px per delta unit
+    const delta = Math.sign(e.deltaY) * 48;
+    // compute slot height more robustly
+    const slots = computeSlotRects(zone);
+    const slotH = slots && slots.length > 0 ? slots[0].h : zone.rectPx[3] / 5;
+    const visible = 5;
+    const maxOffset = -(Math.max(0, handLen - visible) * slotH);
+    handScrollTargetRef.current = Math.max(Math.min(handScrollTargetRef.current - delta, 0), maxOffset);
+  }, [gameState.hands]);
+
+  const handleTouchStart = useCallback((e: React.TouchEvent<HTMLCanvasElement>) => {
+    if (!e.touches || e.touches.length === 0) return;
+    const handLen = (gameState.hands && gameState.hands[1]) ? gameState.hands[1].length : 0;
+    if (handLen <= 5) return;
+    isTouchingRef.current = true;
+    const y = e.touches[0].clientY;
+    touchStartYRef.current = y;
+    lastTouchYRef.current = y;
+    e.preventDefault();
+  }, [gameState.hands]);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent<HTMLCanvasElement>) => {
+    if (!isTouchingRef.current) return;
+    if (!e.touches || e.touches.length === 0) return;
+    const y = e.touches[0].clientY;
+    const last = lastTouchYRef.current ?? y;
+    const dy = y - last; // positive when moving down
+    lastTouchYRef.current = y;
+
+    // invert so dragging up moves cards up
+    const delta = -dy;
+    const handLen = (gameState.hands && gameState.hands[1]) ? gameState.hands[1].length : 0;
+    const zone = getZone('hand.player');
+    if (!zone) return;
+    const slots = computeSlotRects(zone);
+    const slotH = slots && slots.length > 0 ? slots[0].h : zone.rectPx[3] / 5;
+    const visible = 5;
+    const maxOffset = -(Math.max(0, handLen - visible) * slotH);
+    handScrollTargetRef.current = Math.max(Math.min(handScrollTargetRef.current + delta, 0), maxOffset);
+    e.preventDefault();
+  }, [gameState.hands]);
+
+  const handleTouchEnd = useCallback((e: React.TouchEvent<HTMLCanvasElement>) => {
+    isTouchingRef.current = false;
+    touchStartYRef.current = null;
+    lastTouchYRef.current = null;
+  }, []);
+
+
+
+  // Expose debug trigger to manually start instant sprite animation by slot-key or uid
+  useEffect(() => {
+    (window as any).__pc_triggerInstantAnim = (key: any) => {
+      const now = performance.now();
+      instantSpriteStateRef.current[key || '1.instant.0'] = { started: now, frameCount: 14, frameDuration: 40 };
+    };
+    // alias
+    try { (window as any).pc_triggerInstantAnim = (window as any).__pc_triggerInstantAnim; } catch (e) {}
+    return () => { delete (window as any).__pc_triggerGovAnim; delete (window as any).__pc_triggerInstantAnim; };
+  }, []);
+
+  // Click handler wrapper for corruption selection
+  const handleCardClickInternal = useCallback((data: any) => {
+    const sel: any = (gameState as any).pendingAbilitySelect;
+    if (sel && sel.type === 'corruption_steal') {
+      // expect data.uid and data.player and data.lane
+      if (data.player !== sel.actorPlayer && data.lane === 'aussen') {
+        try {
+          window.dispatchEvent(new CustomEvent('pc:corruption_pick_target', { detail: { player: sel.actorPlayer, targetUid: data.uid } }));
+        } catch(e) {}
+        return; // consume click
+      }
+    }
+    onCardClick(data);
+  }, [gameState, onCardClick]);
 
   return (
     <canvas
@@ -822,6 +1728,10 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       }}
       onClick={handleClick}
       onMouseMove={handleMouseMove}
+      onWheel={handleWheel}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
     />
   );
 };

@@ -1,5 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { GameState } from '../types/game';
+import { Icon } from '../ui/Icon';
+import { withIcons } from '../ui/withIcons';
 
 interface GameLogModalProps {
   gameState: GameState;
@@ -40,7 +42,7 @@ export const GameLogModal: React.FC<GameLogModalProps> = ({
       transform: 'translate(-50%, -50%)',
       width: '80vw',
       height: '80vh',
-      background: 'rgba(13, 22, 33, 0.95)',
+      background: 'rgba(13, 22, 33, 0.5)',
       border: '1px solid rgba(255, 255, 255, 0.3)',
       borderRadius: '12px',
       backdropFilter: 'blur(10px)',
@@ -68,14 +70,18 @@ export const GameLogModal: React.FC<GameLogModalProps> = ({
             color: '#e5e7eb',
             fontSize: '18px',
             fontWeight: '600',
+            display: 'flex',
+            gap: '8px',
+            alignItems: 'center',
           }}>
-            🎮 Spiel-Log
+            <Icon name="game_log" size={20} />
+            Game Log
           </div>
           <div style={{
             color: '#9ca3af',
             fontSize: '14px',
           }}>
-            {gameState.log.length} Einträge
+            {gameState.log.length} entries
           </div>
         </div>
 
@@ -109,7 +115,17 @@ export const GameLogModal: React.FC<GameLogModalProps> = ({
               e.currentTarget.style.transform = 'scale(1)';
             }}
           >
-            {copied ? '✓ Kopiert!' : '📋 Kopieren'}
+                         {copied ? (
+               <>
+                 <Icon name="copy_log" size={14} />
+                 Copied!
+               </>
+             ) : (
+               <>
+                 <Icon name="copy_log" size={14} />
+                 Copy
+               </>
+             )}
           </button>
 
           {/* Clear Button */}
@@ -133,7 +149,8 @@ export const GameLogModal: React.FC<GameLogModalProps> = ({
               e.currentTarget.style.transform = 'scale(1)';
             }}
           >
-            🗑️ Löschen
+            <Icon name="clear_log" size={14} />
+            Clear
           </button>
 
           {/* Close Button */}
@@ -241,7 +258,7 @@ export const GameLogModal: React.FC<GameLogModalProps> = ({
 
             return (
               <div key={index} style={entryStyle}>
-                {entry}
+                {withIcons(entry)}
               </div>
             );
           })
@@ -260,10 +277,10 @@ export const GameLogModal: React.FC<GameLogModalProps> = ({
         fontSize: '12px',
         color: '#9ca3af',
       }}>
-        <div>
-          Runde {gameState.round} | Spieler {gameState.current} |
-          AP: {gameState.actionPoints[gameState.current]}/{gameState.actionsUsed[gameState.current]}/2
-        </div>
+                  <div>
+            Round {gameState.round} | Player {gameState.current} |
+            AP: {gameState.actionPoints[gameState.current]}
+          </div>
         <div>
           P1: {gameState.roundsWon[1]} | P2: {gameState.roundsWon[2]}
         </div>

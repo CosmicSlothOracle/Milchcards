@@ -1,9 +1,9 @@
-import { useCallback } from 'react';
+import { useCallback, useRef, useEffect } from 'react';
 import { GameState, Card, Player, BuilderEntry, PoliticianCard } from '../types/game';
 import { createDefaultEffectFlags } from '../types/game';
 import { buildDeckFromEntries, sumGovernmentInfluenceWithAuras } from '../utils/gameUtils';
 import { PRESET_DECKS } from '../data/gameData';
-import { getCardActionPointCost, applyApRefundsAfterPlay, getNetApCost, canPlayCard, isInitiativeCard, isGovernmentCard } from '../utils/ap';
+import { getCardActionPointCost, getNetApCost, canPlayCard, isInitiativeCard, isGovernmentCard } from '../utils/ap';
 import { triggerCardEffects } from '../effects/cards';
 import { ensureTestBaselineAP } from '../utils/testCompat';
 import { resolveQueue } from '../utils/queue';
@@ -14,6 +14,17 @@ import { activateInstantInitiative as activateInstantInitiativeRuntime } from '.
 import { isInstantInitiative } from '../utils/initiative';
 import { emptyBoard } from '../state/board';
 import type { EffectEvent } from '../types/effects';
+import { logger } from '../debug/logger';
+import { useVisualEffects, useVisualEffectsSafe } from '../context/VisualEffectsContext';
+// TS: sometimes asset module resolution fails in some setups — ignore typecheck for this import
+// @ts-ignore
+import slotGovGif from '../ui/layout/slot_gov.webm';
+import { getUiTransform, getGovernmentRects } from '../ui/layout';
+
+// Migration Helper für Queue-Vereinheitlichung
+const migrateLegacyQueue = (state: any) => {
+  // Queue migration completed - only _effectQueue exists now
+};
 
 // Helper function for getting the other player
 const other = (p: Player): Player => (p === 1 ? 2 : 1) as Player;
@@ -44,13 +55,20 @@ const isCardPlayableNow = (state: GameState, player: Player, card: Card): boolea
 
   if (card.kind === 'spec') {
     const t = String((card as any).type || '').toLowerCase();
+    // Public cards
     if (t === 'öffentlichkeitskarte' || t === 'oeffentlichkeitskarte' || t === 'public') {
       return state.board[player].innen.length < 5;
     }
-    if (t === 'dauerhaft-initiative') {
-      const slot = 'government'; // wie bei dir „simplified"
-      return !state.permanentSlots[player][slot];
+
+    // Detect Ongoing / Permanent Initiatives by explicit tags or by effectKey namespace
+    const tags: string[] = (card as any).tags || (card as any).tags || [];
+    const isOngoingInitiative = ((card as any).type && String((card as any).type).toLowerCase().includes('initiative')) && (tags.includes('Ongoing') || (String((card as any).effectKey || '').startsWith('init.') && tags.includes('Ongoing')));
+    if (isOngoingInitiative) {
+      // Determine which permanent slot this initiative should occupy. Prefer explicit slot metadata, otherwise default to government.
+      const preferredSlot = (card as any).permanentSlot || ((card as any).tags && (card as any).tags.includes('Public') ? 'public' : 'government');
+      return !state.permanentSlots[player][preferredSlot as 'government' | 'public'];
     }
+
     // sonst: Fallen/Interventionen – aktuell immer erlaubt
     return true;
   }
@@ -103,7 +121,7 @@ function applyAurasForPlayer(state: GameState, player: Player, log?: (msg: strin
 function checkRoundEnd(gameState: GameState): boolean {
   // Round ends if both players have passed
   const result = gameState.passed[1] && gameState.passed[2];
-  console.log(`🔧 DEBUG: checkRoundEnd - P1 passed: ${gameState.passed[1]}, P2 passed: ${gameState.passed[2]}, result: ${result}`);
+  logger.dbg(`checkRoundEnd P1=${gameState.passed[1]} P2=${gameState.passed[2]} result=${result}`);
   return result;
 }
 
@@ -139,11 +157,10 @@ function reallyEndTurn(gameState: GameState, log: (msg: string) => void): GameSt
     return resolveRound(gameState, log);
   }
 
-  // Spielerwechsel + AP/Actions reset
+  // Spielerwechsel + AP reset
   const newCurrent: Player = current === 1 ? 2 : 1;
   gameState.current = newCurrent;
   gameState.actionPoints = { ...gameState.actionPoints, [newCurrent]: 2 };
-  gameState.actionsUsed = { ...gameState.actionsUsed, [newCurrent]: 0 };
   gameState.passed = { ...gameState.passed, [newCurrent]: false };
 
             // Apply new start-of-turn hooks
@@ -229,10 +246,10 @@ function resolveRound(gameState: GameState, log: (msg: string) => void): GameSta
     ...gameState,
     round: gameState.round + 1,
     current: roundWinner, // Winner starts next round
-    passed: { 1: false, 2: false }, // Reset pass status
-    actionPoints: { 1: 2, 2: 2 }, // Reset AP
-    actionsUsed: { 1: 0, 2: 0 }, // Reset actions
-    roundsWon: newRoundsWon,
+         passed: { 1: false, 2: false }, // Reset pass status
+     actionPoints: { 1: 2, 2: 2 }, // Reset AP
+     actionsUsed: { 1: 0, 2: 0 }, // Reset actions (kept for compatibility)
+     roundsWon: newRoundsWon,
     effectFlags: {
       1: createDefaultEffectFlags(),
       2: createDefaultEffectFlags()
@@ -241,8 +258,8 @@ function resolveRound(gameState: GameState, log: (msg: string) => void): GameSta
     board: emptyBoard(),
     // Clear permanent slots
     permanentSlots: {
-      1: { government: null, public: null },
-      2: { government: null, public: null }
+      1: { government: null, public: null, initiativePermanent: null },
+      2: { government: null, public: null, initiativePermanent: null }
     },
     // instantSlot wird nicht mehr verwendet - Sofort-Initiativen gehen in board[player].sofort
     // New hands with 5 cards each
@@ -268,8 +285,170 @@ function resolveRound(gameState: GameState, log: (msg: string) => void): GameSta
 export function useGameActions(
   gameState: GameState,
   setGameState: React.Dispatch<React.SetStateAction<GameState>>,
-  log: (msg: string) => void
+  log: (msg: string) => void,
+  afterQueueResolved?: () => void
 ) {
+  // Visual effects context (spawn helpers)
+  // Use safe hook variant which returns null when no provider is present
+  const visualEffects = useVisualEffectsSafe();
+  // Helper: spawn lightweight UI visuals via window hooks (prototype only)
+  const spawnCardVisual = useCallback((card: any, stateOverride?: GameState) => {
+    try {
+      if (!card) return;
+      console.debug('[GameActions] spawnCardVisual called', { uid: card.uid ?? card.id, name: card.name });
+      const uid = card.uid ?? card.id;
+      // prefer VisualEffects context if available
+      const effectiveState = stateOverride || gameState;
+      if (visualEffects) {
+        // Prefer authoritative board-based slot centering (gov slots) using effectiveState
+        try {
+          let located: { player: number; lane: 'aussen' | 'innen'; index: number } | null = null;
+          for (const p of [1, 2] as const) {
+            const aussen = effectiveState.board[p].aussen || [];
+            const idxA = aussen.findIndex((c: any) => (c.uid ?? c.id) === (card.uid ?? card.id));
+            if (idxA >= 0) { located = { player: p, lane: 'aussen', index: idxA }; break; }
+            const innen = effectiveState.board[p].innen || [];
+            const idxI = innen.findIndex((c: any) => (c.uid ?? c.id) === (card.uid ?? card.id));
+            if (idxI >= 0) { located = { player: p, lane: 'innen', index: idxI }; break; }
+          }
+
+          if (located && located.lane === 'aussen') {
+            const rects = getGovernmentRects(located.player === 1 ? 'player' : 'opponent');
+            const slot = rects[located.index] || rects[0] || { x: 960 - 128, y: 540 - 128, w: 256, h: 256 };
+            const cx_slot = slot.x + slot.w / 2;
+            const cy_slot = slot.y + slot.h / 2;
+            visualEffects.spawnParticles(cx_slot, cy_slot, 18);
+            visualEffects.spawnPop(card.uid ?? card.id);
+            console.debug('[GameActions] spawnCardVisual particles/pop (gov slot)', { uid: card.uid ?? card.id, cx: cx_slot, cy: cy_slot, slot });
+
+            const canvas = document.querySelector('canvas');
+            if (canvas) {
+              const rect = canvas.getBoundingClientRect();
+              const { scale, offsetX, offsetY } = getUiTransform(canvas.width, canvas.height);
+              // Apply offset first, then scale (matches canvas transform order)
+              const screenCx = rect.left + (cx_slot + offsetX) * scale;
+              const screenCy = rect.top  + (cy_slot + offsetY) * scale;
+              // Use dedicated government slot GIF provided by user
+              // Use UI-based overlay spawner so we always align to canvas-derived
+              // pulsing slot fields exactly (handles scale+offset internally).
+              visualEffects.spawnGifOverlayUi({ id: card.uid ?? card.id, cx: cx_slot, cy: cy_slot, w: 256, h: 256, src: slotGovGif, duration: 700 });
+              console.debug('[GameActions] spawnCardVisual spawnGifOverlay (gov slot)', { uid: card.uid ?? card.id, screenCx, screenCy, src: slotGovGif });
+            }
+
+            try { visualEffects.playAnimsRef.current.push({ uid: card.uid ?? card.id, started: performance.now(), duration: 420 }); } catch (e) {}
+            return;
+          }
+        } catch (e) {
+          console.debug('[GameActions] gov-slot centering failed, falling back', e);
+        }
+        // attempt to find a row_slot zone center via debug snapshot (avoid hand slots)
+        const zones = (window as any).__politicardDebug?.clickZones || [];
+        const zone = zones.find((z: any) => z.data && z.data.type === 'row_slot' && z.data.card && ((z.data.card.uid ?? z.data.card.id) === uid));
+        const cx = zone ? zone.x + (zone.w || 256) / 2 : 960;
+        const cy = zone ? zone.y + (zone.h || 256) / 2 : 540;
+        visualEffects.spawnParticles(cx, cy, 18);
+        visualEffects.spawnPop(uid);
+        console.debug('[GameActions] spawnCardVisual particles/pop (fallback)', { uid, cx, cy, zone });
+        // Add play animation entry so canvas will fade-in the card itself
+        try {
+          visualEffects.playAnimsRef.current.push({ uid, started: performance.now(), duration: 420 });
+          console.debug('[GameActions] spawnCardVisual playAnimsRef push', uid);
+        } catch (e) { console.debug('[GameActions] spawnCardVisual playAnimsRef push failed', e); }
+        return;
+      }
+      // fallback to old window-based prototype
+      const zones = (window as any).__politicardDebug?.clickZones || [];
+      const zone = zones.find((z: any) => z.data && z.data.card && ((z.data.card.uid ?? z.data.card.id) === uid));
+      const cx = zone ? zone.x + (zone.w || 256) / 2 : 960;
+      const cy = zone ? zone.y + (zone.h || 256) / 2 : 540;
+      (window as any).__pc_particles = (window as any).__pc_particles || [];
+      for (let i = 0; i < 18; i++) {
+        (window as any).__pc_particles.push({ start: performance.now(), life: 600 + Math.random() * 400, x: cx + (Math.random() - 0.5) * 40, y: cy + (Math.random() - 0.5) * 40, vx: (Math.random() - 0.5) * 6, vy: -Math.random() * 6, size: 3 + Math.random() * 5, color: ['#ffd166', '#ff6b6b', '#4ade80'][Math.floor(Math.random() * 3)], gravity: 0.12 });
+      }
+      (window as any).__pc_pops = (window as any).__pc_pops || [];
+      (window as any).__pc_pops.push({ uid, started: performance.now(), duration: 420 });
+      // Fallback: add play anim entry to global when VisualEffects not available
+      (window as any).__pc_play_anims = (window as any).__pc_play_anims || [];
+      (window as any).__pc_play_anims.push({ uid, started: performance.now(), duration: 420 });
+      // Also attempt to use provider fallback on window if available
+      try {
+        const wv = (window as any).__pc_visual_effects;
+        if (wv && typeof wv.spawnGifOverlay === 'function') {
+          // Compute screen coords based on canvas if possible
+          const canvas = document.querySelector('canvas');
+          if (canvas) {
+            const rect = canvas.getBoundingClientRect();
+            const ui = (window as any).__politicardDebug?.uiTransform || { scale: 1, offsetX: 0, offsetY: 0 };
+            const screenCx = rect.left + (cx + ui.offsetX) * ui.scale;
+            const screenCy = rect.top  + (cy + ui.offsetY) * ui.scale;
+            try {
+              if (typeof wv.spawnGifOverlayUi === 'function') {
+                // pass canvas-space coords so provider will align to UI
+                try { wv.spawnGifOverlayUi({ id: uid, cx: cx, cy: cy, w: 256, h: 256, src: slotGovGif, duration: 700 }); console.debug('[GameActions] fallback window.__pc_visual_effects.spawnGifOverlayUi', uid); } catch (e) { console.debug('[GameActions] fallback spawnGifOverlayUi failed', e); }
+              } else {
+                wv.spawnGifOverlay({ id: uid, cx: screenCx, cy: screenCy, w: 256 * ui.scale, h: 256 * ui.scale, src: slotGovGif, duration: 700 });
+                console.debug('[GameActions] fallback window.__pc_visual_effects.spawnGifOverlay', uid);
+              }
+            } catch (e) { console.debug('[GameActions] fallback spawnGifOverlay failed', e); }
+          }
+        }
+      } catch (e) {}
+    } catch (e) {
+      // swallow - non-critical
+    }
+  }, [visualEffects, gameState]);
+  // Guard against duplicate concurrent playCard calls for the same card UID
+  const playingUidRef = useRef<Set<number>>(new Set());
+  // === Corruption Steal helper refs ===
+  const pendingTargetRef = useRef<number | null>(null);
+
+  // Listen for target selection & dice result (global events)
+  useEffect(() => {
+    const handlePickTarget = (ev: any) => {
+      const uid = ev.detail?.targetUid as number | undefined;
+      const player = ev.detail?.player as Player | undefined;
+      if (!uid || !player) return;
+      // Compute dice roll via global RNG fallback and immediately enqueue resolve event
+      try {
+        const { getGlobalRNG } = require('../services/rng');
+        const rng = getGlobalRNG();
+        const roll = rng.randomInt(6) + 1;
+        // enqueue resolve directly
+        setGameState(prev => {
+          const events: EffectEvent[] = prev._effectQueue ? [...prev._effectQueue] : [];
+          events.push({ type: 'CORRUPTION_STEAL_GOV_RESOLVE', player, targetUid: uid, roll } as any);
+          try { resolveQueue(prev as any, events); } catch (e) { logger.dbg('resolveQueue failed in handlePickTarget', e); }
+          return { ...prev, _effectQueue: [] } as any;
+        });
+      } catch (e) {
+        // best effort fallback: log and ignore
+        try { window.dispatchEvent(new CustomEvent('pc:dice_roll', { detail: { face: 1 } })); } catch (e) {}
+      }
+    };
+    const handleDiceResult = (ev: any) => {
+      const roll = ev.detail?.roll as number | undefined;
+      const player = ev.detail?.player as Player | undefined;
+      if (!roll || !player || pendingTargetRef.current === null) return;
+      const targetUid = pendingTargetRef.current;
+      pendingTargetRef.current = null;
+
+      // Enqueue resolve event
+      setGameState(prev => {
+        const events: EffectEvent[] = prev._effectQueue || [];
+        events.push({ type: 'CORRUPTION_STEAL_GOV_RESOLVE', player, targetUid, roll } as any);
+        // Process immediately
+        resolveQueue(prev as any, events);
+        if (afterQueueResolved) afterQueueResolved();
+        return { ...prev, _effectQueue: events } as any;
+      });
+    };
+    window.addEventListener('pc:corruption_pick_target', handlePickTarget as EventListener);
+    window.addEventListener('pc:dice_result', handleDiceResult as EventListener);
+    return () => {
+      window.removeEventListener('pc:corruption_pick_target', handlePickTarget as EventListener);
+      window.removeEventListener('pc:dice_result', handleDiceResult as EventListener);
+    };
+  }, [setGameState, afterQueueResolved]);
   const startMatchWithDecks = useCallback((p1DeckEntries: BuilderEntry[], p2DeckEntries: BuilderEntry[]) => {
     const p1Cards = buildDeckFromEntries(p1DeckEntries);
     const p2Cards = buildDeckFromEntries(p2DeckEntries);
@@ -291,8 +470,8 @@ export function useGameActions(
     const h1 = d1.splice(0, Math.min(5, d1.length));
     const h2 = d2.splice(0, Math.min(5, d2.length));
 
-    setGameState({
-      ...gameState,
+    setGameState(prev => ({
+      ...prev,
       round: 1,
       current: 1,
       passed: { 1: false, 2: false },
@@ -301,8 +480,8 @@ export function useGameActions(
       board: { 1: { innen: [], aussen: [], sofort: [] }, 2: { innen: [], aussen: [], sofort: [] } },
       traps: { 1: [], 2: [] },
       permanentSlots: {
-        1: { government: null, public: null },
-        2: { government: null, public: null },
+        1: { government: null, public: null, initiativePermanent: null },
+        2: { government: null, public: null, initiativePermanent: null },
       },
       // instantSlot wird nicht mehr verwendet - Sofort-Initiativen gehen in board[player].sofort
       discard: [],
@@ -311,6 +490,7 @@ export function useGameActions(
         1: createDefaultEffectFlags(),
         2: createDefaultEffectFlags()
       },
+      actionsUsed: { 1: 0, 2: 0 },
       log: [
         `Match gestartet. P1 und P2 erhalten je ${h1.length}/${h2.length} Startkarten.`,
         `🔍 DECK DEBUG P1: ${p1Cards.length} Karten total`,
@@ -323,15 +503,21 @@ export function useGameActions(
         `🏠 PERMANENT SLOTS: Alle leer`
       ],
       activeRefresh: { 1: 0, 2: 0 },
-    });
+      // preserve any aiEnabled flags set before calling this
+      aiEnabled: prev.aiEnabled || { 1: false, 2: false }
+    }));
   }, [gameState, setGameState, log]);
 
   const startMatchVsAI = useCallback((p1DeckEntries: BuilderEntry[], presetKey: keyof typeof PRESET_DECKS = 'AUTORITAERER_REALIST') => {
     const p2DeckEntries = PRESET_DECKS[presetKey] as BuilderEntry[];
+    // Enable AI for P2 first so nextTurn/auto-run sees the flag immediately
+    setGameState(prev => ({ ...prev, aiEnabled: { ...(prev.aiEnabled || { 1: false, 2: false }), 2: true } }));
+    log('🔧 AI aktiviert für Spieler 2');
     startMatchWithDecks(p1DeckEntries, p2DeckEntries);
   }, [startMatchWithDecks]);
 
   const playCard = useCallback((player: Player, handIndex: number, lane?: 'innen' | 'aussen') => {
+    logger.info(`playCard START P${player} idx=${handIndex}`);
     setGameState(prev => {
       // Test-only baseline fix – ensures AP=5 at game start inside test runner
       ensureTestBaselineAP(prev);
@@ -339,6 +525,7 @@ export function useGameActions(
       // Validate input parameters
       if (prev.current !== player) {
         log(`❌ ERROR: Not player turn - Current: ${prev.current}, Attempted: ${player}`);
+        logger.warn(`playCard abort: wrong turn`);
         return prev;
       }
 
@@ -361,47 +548,39 @@ export function useGameActions(
 
       const selectedCard = hand[handIndex];
       if (!canPlayCard(prev, player, selectedCard)) {
-        log('🚫 Kann Karte nicht spielen (Aktionslimit & nicht 0-AP).');
+        log('🚫 Kann Karte nicht spielen (keine AP verfügbar).');
         return prev;
       }
 
-      const { cost, refund, net } = getNetApCost(prev, player, selectedCard);
+      const { cost } = getNetApCost(prev, player, selectedCard);
       const prevAp = prev.actionPoints[player];
-      const prevAct = prev.actionsUsed[player] ?? 0;
 
       const newState = { ...prev };
 
-      // AP abbuchen & refund gutschreiben
-      newState.actionPoints[player] = Math.max(0, newState.actionPoints[player] - cost + refund);
-
-      // Action-Zähler: nur wenn net > 0
-      if (net > 0) {
-        newState.actionsUsed[player] += 1;
-        log(`💳 Kosten verbucht: AP ${prevAp}→${newState.actionPoints[player]} | Aktionen ${prevAct}→${newState.actionsUsed[player]}`);
-      } else {
-        log(`🆓 Netto-0-Zug: −${cost} AP (+${refund} Refund) → keine Aktion verbraucht.`);
-      }
+      // Simplified AP system: All cards cost exactly 1 AP
+      newState.actionPoints[player] = Math.max(0, newState.actionPoints[player] - cost);
+      log(`💳 Kosten verbucht: AP ${prevAp}→${newState.actionPoints[player]}`);
 
       // Flags KONSUMIEREN (einheitlich, NUR HIER!)
       ensureFlags(newState, player);
       const ef = newState.effectFlags[player];
 
-      // Regierung: Refund einmalig pro Zug
-      if (selectedCard.kind === 'pol' && ef.govRefundAvailable) {
-        ef.govRefundAvailable = false;
-      }
-
-      // Initiative: pro Karte je 1 Refund & 1 Discount abbauen, falls vorhanden
-      const isInstant = (selectedCard.kind === 'spec' && /Sofort-?Initiative/i.test((selectedCard as any).type ?? ''));
-      if (isInstant) {
-        if (ef.initiativeRefund > 0) ef.initiativeRefund -= 1;
-        if (ef.initiativeDiscount > 0) ef.initiativeDiscount -= 1;
-      }
+      // Simplified AP system: No refunds or discounts
+      // All cards cost exactly 1 AP
 
       // Remove card from hand
       const newHand = [...newState.hands[player]];
       const [playedCard] = newHand.splice(handIndex, 1);
       newState.hands = { ...newState.hands, [player]: newHand };
+
+      // Prevent double-playing the same UID concurrently
+      if ((playedCard as any).uid) {
+        if (playingUidRef.current.has((playedCard as any).uid)) {
+          log(`⚠️ Duplicate play prevented for UID ${(playedCard as any).uid}`);
+          return prev;
+        }
+        playingUidRef.current.add((playedCard as any).uid);
+      }
 
       // 🔧 CLUSTER 3 DEBUG: Zeige jede gespielte Karte
       log(`🔧 CLUSTER 3 GLOBAL DEBUG: P${player} spielt ${(playedCard as any).name} (${playedCard.kind}) - Type: ${(playedCard as any).type || 'KEIN TYPE'}`);
@@ -427,6 +606,36 @@ export function useGameActions(
         const laneArray = [...newState.board[player][targetLane], playedCard];
         const playerBoardCloned = { ...newState.board[player], [targetLane]: laneArray } as any;
         newState.board = { ...newState.board, [player]: playerBoardCloned } as any;
+
+        // VISUAL: spawn GIF overlay centered over the government slot icon when placing a government card
+        try {
+          if (targetLane === 'aussen') {
+            const rects = getGovernmentRects(player === 1 ? 'player' : 'opponent');
+            const slotIndex = newState.board[player].aussen.length - 1;
+            const slotRect = rects[slotIndex] || rects[0] || { x: 960 - 128, y: 540 - 128, w: 256, h: 256 };
+            const cx = slotRect.x + slotRect.w / 2;
+            const cy = slotRect.y + slotRect.h / 2;
+
+            // particles/pop in canvas coords
+            try { visualEffects?.spawnParticles(cx, cy, 18); } catch (e) {}
+            try { visualEffects?.spawnPop(playedCard.uid ?? playedCard.id); } catch (e) {}
+
+            // compute screen coords and spawn 300x300 overlay
+            const canvas = document.querySelector('canvas');
+            if (canvas) {
+              // Prefer reliable canvas spritesheet animation directly on the target slot
+              try {
+                const key = `${player}.${'aussen'}.${slotIndex}`;
+                const trig = (window as any).__pc_triggerGovAnim || (window as any).pc_triggerGovAnim;
+                if (typeof trig === 'function') trig(key);
+              } catch (e) {}
+              // Only fade-in anim
+              try { visualEffects?.playAnimsRef?.current?.push({ uid: playedCard.uid ?? playedCard.id, started: performance.now(), duration: 420 }); } catch (e) {}
+            }
+          }
+        } catch (e) {
+          console.debug('[GameActions] GOV overlay failed', e);
+        }
         log(`🃏 Player ${player}: ${playedCard.name} gespielt in ${targetLane === 'aussen' ? 'Regierung' : 'Öffentlichkeit'}`);
 
         // 3) Nachdem die Karte gelegt wurde: gegnerische Traps prüfen
@@ -446,11 +655,23 @@ export function useGameActions(
 
         // 6) Karteneffekte enqueuen + Queue auflösen
         triggerCardEffects(newState, player, playedCard);
-        // Queue needs array of events
-        if (newState._queue && newState._queue.length > 0) {
-          resolveQueue(newState, newState._queue);
-          newState._queue = [];
+        // UI visual: particle burst + pop scale for played card (prototype hook)
+        try { spawnCardVisual(playedCard, newState); } catch (e) {}
+        // Migration Helper verwenden
+        migrateLegacyQueue(newState);
+        // Nur noch _effectQueue verwenden
+        if (newState._effectQueue && newState._effectQueue.length > 0) {
+          try { log(`DEBUG: about to resolve queue (pol play) -> ${JSON.stringify((newState._effectQueue as any).map((e:any)=>({type:e.type, amount:e.amount, msg:e.msg})).slice(0,50))}`); } catch(e) {}
+          log(`DEBUG AP before resolve (pol play): P1=${newState.actionPoints[1]} P2=${newState.actionPoints[2]}`);
+          resolveQueue(newState, newState._effectQueue);
+          newState._effectQueue = [];
+          // Nach Queue-Auflösung: Hand-Arrays immutabel neu zuweisen
+          afterQueueResolved?.();
+          log(`DEBUG AP after resolve (pol play): P1=${newState.actionPoints[1]} P2=${newState.actionPoints[2]}`);
         }
+
+        // Release playing UID after queue resolved
+        if ((playedCard as any).uid) playingUidRef.current.delete((playedCard as any).uid);
 
         // Check for trap triggers
         applyTrapsOnCardPlayed(
@@ -532,21 +753,35 @@ export function useGameActions(
 
         // 1) Dauerhaft-Initiative (Ongoing)
         if (typeStr.includes('dauerhaft')) {
-          const slotType = 'government'; // ggf. später per specCard.slot dynamisch
-          if (!newState.permanentSlots[player][slotType]) {
-            newState.permanentSlots[player][slotType] = playedCard;
-            log(`P${player} spielt ${playedCard.name} als Dauerhafte Initiative`);
+          // Slot-Mapping: Dauerhaft-Initiativen → map to permanentSlots.government or .public
+          // Prefer explicit metadata on the card, fallback to tag-based heuristic, default to 'government'
+          const preferredSlot: 'government' | 'public' = (specCard.permanentSlot as 'government' | 'public') || ((specCard.tags || []).includes('Public') ? 'public' : 'government');
+          if (!newState.permanentSlots[player][preferredSlot]) {
+            // ensure card is stored as a shallow clone to avoid accidental shared references
+            newState.permanentSlots[player] = { ...newState.permanentSlots[player], [preferredSlot]: { ...playedCard } } as any;
+            log(`P${player} spielt ${playedCard.name} als Dauerhafte Initiative (Slot: ${preferredSlot})`);
           } else {
-            log(`⚠️ WARN: Slot occupied - Slot ${slotType} already has ${newState.permanentSlots[player][slotType]?.name}`);
+            log(`⚠️ WARN: Slot occupied - Slot ${preferredSlot} already has ${newState.permanentSlots[player][preferredSlot]?.name}`);
+            // Return the card to hand and refund AP as graceful fallback
+            newState.hands[player] = [...newState.hands[player], playedCard];
+            newState.actionPoints[player] += cost;
+            return newState;
           }
 
           // 6) Karteneffekte enqueuen + Queue auflösen
           triggerCardEffects(newState, player, playedCard);
-          // Queue needs array of events
-        if (newState._queue && newState._queue.length > 0) {
-          resolveQueue(newState, newState._queue);
-          newState._queue = [];
-        }
+          // Migration Helper verwenden
+          migrateLegacyQueue(newState);
+          // Nur noch _effectQueue verwenden
+          if (newState._effectQueue && newState._effectQueue.length > 0) {
+            try { log(`DEBUG: about to resolve queue (spec ongoing) -> ${JSON.stringify((newState._effectQueue as any).map((e:any)=>({type:e.type, amount:e.amount, msg:e.msg})).slice(0,50))}`); } catch(e) {}
+            log(`DEBUG AP before resolve (spec ongoing): P1=${newState.actionPoints[1]} P2=${newState.actionPoints[2]}`);
+            resolveQueue(newState, newState._effectQueue);
+            newState._effectQueue = [];
+            // Nach Queue-Auflösung: Hand-Arrays immutabel neu zuweisen
+            afterQueueResolved?.();
+            log(`DEBUG AP after resolve (spec ongoing): P1=${newState.actionPoints[1]} P2=${newState.actionPoints[2]}`);
+          }
 
           // Check for trap triggers
           applyTrapsOnCardPlayed(
@@ -576,11 +811,8 @@ export function useGameActions(
               // Karte zurück in die Hand
               newState.hands[player] = [...newState.hands[player], playedCard];
               // AP zurückgeben
-              newState.actionPoints[player] += net;
-              // Aktion rückgängig machen
-              if (net > 0) {
-                newState.actionsUsed[player] = Math.max(0, newState.actionsUsed[player] - 1);
-              }
+              newState.actionPoints[player] += cost;
+              // AP zurückgegeben, keine Aktion rückgängig zu machen
               return newState;
             }
 
@@ -589,8 +821,8 @@ export function useGameActions(
             log(`🎯 P${player} legt ${playedCard.name} in Sofort-Initiative-Slot (kann später aktiviert werden)`);
 
             // Sofort-Initiativen: auf Board.sofort legen (nicht direkt entsorgen)
-            if (!newState._queue) newState._queue = [];
-            newState._queue.push({ type: 'LOG', msg: `🔔 Sofort-Initiative bereit: ${playedCard.name} (zum Aktivieren anklicken oder Taste 'A')` });
+            if (!newState._effectQueue) newState._effectQueue = [];
+            newState._effectQueue.push({ type: 'LOG', msg: `🔔 Sofort-Initiative bereit: ${playedCard.name} (zum Aktivieren anklicken oder Taste 'A')` });
             return newState;
           }
 
@@ -601,10 +833,14 @@ export function useGameActions(
 
                      // 6) Karteneffekte enqueuen + Queue auflösen
            triggerCardEffects(newState, player, playedCard);
-           // Queue needs array of events
-         if (newState._queue && newState._queue.length > 0) {
-           resolveQueue(newState, newState._queue);
-           newState._queue = [];
+           // Migration Helper verwenden
+           migrateLegacyQueue(newState);
+           // Nur noch _effectQueue verwenden
+         if (newState._effectQueue && newState._effectQueue.length > 0) {
+           resolveQueue(newState, newState._effectQueue);
+           newState._effectQueue = [];
+           // Nach Queue-Auflösung: Hand-Arrays immutabel neu zuweisen
+           afterQueueResolved?.();
          }
 
            // Check for trap triggers
@@ -622,34 +858,8 @@ export function useGameActions(
           // 🔥 CLUSTER 3: Ai Weiwei Bonus wird bei Aktivierung angewendet (nicht beim Spielen)
 
           // 🔥 PASSIVE EFFEKTE NACH INITIATIVE: Mark Zuckerberg & Sam Altman
-
-          // Mark Zuckerberg: "Nach einer Initiative: +1 Aktionspunkt zurück (einmal pro Runde)"
-          const markZuckerberg = newState.board[player].innen.find(card =>
-            card.kind === 'spec' && (card as any).name === 'Mark Zuckerberg'
-          );
-          if (markZuckerberg && !newState.effectFlags[player]?.markZuckerbergUsed) {
-            newState.actionPoints[player] += 1;
-            newState.effectFlags[player] = { ...newState.effectFlags[player], markZuckerbergUsed: true };
-            log(`🔥 MARK ZUCKERBERG EFFEKT: +1 AP zurück nach Initiative (${newState.actionPoints[player] - 1} → ${newState.actionPoints[player]})`);
-          }
-
-          // Sam Altman: "Bei einer KI-bezogenen Initiative: ziehe 1 Karte + 1 Aktionspunkt zurück"
-          const samAltman = newState.board[player].innen.find(card =>
-            card.kind === 'spec' && (card as any).name === 'Sam Altman'
-          );
-          if (samAltman && (playedCard as any).tag === 'Intelligenz') {
-            // Ziehe 1 Karte
-            if (newState.decks[player].length > 0) {
-              const drawnCard = newState.decks[player].shift();
-              if (drawnCard) {
-                newState.hands[player].push(drawnCard);
-                log(`🔥 SAM ALTMAN EFFEKT: +1 Karte gezogen (${drawnCard.name}) - KI-Initiative`);
-              }
-            }
-            // +1 AP zurück
-            newState.actionPoints[player] += 1;
-            log(`🔥 SAM ALTMAN EFFEKT: +1 AP zurück (${newState.actionPoints[player] - 1} → ${newState.actionPoints[player]}) - KI-Initiative`);
-          }
+          // Diese Effekte werden jetzt über INITIATIVE_ACTIVATED Event + Board-Check gehandhabt
+          // Keine direkten Flag-Mutationen mehr - alles über Events
 
 
           return newState;
@@ -673,10 +883,13 @@ export function useGameActions(
 
                          // 6) Karteneffekte enqueuen + Queue auflösen
              triggerCardEffects(newState, player, playedCard);
-             // Queue needs array of events
-         if (newState._queue && newState._queue.length > 0) {
-           resolveQueue(newState, newState._queue);
-           newState._queue = [];
+             // Migration Helper verwenden
+             migrateLegacyQueue(newState);
+         if (newState._effectQueue && newState._effectQueue.length > 0) {
+           resolveQueue(newState, newState._effectQueue);
+           newState._effectQueue = [];
+           // Nach Queue-Auflösung: Hand-Arrays immutabel neu zuweisen
+           afterQueueResolved?.();
          }
 
              // Check for trap triggers
@@ -777,8 +990,7 @@ export function useGameActions(
             log(`❌ ERROR: Lane full - Öffentlichkeit ist voll (5/5)`);
           }
 
-          // 🔥 AP-REFUNDS nach dem Kartenspielen anwenden
-          applyApRefundsAfterPlay(newState, player, selectedCard);
+          // Simplified AP system: No refunds
           return newState;
         }
 
@@ -795,10 +1007,17 @@ export function useGameActions(
 
         // 6) Karteneffekte enqueuen + Queue auflösen
         triggerCardEffects(newState, player, playedCard);
-        // Queue needs array of events
-        if (newState._queue && newState._queue.length > 0) {
-          resolveQueue(newState, newState._queue);
-          newState._queue = [];
+        // Migration Helper verwenden
+        migrateLegacyQueue(newState);
+        // Nur noch _effectQueue verwenden
+        if (newState._effectQueue && newState._effectQueue.length > 0) {
+          try { log(`DEBUG: about to resolve queue (spec instant) -> ${JSON.stringify((newState._effectQueue as any).map((e:any)=>({type:e.type, amount:e.amount, msg:e.msg})).slice(0,50))}`); } catch(e) {}
+          log(`DEBUG AP before resolve (spec instant): P1=${newState.actionPoints[1]} P2=${newState.actionPoints[2]}`);
+          resolveQueue(newState, newState._effectQueue);
+          newState._effectQueue = [];
+          // Nach Queue-Auflösung: Hand-Arrays immutabel neu zuweisen
+          afterQueueResolved?.();
+          log(`DEBUG AP after resolve (spec instant): P1=${newState.actionPoints[1]} P2=${newState.actionPoints[2]}`);
         }
 
         // Check for trap triggers
@@ -810,17 +1029,23 @@ export function useGameActions(
           (m) => (newState._effectQueue ??= []).push({ type: 'LOG', msg: m })
         );
 
-        // 🔥 AP-REFUNDS nach dem Kartenspielen anwenden
-        applyApRefundsAfterPlay(newState, player, selectedCard);
+        // Simplified AP system: No refunds
         return newState;
       }
 
       // 6) Karteneffekte enqueuen + Queue auflösen (fallback für unbekannte Kartentypen)
       triggerCardEffects(newState, player, selectedCard);
-      // Queue needs array of events
-        if (newState._queue && newState._queue.length > 0) {
-          resolveQueue(newState, newState._queue);
-          newState._queue = [];
+      // Migration Helper verwenden
+      migrateLegacyQueue(newState);
+      // Nur noch _effectQueue verwenden
+        if (newState._effectQueue && newState._effectQueue.length > 0) {
+          try { log(`DEBUG: about to resolve queue (spec public/default) -> ${JSON.stringify((newState._effectQueue as any).map((e:any)=>({type:e.type, amount:e.amount, msg:e.msg})).slice(0,50))}`); } catch(e) {}
+          log(`DEBUG AP before resolve (spec public/default): P1=${newState.actionPoints[1]} P2=${newState.actionPoints[2]}`);
+          resolveQueue(newState, newState._effectQueue);
+          newState._effectQueue = [];
+          // Nach Queue-Auflösung: Hand-Arrays immutabel neu zuweisen
+          afterQueueResolved?.();
+          log(`DEBUG AP after resolve (spec public/default): P1=${newState.actionPoints[1]} P2=${newState.actionPoints[2]}`);
         }
 
       // Check for trap triggers
@@ -832,8 +1057,7 @@ export function useGameActions(
         (m) => (newState._effectQueue ??= []).push({ type: 'LOG', msg: m })
       );
 
-      // 🔥 AP-REFUNDS nach dem Kartenspielen anwenden
-      applyApRefundsAfterPlay(newState, player, selectedCard);
+      // Simplified AP system: No refunds
 
       // Kein Aktionenlimit mehr → automatischer Turnwechsel entfällt
 
@@ -843,6 +1067,7 @@ export function useGameActions(
   }, [setGameState, log]);
 
   const activateInstantInitiative = useCallback((player: Player) => {
+    logger.info(`activateInstantInitiative START P${player}`);
     setGameState(prev => {
       if (prev.current !== player) {
         log(`❌ ERROR: Not player turn - Current: ${prev.current}, Attempted: ${player}`);
@@ -860,6 +1085,24 @@ export function useGameActions(
       // 1) Normale Karten-Effekte der Sofort-Karte feuern
       triggerCardEffects(newState, player, instantCard);
 
+      // UI visual: initiative ripple + AP pop (prototype hook)
+      try {
+        const zones = (window as any).__politicardDebug?.clickZones || [];
+        const boardZone = zones.find((z: any) => z.data && z.data.type === 'row_slot');
+        const cx = boardZone ? boardZone.x + (boardZone.w || 256) / 2 : 960;
+        const cy = boardZone ? boardZone.y + (boardZone.h || 256) / 2 : 300;
+        if (visualEffects) {
+          visualEffects.spawnRipple(cx, cy, { radius: 640, showAp: true, apX: cx, apY: cy + 40 });
+          try {
+            const trigI = (window as any).__pc_triggerInstantAnim || (window as any).pc_triggerInstantAnim;
+            if (typeof trigI === 'function') trigI('1.instant.0');
+          } catch (e) {}
+        } else {
+          (window as any).__pc_ripples = (window as any).__pc_ripples || [];
+          (window as any).__pc_ripples.push({ cx, cy, started: performance.now(), duration: 700, radius: 640, showAp: true, apX: cx, apY: cy + 40 });
+        }
+      } catch (e) {}
+
       // Check for trap triggers
       applyTrapsOnCardPlayed(
         newState,
@@ -869,22 +1112,42 @@ export function useGameActions(
         (m) => (newState._effectQueue ??= []).push({ type: 'LOG', msg: m })
       );
 
-      // 2) Karte nach Aktivierung in den Ablagestapel
+      // 2) Queue auflösen (BEVOR die Karte entfernt wird)
+      if (newState._effectQueue && newState._effectQueue.length > 0) {
+        resolveQueue(newState, [...newState._effectQueue]);
+        newState._effectQueue = [];
+        // Nach Queue-Auflösung: Hand-Arrays immutabel neu zuweisen
+        afterQueueResolved?.();
+      }
+
+      // 3) Karte NACH Queue-Auflösung in den Ablagestapel
       const [played] = newState.board[player].sofort.splice(0, 1);
       newState.discard.push(played);
 
-      // 3) Queue auflösen
-      // Queue needs array of events
-        if (newState._queue && newState._queue.length > 0) {
-          resolveQueue(newState, newState._queue);
-          newState._queue = [];
-        }
+      // Visual: listen for dice roll event to animate & bind to SKANDALSPIRALE_TRIGGER if present
+      try {
+        const diceHandler = (ev: any) => {
+          try {
+            const face = ev.detail?.face;
+            if (face == null) return;
+            // If last enqueued event was SKANDALSPIRALE_TRIGGER, attach a LOG with the face
+            const last = (newState._effectQueue ?? []).slice(-1)[0];
+            // Emit a LOG event for visibility
+            if (!newState._effectQueue) newState._effectQueue = [];
+            newState._effectQueue.push({ type: 'LOG', msg: `Würfel: ${face}` } as any);
+          } catch (e) {}
+        };
+        window.addEventListener('pc:dice_roll', diceHandler as EventListener);
+        // remove after short timeout to avoid leaking listeners
+        setTimeout(() => window.removeEventListener('pc:dice_roll', diceHandler as EventListener), 2000);
+      } catch (e) {}
 
       return newState;
     });
   }, [setGameState, log]);
 
   const endTurn = useCallback((reason: 'button_end_turn' | 'auto' = 'button_end_turn') => {
+    logger.info(`endTurn START reason=${reason}`);
     setGameState((prev): GameState => {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const current = prev.current;
@@ -916,22 +1179,80 @@ export function useGameActions(
 
   // Legacy: nextTurn als Alias für endTurn für Kompatibilität
   const nextTurn = useCallback(() => {
+    logger.info('nextTurn alias called');
     endTurn('auto');
   }, [endTurn]);
 
+  // Global listener: handle visual dice results and apply Skandalspirale effects automatically
+  useEffect(() => {
+    const handler = (ev: any) => {
+      const face = ev?.detail?.face;
+      if (typeof face !== 'number') return;
+      setGameState(prev => {
+        try {
+          const pending = (prev as any)._pendingSkandal as { player: Player; ts: number } | undefined;
+          if (!pending) return prev;
+          // only accept recent pending requests (avoid stale triggers)
+          if (Date.now() - (pending.ts || 0) > 8000) {
+            const n = { ...prev } as GameState & any;
+            delete n._pendingSkandal;
+            return n;
+          }
+
+          const newState = { ...prev } as GameState & any;
+          // clear pending marker
+          delete newState._pendingSkandal;
+
+          // Prepare events based on face
+          newState._effectQueue = newState._effectQueue || [];
+          if (face >= 1 && face <= 3) {
+            const loss = face;
+            // enqueue negative buff (debuff) on disadvantaged player's strongest gov
+            newState._effectQueue.push({ type: 'BUFF_STRONGEST_GOV', player: pending.player, amount: -loss } as any);
+            newState._effectQueue.push({ type: 'LOG', msg: `Skandalspirale: Spieler ${pending.player} würfelt ${face} → stärkste Regierung -${loss}.` } as any);
+          } else {
+            newState._effectQueue.push({ type: 'LOG', msg: `Skandalspirale: Spieler ${pending.player} würfelt ${face} → Keine Auswirkung.` } as any);
+          }
+
+          // Resolve immediately so effect is visible without waiting
+          if (newState._effectQueue && newState._effectQueue.length > 0) {
+            try { resolveQueue(newState, [...newState._effectQueue]); } catch (e) { logger.dbg('resolveQueue failed on dice handler', e); }
+            newState._effectQueue = [];
+          }
+
+          // Ensure React sees shallow-copied hands for UI update
+          try {
+            newState.hands = { 1: [...newState.hands[1]], 2: [...newState.hands[2]] };
+          } catch (e) {}
+
+          // run after-queue hook if provided (best-effort)
+          try { if ((window as any).__afterQueueResolved) (window as any).__afterQueueResolved(); } catch (e) {}
+
+          return newState;
+        } catch (err) {
+          logger.dbg('dice handler setGameState error', err);
+          return prev;
+        }
+      });
+    };
+
+    window.addEventListener('pc:dice_roll', handler as EventListener);
+    return () => window.removeEventListener('pc:dice_roll', handler as EventListener);
+  }, [setGameState]);
+
     const passTurn = useCallback((player: Player) => {
-    console.log(`🔧 DEBUG: passTurn called for player ${player}`);
+    logger.info(`passTurn START P${player}`);
 
     setGameState(prev => {
-      console.log(`🔧 DEBUG: passTurn setState - current: ${prev.current}, player: ${player}`);
+      logger.dbg(`passTurn setState current=${prev.current} player=${player}`);
 
       if (prev.current !== player) {
-        console.log(`🔧 DEBUG: Wrong player turn - current: ${prev.current}, attempted: ${player}`);
+        logger.dbg(`passTurn wrong turn current=${prev.current} attempted=${player}`);
         return prev;
       }
 
       const newState = { ...prev, passed: { ...prev.passed, [player]: true } };
-      console.log(`🔧 DEBUG: Pass status updated - P1: ${newState.passed[1]}, P2: ${newState.passed[2]}`);
+      logger.dbg(`Pass status updated P1=${newState.passed[1]} P2=${newState.passed[2]}`);
       log(`🚫 Spieler ${player} passt.`);
 
       // ❗ Kein Nachziehen bei Pass:
@@ -940,7 +1261,7 @@ export function useGameActions(
 
       // Check if round should end (both players passed)
       const shouldEndRound = checkRoundEnd(newState);
-      console.log(`🔧 DEBUG: Should end round? ${shouldEndRound}`);
+      logger.dbg(`Should end round? ${shouldEndRound}`);
 
       if (shouldEndRound) {
         log(`🏁 Runde ${newState.round} wird beendet und ausgewertet.`);
@@ -948,13 +1269,12 @@ export function useGameActions(
       } else {
         // Switch turn to other player for their final chance
         const otherPlayer: Player = player === 1 ? 2 : 1;
-        console.log(`🔧 DEBUG: Switching to other player ${otherPlayer}, has passed: ${newState.passed[otherPlayer]}`);
+        logger.dbg(`Switching to other player ${otherPlayer} hasPassed=${newState.passed[otherPlayer]}`);
 
         // Only switch if other player hasn't passed yet
         if (!newState.passed[otherPlayer]) {
-          newState.current = otherPlayer;
-          newState.actionPoints = { ...newState.actionPoints, [otherPlayer]: 2 };
-          newState.actionsUsed = { ...newState.actionsUsed, [otherPlayer]: 0 };
+                     newState.current = otherPlayer;
+           newState.actionPoints = { ...newState.actionPoints, [otherPlayer]: 2 };
 
           // Apply new start-of-turn hooks
           applyStartOfTurnFlags(newState, otherPlayer, log);
@@ -963,7 +1283,7 @@ export function useGameActions(
         recomputeAuraFlags(newState);
 
           log(`⏭️ Spieler ${otherPlayer} hat noch einen letzten Zug.`);
-          console.log(`🔧 DEBUG: Turn switched to player ${otherPlayer}`);
+          logger.dbg(`Turn switched to player ${otherPlayer}`);
         } else {
           // Both players have passed now, end round
           log(`🏁 Runde ${newState.round} wird beendet (beide Spieler haben gepasst).`);
@@ -984,4 +1304,4 @@ export function useGameActions(
     nextTurn,
     endTurn,
   };
-}
+  }

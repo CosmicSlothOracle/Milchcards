@@ -9,8 +9,9 @@ export const AP_CAP = Number.MAX_SAFE_INTEGER; // Unlimited AP cap in simplified
 export const ACTIONS_PER_TURN = Number.MAX_SAFE_INTEGER; // No action limit per turn
 
 // Initiative-System
-export const MAX_DISCOUNT = 2;
-export const MAX_REFUND = 2;
+// Simplified AP system: No discounts or refunds
+export const MAX_DISCOUNT = 0;
+export const MAX_REFUND = 0;
 
 // Karten-Limits
 export const HAND_SIZE_LIMIT = 10;
