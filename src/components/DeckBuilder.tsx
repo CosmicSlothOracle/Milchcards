@@ -63,7 +63,8 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
     const categories = {
       government: [] as Array<{ kind: 'pol' | 'spec'; base: BasePolitician | BaseSpecial }>,
       public: [] as Array<{ kind: 'pol' | 'spec'; base: BasePolitician | BaseSpecial }>,
-      initiatives: [] as Array<{ kind: 'pol' | 'spec'; base: BasePolitician | BaseSpecial }>,
+      initiatives_sofort: [] as Array<{ kind: 'pol' | 'spec'; base: BasePolitician | BaseSpecial }>,
+      initiatives_dauerhaft: [] as Array<{ kind: 'pol' | 'spec'; base: BasePolitician | BaseSpecial }>,
       interventions: [] as Array<{ kind: 'pol' | 'spec'; base: BasePolitician | BaseSpecial }>,
       corruptions: [] as Array<{ kind: 'pol' | 'spec'; base: BasePolitician | BaseSpecial }>
     };
@@ -75,9 +76,11 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
     Specials.filter((s: BaseSpecial) => s.type === 'Öffentlichkeitskarte')
       .forEach((s: BaseSpecial) => categories.public.push({ kind: 'spec', base: s }));
 
-    // Initiatives (Instant and Ongoing)
-    Specials.filter((s: BaseSpecial) => s.type === 'Sofort-Initiative' || s.type === 'Dauerhaft-Initiative')
-      .forEach((s: BaseSpecial) => categories.initiatives.push({ kind: 'spec', base: s }));
+    // Initiatives: separate into Sofort (instant) and Dauerhaft (ongoing)
+    Specials.filter((s: BaseSpecial) => s.type === 'Sofort-Initiative')
+      .forEach((s: BaseSpecial) => categories.initiatives_sofort.push({ kind: 'spec', base: s }));
+    Specials.filter((s: BaseSpecial) => s.type === 'Dauerhaft-Initiative')
+      .forEach((s: BaseSpecial) => categories.initiatives_dauerhaft.push({ kind: 'spec', base: s }));
 
     // Interventions
     Specials.filter((s: BaseSpecial) => s.type === 'Intervention')
@@ -92,7 +95,8 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
       arr.sort((a, b) => getEffectRank(a.base) - getEffectRank(b.base));
 
     sortByEffect(categories.public);
-    sortByEffect(categories.initiatives);
+    sortByEffect(categories.initiatives_sofort);
+    sortByEffect(categories.initiatives_dauerhaft);
     sortByEffect(categories.interventions);
     sortByEffect(categories.corruptions);
 
@@ -107,7 +111,8 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
     const allFilteredCards = [
       ...categories.government.filter(({ kind, base }) => matches(kind, base)),
       ...categories.public.filter(({ kind, base }) => matches(kind, base)),
-      ...categories.initiatives.filter(({ kind, base }) => matches(kind, base)),
+      ...categories.initiatives_sofort.filter(({ kind, base }) => matches(kind, base)),
+      ...categories.initiatives_dauerhaft.filter(({ kind, base }) => matches(kind, base)),
       ...categories.interventions.filter(({ kind, base }) => matches(kind, base)),
       ...categories.corruptions.filter(({ kind, base }) => matches(kind, base))
     ];
@@ -116,7 +121,8 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
       categories: {
         government: categories.government.filter(({ kind, base }) => matches(kind, base)),
         public: categories.public.filter(({ kind, base }) => matches(kind, base)),
-        initiatives: categories.initiatives.filter(({ kind, base }) => matches(kind, base)),
+        initiatives_sofort: categories.initiatives_sofort.filter(({ kind, base }) => matches(kind, base)),
+        initiatives_dauerhaft: categories.initiatives_dauerhaft.filter(({ kind, base }) => matches(kind, base)),
         interventions: categories.interventions.filter(({ kind, base }) => matches(kind, base)),
         corruptions: categories.corruptions.filter(({ kind, base }) => matches(kind, base))
       },
@@ -181,7 +187,8 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
         'NEOLIBERAL_TECHNOKRAT': '🏛️ Neoliberaler Technokrat',
         'AUTORITAERER_REALIST': '🦅 Autoritärer Realist',
         'PROGRESSIVER_AKTIVISMUS': '🌱 Progressiver Aktivismus',
-        'POPULISTISCHER_OPPORTUNIST': '🎭 Populistischer Opportunist'
+        'POPULISTISCHER_OPPORTUNIST': '🎭 Populistischer Opportunist',
+        'BALANCED_AI_DECK': '🤖 Balanced AI Deck'
       };
       setSelectedDeckName(deckNames[which] || '');
     }
@@ -759,18 +766,24 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                 justifyContent: 'start',
                 alignContent: 'start',
               }}>
-                {[0,1,2,3].map(rank => (
-                  <React.Fragment key={rank}>
-                    {categorizedCards.categories.initiatives.some(({ base }) => getEffectRank(base) === rank) && (
-                      <div style={{ gridColumn: '1 / -1', fontSize: '11px', fontWeight: 600, color: '#40e0d0', margin: '4px 0' }}>
-                        {getEffectLabel(rank)}
-                      </div>
-                    )}
-                    {categorizedCards.categories.initiatives.filter(({ base }) => getEffectRank(base) === rank)
-                      .map(({ kind, base }) => (
-                        <CardTile key={`${rank}-${kind}-${base.id}`} kind={kind} base={base} onClick={() => handleCardClick(kind, base)} />
-                    ))}
-                  </React.Fragment>
+                {/* Sofort (Instant) initiatives */}
+                {categorizedCards.categories.initiatives_sofort.length > 0 && (
+                  <div style={{ gridColumn: '1 / -1', fontSize: '11px', fontWeight: 700, color: '#40e0d0', margin: '4px 0' }}>
+                    Sofort (Instant)
+                  </div>
+                )}
+                {categorizedCards.categories.initiatives_sofort.map(({ kind, base }) => (
+                  <CardTile key={`sofort-${kind}-${base.id}`} kind={kind} base={base} onClick={() => handleCardClick(kind, base)} />
+                ))}
+
+                {/* Dauerhaft (Ongoing) initiatives */}
+                {categorizedCards.categories.initiatives_dauerhaft.length > 0 && (
+                  <div style={{ gridColumn: '1 / -1', fontSize: '11px', fontWeight: 700, color: '#40e0d0', margin: '12px 0 4px' }}>
+                    Dauerhaft (Ongoing)
+                  </div>
+                )}
+                {categorizedCards.categories.initiatives_dauerhaft.map(({ kind, base }) => (
+                  <CardTile key={`dauerhaft-${kind}-${base.id}`} kind={kind} base={base} onClick={() => handleCardClick(kind, base)} />
                 ))}
               </div>
             </div>

@@ -86,7 +86,7 @@ export const CARDS: CardDef[] = [
   I('init.symbolic_politics', 'Symbolic Politics', ['Instant','Draw'], 2, 'init.symbolic_politics.draw1'),
 
   // ----- INITIATIVES — ONGOING (mit effectKeys für SoT/Auren) -----
-  I('init.koalitionszwang', 'Koalitionszwang (Regierung)', ['Ongoing'], 4, 'init.koalitionszwang.gov_aura'),
+  I('init.koalitionszwang', 'Koalitionszwang (Regierung)', ['Ongoing'], 4, 'gov.koalitionszwang.coalition_bonus'),
   I('init.algorithmischer_diskurs', 'Algorithmischer Diskurs (Oeffentlichkeit)', ['Ongoing','Media'], 4, 'init.algorithmischer_diskurs.media_aura'),
   I('init.wirtschaftlicher_druck', 'Wirtschaftlicher Druck (Regierung)', ['Ongoing'], 4, 'init.wirtschaftlicher_druck.gov_penalty'),
   I('init.napoleon_komplex', 'Napoleon Komplex', ['Ongoing','Government','Buff'], 4, 'init.napoleon_komplex.tier1_gov_plus1'),
@@ -124,9 +124,9 @@ export const CARDS: CardDef[] = [
   T('trap.soft_power_collapse', 'Soft-Power Collapse', ['Trap','Debuff'], 5, 'trap.soft_power_collapse.minus3_diplomat'),
   T('trap.cancel_culture', 'Cancel Culture', ['Trap','Deactivate'], 4, 'trap.cancel_culture.deactivate_public'),
   T('trap.lobby_leak', 'Lobby Leak', ['Trap','Discard'], 4, 'trap.lobby_leak.force_discard_on_ngo'),
-  T('trap.mole', 'Mole', ['Trap','Copy'], 4, 'trap.mole.copy_weaker_gov'),
+  I('corruption.mole', 'Maulwurf', ['Corruption','Dice','Control'], 4, 'corruption.mole.steal_weakest_gov'),
   T('trap.scandal_spiral', 'Scandal Spiral', ['Trap','Cancel'], 5, 'trap.scandal_spiral.cancel_one_of_two'),
-  T('trap.tunnel_vision', 'Tunnel Vision', ['Trap','Ignore'], 4, 'trap.tunnel_vision.ignore_weak_gov'),
+  I('init.tunnel_vision', 'Tunnelvision', ['Control','Dice','Dauerhaft'], 2, 'init.tunnel_vision.gov_probe_system'),
   T('trap.satire_show', 'Satire Show', ['Trap','Debuff'], 4, 'trap.satire_show.minus2_enemy_gov'),
 ];
 

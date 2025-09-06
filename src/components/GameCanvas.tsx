@@ -30,6 +30,18 @@ function isCorruptionSelection(state: GameState, player: Player) {
   return sel && sel.type === 'corruption_steal' && sel.actorPlayer === player;
 }
 
+// Helper: is maulwurf corruption active
+function isMaulwurfCorruption(state: GameState, player: Player) {
+  const sel: any = (state as any).pendingAbilitySelect;
+  return sel && sel.type === 'maulwurf_steal' && sel.actorPlayer === player;
+}
+
+// Helper: is tunnelvision probe active
+function isTunnelvisionProbe(state: GameState, player: Player) {
+  const sel: any = (state as any).pendingAbilitySelect;
+  return sel && sel.type === 'tunnelvision_probe' && sel.actorPlayer === player;
+}
+
 export const GameCanvas: React.FC<GameCanvasProps> = ({
   gameState,
   selectedHandIndex,
@@ -73,6 +85,9 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
   const slotSymbolImgsRef = useRef<Map<string, HTMLImageElement>>(new Map());
   // Map of canonical slot positions for animations: key -> {x,y,w,h,cx,cy}
   const slotPositionsRef = useRef<Record<string, { x: number; y: number; w: number; h: number; cx: number; cy: number }>>({});
+  // Mapping between animation UIDs and slot keys to ensure one-shot playback
+  const uidToKeyRef = useRef<Record<string, string>>({});
+  const keyToUidRef = useRef<Record<string, string>>({});
   // Temporary test GIF for government slots
   const govGifRef = useRef<HTMLImageElement | null>(null);
   const govSpritesRef = useRef<HTMLImageElement | null>(null);
@@ -84,6 +99,194 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
   const instantSpriteStateRef = useRef<Record<string, { started: number; frameCount: number; frameDuration: number }>>({});
 
   const hitSpriteStateRef = useRef<Record<string, { started: number; frameCount: number; frameDuration: number }>>({});
+
+  // Corruption (Bestechungsskandal) target selection mode
+  const corruptionSelectActorRef = useRef<Player | null>(null);
+  const gameStateRef = useRef<GameState>(gameState);
+  useEffect(() => { gameStateRef.current = gameState; }, [gameState]);
+  useEffect(() => {
+    const onEnterCorruptionSelect = (ev: any) => {
+      try {
+        const actor = ev.detail?.player as Player | undefined;
+        console.log('🔥 GAMECANVAS RECEIVED pc:corruption_select_target - Actor:', actor);
+        corruptionSelectActorRef.current = actor ?? null;
+        console.log('🔥 SET corruptionSelectActorRef.current:', corruptionSelectActorRef.current);
+      } catch (e) {
+        console.error('🔥 ERROR in corruption select handler:', e);
+      }
+    };
+    window.addEventListener('pc:corruption_select_target', onEnterCorruptionSelect as EventListener);
+    // Keyboard hotkeys 1-5 to choose opponent government slot when corruption select is active
+    const onKeyDown = (ev: KeyboardEvent) => {
+      try {
+        const k = ev.key;
+        if (!['1','2','3','4','5'].includes(k)) return;
+        const actor = corruptionSelectActorRef.current;
+        if (!actor) return;
+        const victim = actor === 1 ? 2 : 1;
+        const idx = Number(k) - 1; // map '1' -> slot 0
+        const gs = gameStateRef.current as any;
+        const card = gs?.board?.[victim]?.aussen?.[idx];
+        console.debug('[CORR][KEY] pressed', k, 'actor', actor, 'victim', victim, 'idx', idx, 'card', card);
+        if (!card) return;
+        const uid = card.uid ?? card.id;
+        if (!uid) return;
+        console.debug('[CORR][KEY] dispatching pick_target for uid', uid);
+        window.dispatchEvent(new CustomEvent('pc:corruption_pick_target', { detail: { player: actor, targetUid: uid } }));
+        try {
+          console.debug('[CORR][KEY] dispatching target_selected for uid', uid);
+          window.dispatchEvent(new CustomEvent('pc:corruption_target_selected', { detail: { player: actor, targetUid: uid } }));
+        } catch(e) { console.debug('[CORR][KEY] target_selected dispatch error', e); }
+        ev.preventDefault();
+      } catch(e) {}
+    };
+    window.addEventListener('keydown', onKeyDown as EventListener);
+    return () => {
+      window.removeEventListener('pc:corruption_select_target', onEnterCorruptionSelect as EventListener);
+      window.removeEventListener('keydown', onKeyDown as EventListener);
+    };
+  }, []);
+
+  // Maulwurf corruption target selection mode
+  const maulwurfSelectActorRef = useRef<Player | null>(null);
+  useEffect(() => {
+    const onEnterMaulwurfSelect = (ev: any) => {
+      try {
+        const actor = ev.detail?.player as Player | undefined;
+        const targetUid = ev.detail?.targetUid as number | undefined;
+        const requiredRoll = ev.detail?.requiredRoll as number | undefined;
+        const targetName = ev.detail?.targetName as string | undefined;
+        console.log('🔥 GAMECANVAS RECEIVED pc:maulwurf_select_target - Actor:', actor, 'Target:', targetName, 'Required:', requiredRoll);
+        maulwurfSelectActorRef.current = actor ?? null;
+
+        // Show modal for dice roll
+        const el = document.createElement('div');
+        el.id = 'pc-maulwurf-modal';
+        el.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.8);display:flex;align-items:center;justify-content:center;z-index:10000;';
+        el.style.fontSize = '14px';
+        document.body.appendChild(el);
+
+        el.innerHTML = `<div style="display:flex;flex-direction:column;gap:8px;min-width:260px;">
+          <div style="font-weight:700">Maulwurf — Ziel automatisch gewählt</div>
+          <div>Gewähltes Ziel: <b>${targetName || 'Unbekannt'}</b></div>
+          <div>Probe: W6 ≥ ${requiredRoll || 2} (2 + Anzahl Regierungskarten)</div>
+          <div style="display:flex;gap:8px;justify-content:flex-end;">
+            <button id="pc-maulwurf-roll" style="background:#2563eb;color:white;border:none;padding:6px 10px;border-radius:6px;cursor:pointer;">Würfeln</button>
+            <button id="pc-maulwurf-cancel" style="background:#374151;color:white;border:none;padding:6px 10px;border-radius:6px;cursor:pointer;">Abbrechen</button>
+          </div>
+        </div>`;
+
+        // Event listeners for buttons
+        const rollBtn = el.querySelector('#pc-maulwurf-roll');
+        const cancelBtn = el.querySelector('#pc-maulwurf-cancel');
+
+        if (rollBtn) {
+          rollBtn.addEventListener('click', () => {
+            try {
+              window.dispatchEvent(new CustomEvent('pc:maulwurf_request_roll', {
+                detail: { player: actor, targetUid }
+              }));
+              document.body.removeChild(el);
+            } catch (e) {
+              console.error('Maulwurf roll button error:', e);
+            }
+          });
+        }
+
+        if (cancelBtn) {
+          cancelBtn.addEventListener('click', () => {
+            try {
+              document.body.removeChild(el);
+              // Clear pending selection
+              if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent('pc:clear_pending_selection'));
+              }
+            } catch (e) {
+              console.error('Maulwurf cancel button error:', e);
+            }
+          });
+        }
+      } catch (e) {
+        console.error('🔥 ERROR in maulwurf select handler:', e);
+      }
+    };
+
+    window.addEventListener('pc:maulwurf_select_target', onEnterMaulwurfSelect as EventListener);
+
+    return () => {
+      window.removeEventListener('pc:maulwurf_select_target', onEnterMaulwurfSelect as EventListener);
+    };
+  }, []);
+
+  // Tunnelvision probe mode
+  const tunnelvisionProbeActorRef = useRef<Player | null>(null);
+  useEffect(() => {
+    const onEnterTunnelvisionProbe = (ev: any) => {
+      try {
+        const actor = ev.detail?.player as Player | undefined;
+        const targetUid = ev.detail?.targetUid as number | undefined;
+        const requiredRoll = ev.detail?.requiredRoll as number | undefined;
+        const influence = ev.detail?.influence as number | undefined;
+        console.log('🔥 GAMECANVAS RECEIVED pc:tunnelvision_probe_start - Actor:', actor, 'Target:', targetUid, 'Required:', requiredRoll, 'Influence:', influence);
+        tunnelvisionProbeActorRef.current = actor ?? null;
+        console.log('🔥 SET tunnelvisionProbeActorRef.current:', tunnelvisionProbeActorRef.current);
+
+        // Create modal for tunnelvision probe
+        const el = document.getElementById('pc-modal-root');
+        if (!el) return;
+
+        el.innerHTML = `<div style="display:flex;flex-direction:column;gap:8px;min-width:280px;">
+          <div style="font-weight:700">Tunnelvision — Regierungskarte Probe</div>
+          <div>Einfluss: <b>${influence || 'Unbekannt'}</b></div>
+          <div>Probe: W6 ≥ ${requiredRoll || 4} ${(influence || 0) >= 9 ? '(Einfluss 9+)' : '(Standard)'}</div>
+          <div style="font-size:12px;color:#666;">Bei Misserfolg: 2-3 Karte bleibt in Hand, 1 kritischer Misserfolg entfernt Karte dauerhaft</div>
+          <div style="display:flex;gap:8px;justify-content:flex-end;">
+            <button id="pc-tunnelvision-roll" style="background:#2563eb;color:white;border:none;padding:6px 10px;border-radius:6px;cursor:pointer;">Würfeln</button>
+            <button id="pc-tunnelvision-cancel" style="background:#374151;color:white;border:none;padding:6px 10px;border-radius:6px;cursor:pointer;">Abbrechen</button>
+          </div>
+        </div>`;
+
+        // Add event listeners for buttons
+        const rollBtn = document.getElementById('pc-tunnelvision-roll');
+        const cancelBtn = document.getElementById('pc-tunnelvision-cancel');
+
+        if (rollBtn) {
+          rollBtn.onclick = () => {
+            try {
+              window.dispatchEvent(new CustomEvent('pc:tunnelvision_request_roll', {
+                detail: { player: actor, targetUid, requiredRoll, influence }
+              }));
+              el.innerHTML = '';
+            } catch (e) {
+              console.error('Error dispatching tunnelvision request roll:', e);
+            }
+          };
+        }
+
+        if (cancelBtn) {
+          cancelBtn.onclick = () => {
+            el.innerHTML = '';
+            // Cancel the probe - card stays in hand
+            try {
+              window.dispatchEvent(new CustomEvent('pc:tunnelvision_request_roll', {
+                detail: { player: actor, targetUid, requiredRoll, influence, cancel: true }
+              }));
+            } catch (e) {
+              console.error('Error canceling tunnelvision probe:', e);
+            }
+          };
+        }
+      } catch (e) {
+        console.error('🔥 ERROR in tunnelvision probe handler:', e);
+      }
+    };
+
+    window.addEventListener('pc:tunnelvision_probe_start', onEnterTunnelvisionProbe as EventListener);
+
+    return () => {
+      window.removeEventListener('pc:tunnelvision_probe_start', onEnterTunnelvisionProbe as EventListener);
+    };
+  }, []);
 
   // Helper: draw slot icons with uniform pulsing opacity and a light reflection
   const drawSlotIconWithPulse = useCallback((ctx: CanvasRenderingContext2D, img: HTMLImageElement | undefined, x: number, y: number, w: number, h: number, phase = 0) => {
@@ -515,7 +718,10 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       const textY = y + h + 16;
       ctx.fillText(card.name, x + w/2, textY);
 
-      clickZonesRef.current.push({ ...clickZone, data: { type: 'slot_card', slot: clickType, card } });
+      // Register click zone for the card - always in dev mode, otherwise only for current player
+      if (devMode || player === gameState.current) {
+        clickZonesRef.current.push({ ...clickZone, data: { type: 'slot_card', slot: clickType, player, card } });
+      }
 
       // 🔧 NEU: Sofort-Initiative-Slots sind immer klickbar für Aktivierung (handled by activateInstantInitiative)
       if (clickType === 'instant') {
@@ -524,8 +730,8 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
           data: { type: 'activate_instant', player, card }
         });
       }
-    } else if (gameState.current === player) {
-      // Slot-Benennung für leere Slots anzeigen (für den aktuellen Spieler)
+    } else if (gameState.current === player || devMode) {
+      // Slot-Benennung für leere Slots anzeigen (für den aktuellen Spieler oder im Dev Mode)
       const slotName = getSlotDisplayName(zoneId, 0, player);
       ctx.fillStyle = 'rgba(255,255,255,0.6)';
       ctx.font = '11px sans-serif';
@@ -533,9 +739,75 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       const textY = y + h/2;
       ctx.fillText(slotName, x + w/2, textY);
 
-      clickZonesRef.current.push({ x, y, w, h, data: { type: 'empty_slot', slot: clickType } });
+      clickZonesRef.current.push({ x, y, w, h, data: { type: 'empty_slot', slot: clickType, player } });
     }
-  }, [selectedHandIndex, gameState, drawCardAt, getSlotDisplayName]);
+  }, [selectedHandIndex, gameState, drawCardAt, getSlotDisplayName, devMode]);
+
+  // Small UI hook: show a lightweight corruption modal overlay when a target is selected
+  useEffect(() => {
+    const onTargetSelected = (ev: any) => {
+      const { player, targetUid } = ev.detail || {};
+      if (!player || !targetUid) return;
+      // create transient overlay element if not present
+      try {
+        const id = 'pc-corruption-modal';
+        let el = document.getElementById(id);
+        if (!el) {
+          el = document.createElement('div');
+          el.id = id;
+          el.style.position = 'fixed';
+          el.style.left = '50%';
+          el.style.top = '40%';
+          el.style.transform = 'translate(-50%, -50%)';
+          el.style.padding = '12px 16px';
+          el.style.background = 'rgba(6,10,15,0.9)';
+          el.style.border = '1px solid rgba(255,255,255,0.12)';
+          el.style.borderRadius = '8px';
+          el.style.zIndex = '3000';
+          el.style.color = '#e5e7eb';
+          el.style.fontFamily = 'monospace';
+          el.style.fontSize = '14px';
+          document.body.appendChild(el);
+        }
+        const card = (gameState as any).board?.[player === 1 ? 1 : 2]?.aussen?.find((c:any)=>c.uid===targetUid) || (gameState as any).board?.[player === 1 ? 2 : 1]?.aussen?.find((c:any)=>c.uid===targetUid);
+        el.innerHTML = `<div style="display:flex;flex-direction:column;gap:8px;min-width:260px;">
+          <div style="font-weight:700">Bestechungsskandal 2.0 — Ziel gewählt</div>
+          <div>Gewähltes Ziel: <b>${card ? card.name : 'UID '+targetUid}</b></div>
+          <div>Probe: W6 ≥ Einfluss (inkl. Oligarch-Bonus)</div>
+          <div style="display:flex;gap:8px;justify-content:flex-end;">
+            <button id="pc-corruption-roll" style="background:#2563eb;color:white;border:none;padding:6px 10px;border-radius:6px;cursor:pointer;">Würfeln</button>
+            <button id="pc-corruption-cancel" style="background:#374151;color:white;border:none;padding:6px 10px;border-radius:6px;cursor:pointer;">Abbrechen</button>
+          </div>
+        </div>`;
+
+        const rollBtn = document.getElementById('pc-corruption-roll');
+        const cancelBtn = document.getElementById('pc-corruption-cancel');
+        if (rollBtn) {
+          rollBtn.onclick = () => {
+            try {
+              console.log('🔥 CORRUPTION WÜRFELN CLICKED - triggering dice roll');
+              // Trigger the dice component to roll
+              window.dispatchEvent(new CustomEvent('pc:ui_request_dice_roll', { detail: { player, targetUid } }));
+              window.dispatchEvent(new CustomEvent('pc:corruption_request_roll', { detail: { player, targetUid } }));
+            } catch(e) {
+              console.error('🔥 ERROR triggering dice roll:', e);
+            }
+            // disable until result
+            (rollBtn as HTMLButtonElement).disabled = true;
+            (rollBtn as HTMLButtonElement).innerText = 'Würfelt...';
+          };
+        }
+        if (cancelBtn) {
+          cancelBtn.onclick = () => {
+            el!.remove();
+          };
+        }
+      } catch (e) { console.debug('corruption modal create failed', e); }
+    };
+
+    window.addEventListener('pc:corruption_target_selected', onTargetSelected as EventListener);
+    return () => window.removeEventListener('pc:corruption_target_selected', onTargetSelected as EventListener);
+  }, [gameState]);
 
   // Draw permanent slots for player
   const drawPermanentSlotsP1 = useCallback((ctx: CanvasRenderingContext2D) => {
@@ -818,24 +1090,59 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     opponentPublicRects.forEach((s: { x: number; y: number; w: number; h: number }, idx: number) => {
       const card = gameState.board[2].innen[idx];
       if (card) {
-        drawCardAt(ctx, card, s.x, s.y, s.w, false, false, 2);
+        const clickZone = drawCardAt(ctx, card, s.x, s.y, s.w, false, false, 2);
+        // Register hover/click zone for opponent card (always) - include card for hover info
+        clickZonesRef.current.push({
+          ...clickZone,
+          data: { type: 'board_card', player: 2, lane: 'innen', index: idx, card }
+        });
       }
       else {
         // draw placeholder symbol for empty public slot
         const img = slotSymbolImgsRef.current.get('public');
         drawSlotIconWithPulse(ctx, img, s.x, s.y, s.w, s.h, 0.4);
+        // Register empty slot click zone in dev mode
+        if (devMode) {
+          clickZonesRef.current.push({
+            x: s.x, y: s.y, w: s.w, h: s.h,
+            data: { type: 'row_slot', player: 2, lane: 'innen', index: idx }
+          });
+        }
       }
     });
 
     // Draw opponent government slots
     opponentGovRects.forEach((s: { x: number; y: number; w: number; h: number }, idx: number) => {
       const card = gameState.board[2].aussen[idx];
+      const corrActive = !!((gameState as any).pendingAbilitySelect && (gameState as any).pendingAbilitySelect.type === 'corruption_steal');
       if (card) {
-        drawCardAt(ctx, card, s.x, s.y, s.w, false, false, 2);
+        const clickZone = drawCardAt(ctx, card, s.x, s.y, s.w, false, false, 2);
+        // Register hover/click zone for opponent card (always) - include card for hover info
+        clickZonesRef.current.push({
+          ...clickZone,
+          data: { type: 'board_card', player: 2, lane: 'aussen', index: idx, card }
+        });
+        // When corruption target selection is active, register exact slot rectangle for click detection
+        if (corrActive) {
+          clickZonesRef.current.push({
+            x: s.x,
+            y: s.y,
+            w: s.w,
+            h: s.h,
+            data: { type: 'board_card', player: 2, lane: 'aussen', index: idx, card }
+          });
+        }
       }
       else {
         const img = slotSymbolImgsRef.current.get('government');
         drawSlotIconWithPulse(ctx, img, s.x, s.y, s.w, s.h, 0.1);
+        // Register empty slot click zone only in dev mode
+        if (devMode) {
+          clickZonesRef.current.push({
+            x: s.x, y: s.y, w: s.w, h: s.h,
+            data: { type: 'row_slot', player: 2, lane: 'aussen', index: idx }
+          });
+        }
       }
     });
 
@@ -850,6 +1157,13 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         } else {
           const img = slotSymbolImgsRef.current.get('dauerhaft');
           drawSlotIconWithPulse(ctx, img, ox, oy, ow, oh, 0.3);
+          // Register empty slot click zone in dev mode
+          if (devMode) {
+            clickZonesRef.current.push({
+              x: ox, y: oy, w: ow, h: oh,
+              data: { type: 'empty_slot', slot: 'permanent_government', player: 2 }
+            });
+          }
         }
       }
     } catch (e) {}
@@ -863,6 +1177,13 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         } else {
           const img = slotSymbolImgsRef.current.get('dauerhaft');
           drawSlotIconWithPulse(ctx, img, ox2, oy2, ow2, oh2, 0.7);
+          // Register empty slot click zone in dev mode
+          if (devMode) {
+            clickZonesRef.current.push({
+              x: ox2, y: oy2, w: ow2, h: oh2,
+              data: { type: 'empty_slot', slot: 'permanent_public', player: 2 }
+            });
+          }
         }
       }
     } catch (e) {}
@@ -877,9 +1198,10 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       const card = gameState.board[1].innen[idx];
       if (card) {
         const clickZone = drawCardAt(ctx, card, s.x, s.y, s.w, false, false, 1);
+        // register card zone including card so hover panel can show details
         clickZonesRef.current.push({
           ...clickZone,
-          data: { type: 'row_slot', player: 1, lane: 'innen', index: idx }
+          data: { type: 'board_card', player: 1, lane: 'innen', index: idx, card }
         });
       } else {
         // Empty slot click zone and draw public symbol
@@ -900,7 +1222,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         const clickZone = drawCardAt(ctx, card, s.x, s.y, s.w, false, false, 1);
         clickZonesRef.current.push({
           ...clickZone,
-          data: { type: 'row_slot', player: 1, lane: 'aussen', index: idx }
+          data: { type: 'board_card', player: 1, lane: 'aussen', index: idx, card }
         });
       } else {
         // Empty slot click zone and draw government symbol
@@ -921,27 +1243,29 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
 
       // Start sprite animation when a playAnim for a gov-card is active and maps to a slot
       const now = performance.now();
-      // handle specialized 'hit:' playAnims which indicate target-hit sprites by slot key
-      anims.forEach((a: { uid: string | number; started: number; duration: number; lane?: string }) => {
+      // Prefer mutating the source anim array so entries are consumed and don't retrigger repeatedly
+      const animsArr: Array<{ uid: string | number; started: number; duration: number; lane?: string }> = (visualEffects && visualEffects.playAnimsRef && visualEffects.playAnimsRef.current) || ((window as any).__pc_play_anims = (window as any).__pc_play_anims || []);
+
+      // Iterate backwards and consume processed animations to ensure one-shot playback
+      for (let i = animsArr.length - 1; i >= 0; i--) {
+        const a = animsArr[i];
         try {
+          // handle specialized 'hit:' playAnims which indicate target-hit sprites by slot key
           if (typeof a.uid === 'string' && a.uid.indexOf('hit:') === 0) {
             const inner = a.uid.slice(4); // '1.aussen.0'
             if (!hitSpriteStateRef.current[inner]) {
               hitSpriteStateRef.current[inner] = { started: now, frameCount: 25, frameDuration: 30 };
+              animsArr.splice(i, 1);
             }
-            return; // don't treat as gov anim
+            continue;
           }
         } catch (e) {}
 
-        // existing gov/instant handling follows
-      });
-
-      // now run the original anims loop for gov/instant that depend on card uids
-      anims.forEach((a: { uid: string | number; started: number; duration: number; lane?: string }) => {
         // find the zone/slot for this uid
         const zone = clickZonesRef.current.find(z => z.data && z.data.card && ((z.data.card.uid ?? String(z.data.card.id)) === a.uid));
-        if (!zone) return;
-        // determine if gov slot
+        if (!zone) continue;
+
+        // determine if gov slot or instant
         let isGov = false;
         let isInstant = false;
         try {
@@ -951,26 +1275,32 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
           if (dt.slot && typeof dt.slot === 'string' && dt.slot.includes('government')) isGov = true;
           if (dt.type === 'activate_instant' || (dt.slot && typeof dt.slot === 'string' && dt.slot.includes('instant'))) isInstant = true;
         } catch (e) {}
-        if (!isGov && !isInstant) return;
+        if (!isGov && !isInstant) continue;
 
         const player = zone.data.player ?? 1;
         const lane = zone.data.lane ?? 'aussen';
         const idx = zone.data.index ?? 0;
         const key = `${player}.${lane}.${idx}`;
 
-        // initialize sprite state if not present
+        // initialize sprite state if not present; consume the anim entry only when we actually start playback
+        let startedThis = false;
         if (isGov) {
           if (!govSpriteStateRef.current[key]) {
             govSpriteStateRef.current[key] = { started: now, frameCount: 14, frameDuration: 40 }; // 14 frames @ ~40ms -> ~560ms
+            startedThis = true;
           }
         }
         if (isInstant) {
           const instKey = `${player}.instant.${idx}`;
           if (!instantSpriteStateRef.current[instKey]) {
             instantSpriteStateRef.current[instKey] = { started: now, frameCount: 14, frameDuration: 40 };
+            startedThis = true;
           }
         }
-      });
+        if (startedThis) {
+          animsArr.splice(i, 1);
+        }
+      }
 
       // draw running sprite animations per gov slot
       Object.keys(govSpriteStateRef.current).forEach(k => {
@@ -1135,6 +1465,51 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
 
     // Draw info panels
     drawInfoPanels(ctx);
+
+    // Draw corruption mode indicator
+    const corrActive = !!((gameState as any).pendingAbilitySelect && (gameState as any).pendingAbilitySelect.type === 'corruption_steal');
+    if (corrActive) {
+      ctx.save();
+      ctx.fillStyle = 'rgba(255, 0, 0, 0.8)';
+      ctx.font = 'bold 32px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('🔥 CORRUPTION TARGET SELECTION ACTIVE 🔥', 960, 100);
+
+      ctx.fillStyle = 'rgba(255, 255, 0, 0.9)';
+      ctx.font = 'bold 24px sans-serif';
+      ctx.fillText('Click on opponent government card to target', 960, 140);
+      ctx.restore();
+    }
+
+    // Draw maulwurf corruption mode indicator
+    const maulwurfActive = !!((gameState as any).pendingAbilitySelect && (gameState as any).pendingAbilitySelect.type === 'maulwurf_steal');
+    if (maulwurfActive) {
+      ctx.save();
+      ctx.fillStyle = 'rgba(139, 69, 19, 0.8)'; // Brown color for mole
+      ctx.font = 'bold 32px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('🕳️ MAULWURF CORRUPTION ACTIVE 🕳️', 960, 100);
+
+      ctx.fillStyle = 'rgba(255, 255, 0, 0.9)';
+      ctx.font = 'bold 24px sans-serif';
+      ctx.fillText('Ziel automatisch gewählt - würfeln zum Stehlen', 960, 140);
+      ctx.restore();
+    }
+
+    // Draw tunnelvision probe mode indicator
+    const tunnelvisionActive = !!((gameState as any).pendingAbilitySelect && (gameState as any).pendingAbilitySelect.type === 'tunnelvision_probe');
+    if (tunnelvisionActive) {
+      ctx.save();
+      ctx.fillStyle = 'rgba(75, 0, 130, 0.8)'; // Purple color for tunnelvision
+      ctx.font = 'bold 32px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('🔮 TUNNELVISION PROBE ACTIVE 🔮', 960, 100);
+
+      ctx.fillStyle = 'rgba(255, 255, 0, 0.9)';
+      ctx.font = 'bold 24px sans-serif';
+      ctx.fillText('Regierungskarte Probe - würfeln zum Fortfahren', 960, 140);
+      ctx.restore();
+    }
 
     // --- VISUAL EFFECTS: Particle bursts, card pop scale, initiative ripple & AP pop ---
     try {
@@ -1548,6 +1923,21 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
   }, [draw]);
 
   const handleCardClick = useCallback((data: any) => {
+    // Corruption target selection: intercept board card clicks for opponent government
+    if (corruptionSelectActorRef.current && data && data.type === 'board_card') {
+      try {
+        const actor = corruptionSelectActorRef.current as Player;
+        const victim = actor === 1 ? 2 : 1;
+        if (data.player === victim && (data.lane === 'aussen' || data.lane === 'government')) {
+          const uid = data.card?.uid ?? data.card?.id;
+          if (uid != null) {
+            corruptionSelectActorRef.current = null;
+            try { window.dispatchEvent(new CustomEvent('pc:corruption_target_selected', { detail: { player: actor, targetUid: uid } })); } catch (e) {}
+            return; // do not propagate
+          }
+        }
+      } catch (e) {}
+    }
     // Hand-Klick
     if (data.type === 'hand_p1') {
       const uid = data.card?.uid ?? data.card?.id;
@@ -1606,7 +1996,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
           return;
         }
       } catch (err) {}
-      handleCardClick(hit.data);
+      handleCardClickInternal(hit.data);
     }
   }, [handleCardClick]);
 
@@ -1704,16 +2094,44 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
   const handleCardClickInternal = useCallback((data: any) => {
     const sel: any = (gameState as any).pendingAbilitySelect;
     if (sel && sel.type === 'corruption_steal') {
-      // expect data.uid and data.player and data.lane
+      // Accept clicks on either actual card sprites (with uid) or on empty row_slot hitboxes.
       if (data.player !== sel.actorPlayer && data.lane === 'aussen') {
-        try {
-          window.dispatchEvent(new CustomEvent('pc:corruption_pick_target', { detail: { player: sel.actorPlayer, targetUid: data.uid } }));
-        } catch(e) {}
-        return; // consume click
+        let targetUid = (data as any).uid;
+
+        // If we got a row_slot hit (no uid), map index→uid from board state
+        if (!targetUid && data.type === 'row_slot') {
+          try {
+            const p = data.player;
+            const idx = data.index;
+            const card = (gameState as any).board?.[p]?.aussen?.[idx];
+            targetUid = card?.uid;
+          } catch(e) {}
+        }
+
+        if (targetUid) {
+          try {
+            console.debug('[CORR] forwarding uid', targetUid, 'actorPlayer=', sel.actorPlayer);
+            window.dispatchEvent(new CustomEvent('pc:corruption_pick_target', { detail: { player: sel.actorPlayer, targetUid } }));
+            // Also open small confirmation overlay via DOM event for modal convenience
+            try { window.dispatchEvent(new CustomEvent('pc:corruption_target_selected', { detail: { player: sel.actorPlayer, targetUid } })); } catch(e) {}
+          } catch(e) {}
+          return; // consume click
+        }
       }
     }
     onCardClick(data);
   }, [gameState, onCardClick]);
+
+  useEffect(() => {
+    const onDiceResult = () => {
+      // remove corruption modal if exists
+      const el = document.getElementById('pc-corruption-modal');
+      if (el) el.remove();
+      corruptionSelectActorRef.current = null;
+    };
+    window.addEventListener('pc:dice_result', onDiceResult as EventListener);
+    return () => window.removeEventListener('pc:dice_result', onDiceResult as EventListener);
+  }, []);
 
   return (
     <canvas

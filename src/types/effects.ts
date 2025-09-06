@@ -42,7 +42,22 @@ export type EffectEvent =
   // Corruption dice-steal mechanic
   | { type: 'CORRUPTION_STEAL_GOV_START'; player: Player }
   | { type: 'CORRUPTION_STEAL_GOV_RESOLVE'; player: Player; targetUid: number; roll: number; influence: number }
-  | { type: 'SKANDALSPIRALE_TRIGGER'; player: Player };
+  // Maulwurf corruption mechanic
+  | { type: 'CORRUPTION_MOLE_STEAL_START'; player: Player }
+  | { type: 'CORRUPTION_MOLE_STEAL_RESOLVE'; player: Player; targetUid: number; roll: number; requiredRoll: number }
+  // Tunnelvision probe system
+  | { type: 'TUNNELVISION_GOV_PROBE_START'; player: Player; targetUid: number; influence: number }
+  | { type: 'TUNNELVISION_GOV_PROBE_RESOLVE'; player: Player; targetUid: number; roll: number; requiredRoll: number; influence: number }
+  | { type: 'SKANDALSPIRALE_TRIGGER'; player: Player }
+  // Koalitionszwang complex influence calculation
+  | { type: 'KOALITIONSZWANG_CALCULATE_BONUS'; player: Player }
+  // Animation System Events
+  | { type: 'ANIMATION_PLAY'; characterId: string; animationName: string }
+  | { type: 'ANIMATION_COMPLETE'; characterId: string; animationName: string }
+  | { type: 'PROJECTILE_SPAWN'; characterId: string; position: { x: number; y: number }; velocity: { x: number; y: number } }
+  | { type: 'PROJECTILE_HIT'; projectileId: string; targetId: string; damage: number }
+  | { type: 'EFFECT_SPAWN'; effectId: string; position: { x: number; y: number }; animationName: string }
+  | { type: 'DAMAGE_DEALT'; targetId: string; amount: number; knockback?: { x: number; y: number }; hitstun?: number };
 
 // Optional: tolerant fallback in der Migrationsphase
 // | { type: string; [k: string]: any };

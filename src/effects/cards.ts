@@ -24,7 +24,7 @@ export const LEGACY_NAME_TO_KEY: Record<string, string> = {
   'Boykott-Kampagne':        'trap.boycott.deactivate_ngo_movement',
   'Deepfake-Skandal':        'trap.deepfake.lock_diplomat_transfer',
   'Cyber-Attacke':           'trap.cyber_attack.destroy_platform',
-  'Bestechungsskandal 2.0':  'trap.bribery_v2.mind_control_weak_gov',
+
   'Grassroots-Widerstand':   'trap.grassroots_resistance.deactivate_public',
   'Massenproteste':          'trap.mass_protests.debuff_two_govs',
   'Berater-Affäre':          'trap.advisor_scandal.minus2_gov_tier1',
@@ -33,8 +33,8 @@ export const LEGACY_NAME_TO_KEY: Record<string, string> = {
   'Soft Power-Kollaps':      'trap.soft_power_collapse.minus3_diplomat',
   'Cancel Culture':          'trap.cancel_culture.deactivate_public',
   'Lobby Leak':              'trap.lobby_leak.force_discard_on_ngo',
-  'Maulwurf':                'trap.mole.copy_weaker_gov',
-  'Tunnelvision':            'trap.tunnel_vision.ignore_weak_gov',
+  'Maulwurf':                'corruption.mole.steal_weakest_gov',
+  'Tunnelvision':            'init.tunnel_vision.gov_probe_system',
   'Satire-Show':             'trap.satire_show.minus2_enemy_gov',
   'Strategische Enthüllung': 'trap.strategic_disclosure.return_gov',
   // vorhanden

@@ -352,25 +352,34 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
 
       // === CORRUPTION: Bestechungsskandal 2.0 ===
       case 'CORRUPTION_STEAL_GOV_START': {
+        console.log('🔥 PROCESSING CORRUPTION_STEAL_GOV_START - Player:', ev.player);
         // Signal UI that player must select opponent government card & roll dice
         (state as any).pendingAbilitySelect = {
           type: 'corruption_steal',
           actorPlayer: ev.player
         } as any;
 
+        console.log('🔥 SET pendingAbilitySelect:', (state as any).pendingAbilitySelect);
         events.unshift({ type: 'LOG', msg: 'Bribery Scandal 2.0: Wähle eine gegnerische Regierungskarte und würfle einen W6.' });
         // Trigger UI hook to highlight targets
         if (typeof window !== 'undefined') {
           try {
+            console.log('🔥 DISPATCHING pc:corruption_select_target event');
             window.dispatchEvent(new CustomEvent('pc:corruption_select_target', { detail: { player: ev.player } }));
-          } catch(e) {}
+          } catch(e) {
+            console.error('🔥 ERROR dispatching corruption event:', e);
+          }
         }
         break;
       }
 
       case 'CORRUPTION_STEAL_GOV_RESOLVE': {
-        const { player: actor, targetUid, roll } = ev as any;
+        const { player: actor, targetUid } = ev as any;
         const victim: Player = actor === 1 ? 2 : 1;
+
+        // Calculate W6 roll first
+        const roll = 1 + rng.randomInt(6);
+        console.log('🎲 ENGINE: Calculated W6 roll:', roll);
 
         // Locate target card
         const targetIdx = state.board[victim].aussen.findIndex(c => c.uid === targetUid);
@@ -391,6 +400,18 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
         const total = roll + oligarchCount;
         const targetInfluence = target.influence + (target.tempBuffs||0) - (target.tempDebuffs||0);
 
+        // Dispatch the calculated roll to UI for 3D dice display
+        if (typeof window !== 'undefined') {
+          try {
+            console.log('🎲 ENGINE: Dispatching calculated roll to UI:', roll);
+            window.dispatchEvent(new CustomEvent('pc:engine_dice_result', {
+              detail: { roll, player: actor, targetUid }
+            }));
+          } catch(e) {
+            console.error('🎲 ENGINE: Error dispatching dice result:', e);
+          }
+        }
+
         events.unshift({ type: 'LOG', msg: `Bribery Scandal 2.0: Roll ${roll} +${oligarchCount} Bonus = ${total} vs ${targetInfluence} (${target.name}).` });
 
         if (total >= targetInfluence) {
@@ -408,6 +429,202 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
         } else {
           events.unshift({ type: 'LOG', msg: 'Bribery Scandal 2.0: Wurf zu niedrig – keine Übernahme.' });
         }
+
+        // Clear pending selection
+        (state as any).pendingAbilitySelect = undefined;
+        break;
+      }
+
+      // === MAULWURF CORRUPTION ===
+      case 'CORRUPTION_MOLE_STEAL_START': {
+        console.log('🔥 PROCESSING CORRUPTION_MOLE_STEAL_START - Player:', ev.player);
+        const actor: Player = ev.player;
+        const victim: Player = actor === 1 ? 2 : 1;
+
+        // Automatically find the weakest opponent government card
+        const oppGovCards = state.board[victim].aussen.filter(c => c.kind === 'pol') as any[];
+        if (oppGovCards.length === 0) {
+          events.unshift({ type: 'LOG', msg: 'Maulwurf: Keine gegnerischen Regierungskarten gefunden.' });
+          break;
+        }
+
+        // Find the weakest card (lowest influence)
+        const weakestCard = oppGovCards.reduce((weakest, current) =>
+          current.influence < weakest.influence ? current : weakest
+        );
+
+        // Calculate required roll: base 2 + number of opponent government cards
+        const requiredRoll = 2 + oppGovCards.length;
+
+        // Signal UI that player must roll dice for the automatically selected target
+        (state as any).pendingAbilitySelect = {
+          type: 'maulwurf_steal',
+          actorPlayer: actor,
+          targetUid: weakestCard.uid,
+          requiredRoll: requiredRoll
+        } as any;
+
+        console.log('🔥 SET pendingAbilitySelect for Maulwurf:', (state as any).pendingAbilitySelect);
+        events.unshift({ type: 'LOG', msg: `Maulwurf: Schwächste Regierungskarte ${weakestCard.name} (Einfluss ${weakestCard.influence}) automatisch gewählt.` });
+        events.unshift({ type: 'LOG', msg: `Maulwurf: Würfle mindestens ${requiredRoll} (2 + ${oppGovCards.length} Regierungskarten).` });
+
+        // Trigger UI hook to show dice roll
+        if (typeof window !== 'undefined') {
+          try {
+            console.log('🔥 DISPATCHING pc:maulwurf_select_target event');
+            window.dispatchEvent(new CustomEvent('pc:maulwurf_select_target', {
+              detail: {
+                player: actor,
+                targetUid: weakestCard.uid,
+                requiredRoll: requiredRoll,
+                targetName: weakestCard.name
+              }
+            }));
+          } catch(e) {
+            console.error('🔥 ERROR dispatching maulwurf event:', e);
+          }
+        }
+        break;
+      }
+
+      case 'CORRUPTION_MOLE_STEAL_RESOLVE': {
+        const { player: actor, targetUid } = ev as any;
+        const victim: Player = actor === 1 ? 2 : 1;
+
+        // Calculate W6 roll first
+        const roll = 1 + rng.randomInt(6);
+        console.log('🎲 ENGINE: Calculated W6 roll for Maulwurf:', roll);
+
+        // Locate target card
+        const targetIdx = state.board[victim].aussen.findIndex(c => c.uid === targetUid);
+        if (targetIdx === -1) {
+          events.unshift({ type: 'LOG', msg: 'Maulwurf: Zielkarte nicht gefunden.' });
+          break;
+        }
+        const target = state.board[victim].aussen[targetIdx] as any;
+
+        // Calculate required roll: base 2 + number of opponent government cards
+        const oppGovCards = state.board[victim].aussen.filter(c => c.kind === 'pol') as any[];
+        const requiredRoll = 2 + oppGovCards.length;
+
+        // Dispatch the calculated roll to UI for 3D dice display
+        if (typeof window !== 'undefined') {
+          try {
+            console.log('🎲 ENGINE: Dispatching calculated roll to UI for Maulwurf:', roll);
+            window.dispatchEvent(new CustomEvent('pc:engine_dice_result', {
+              detail: { roll, player: actor, targetUid }
+            }));
+          } catch(e) {
+            console.error('🎲 ENGINE: Error dispatching dice result for Maulwurf:', e);
+          }
+        }
+
+        events.unshift({ type: 'LOG', msg: `Maulwurf: Roll ${roll} vs benötigt ${requiredRoll} (${target.name}).` });
+
+        if (roll >= requiredRoll) {
+          const maxSlots = 5; // Government slots
+          if (state.board[actor as Player].aussen.length < maxSlots) {
+            // Transfer card
+            state.board[victim].aussen.splice(targetIdx,1);
+            state.board[actor as Player].aussen.push(target as any);
+            events.unshift({ type: 'LOG', msg: `Maulwurf: Erfolg! ${target.name} übernommen.` });
+          } else {
+            // No space - remove card
+            state.board[victim].aussen.splice(targetIdx,1);
+            state.discard.push(target as any);
+            events.unshift({ type: 'LOG', msg: `Maulwurf: Erfolg, aber kein Slot frei – ${target.name} entfernt.` });
+          }
+        } else {
+          events.unshift({ type: 'LOG', msg: 'Maulwurf: Wurf zu niedrig – keine Übernahme.' });
+        }
+
+        // Clear pending selection
+        (state as any).pendingAbilitySelect = undefined;
+        break;
+      }
+
+      // === TUNNELVISION: Government Card Probe System ===
+      case 'TUNNELVISION_GOV_PROBE_START': {
+        const { player: actor, targetUid, influence } = ev as any;
+        const requiredRoll = influence >= 9 ? 5 : 4;
+
+        // Signal UI that player must roll dice for government card probe
+        (state as any).pendingAbilitySelect = {
+          type: 'tunnelvision_probe',
+          actorPlayer: actor,
+          targetUid: targetUid,
+          requiredRoll: requiredRoll,
+          influence: influence
+        } as any;
+
+        events.unshift({ type: 'LOG', msg: `Tunnelvision: Regierungskarte benötigt Probe. W6 ≥${requiredRoll} (${influence >= 9 ? 'Einfluss 9+' : 'Standard'}).` });
+
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('pc:tunnelvision_probe_start', {
+            detail: {
+              player: actor,
+              targetUid: targetUid,
+              requiredRoll: requiredRoll,
+              influence: influence
+            }
+          }));
+        }
+        break;
+      }
+
+      case 'TUNNELVISION_GOV_PROBE_RESOLVE': {
+        const { player: actor, targetUid, roll, requiredRoll, influence } = ev as any;
+
+        // Dispatch the roll to UI for 3D dice display
+        if (typeof window !== 'undefined') {
+          try {
+            window.dispatchEvent(new CustomEvent('pc:engine_dice_result', {
+              detail: { roll, player: actor, targetUid }
+            }));
+          } catch(e) {
+            console.error('🎲 ENGINE: Error dispatching dice result for Tunnelvision:', e);
+          }
+        }
+
+        events.unshift({ type: 'LOG', msg: `Tunnelvision: Roll ${roll} vs benötigt ${requiredRoll} (Einfluss ${influence}).` });
+
+        if (roll >= requiredRoll) {
+          // Success: Card can be played normally
+          events.unshift({ type: 'LOG', msg: 'Tunnelvision: Probe bestanden - Regierungskarte kann gespielt werden.' });
+
+          // Add the card to the government board
+          const hand = state.hands[actor as Player];
+          const cardIndex = hand.findIndex(c => c.uid === targetUid);
+          if (cardIndex !== -1) {
+            const card = hand[cardIndex];
+            hand.splice(cardIndex, 1);
+            state.board[actor as Player].aussen.push(card as any);
+            events.unshift({ type: 'LOG', msg: `Tunnelvision: ${card.name} erfolgreich in Regierung platziert.` });
+          }
+        } else {
+          // Failure: Different outcomes based on roll
+          if (roll === 1) {
+            // Critical failure: Remove card from game permanently
+            events.unshift({ type: 'LOG', msg: 'Tunnelvision: Kritischer Misserfolg! Regierungskarte wird dauerhaft aus dem Spiel entfernt.' });
+
+            // Remove card from hand and add to discard
+            const hand = state.hands[actor as Player];
+            const cardIndex = hand.findIndex(c => c.uid === targetUid);
+            if (cardIndex !== -1) {
+              const card = hand[cardIndex];
+              hand.splice(cardIndex, 1);
+              state.discard.push(card as any);
+              events.unshift({ type: 'LOG', msg: `Tunnelvision: ${card.name} dauerhaft aus dem Spiel entfernt.` });
+            }
+          } else {
+            // Normal failure: Card stays in hand
+            events.unshift({ type: 'LOG', msg: 'Tunnelvision: Probe misslungen - Regierungskarte bleibt in der Hand.' });
+          }
+        }
+
+        // Always deduct 1 AP regardless of outcome (this is the cost for the probe)
+        state.actionPoints[actor as Player] = Math.max(0, state.actionPoints[actor as Player] - 1);
+        events.unshift({ type: 'LOG', msg: 'Tunnelvision: 1 AP abgezogen für Probe.' });
 
         // Clear pending selection
         (state as any).pendingAbilitySelect = undefined;
@@ -534,6 +751,68 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
       // Simplified AP system: No initiative-specific bonuses
       // All AP bonuses are now immediate ADD_AP events
 
+      case 'KOALITIONSZWANG_CALCULATE_BONUS': {
+        const player = ev.player;
+        const opponent = other(player);
+
+        // Get all government cards for both players
+        const ownGov = state.board[player].innen.filter(c => c.kind === 'pol') as PoliticianCard[];
+        const oppGov = state.board[opponent].innen.filter(c => c.kind === 'pol') as PoliticianCard[];
+
+        // Get public slots for activist/denker cards
+        const ownPublic = state.board[player].aussen;
+        const cd = require('../data/cardDetails') as any;
+
+        let totalBonus = 0;
+        let bonusDetails: string[] = [];
+
+        // 1. For each own government card with same influence as opponent government card: +1
+        for (const ownCard of ownGov) {
+          const ownInfluence = ownCard.influence || 0;
+          const hasMatchingOpponent = oppGov.some(oppCard => (oppCard.influence || 0) === ownInfluence);
+
+          if (hasMatchingOpponent && ownInfluence > 0) {
+            totalBonus += 1;
+            bonusDetails.push(`${ownCard.name} (${ownInfluence}) matches opponent influence`);
+          }
+        }
+
+        // 2. +1 for each activist/denker card in public slots
+        let activistDenkerCount = 0;
+        for (const publicCard of ownPublic) {
+          const cardDetails = cd.getCardDetails?.(publicCard.name);
+          const subcategories = cardDetails?.subcategories as string[] | undefined;
+
+          if (Array.isArray(subcategories)) {
+            const isActivist = subcategories.includes('Aktivist') || subcategories.includes('Aktivisten');
+            const isDenker = subcategories.includes('Denker') || subcategories.includes('Thinker');
+
+            if (isActivist || isDenker) {
+              activistDenkerCount++;
+              bonusDetails.push(`${publicCard.name} (${isActivist ? 'Aktivist' : 'Denker'})`);
+            }
+          }
+        }
+        totalBonus += activistDenkerCount;
+
+        // Apply bonus to strongest government card
+        if (totalBonus > 0) {
+          const strongestGov = getStrongestGovernment(state, player);
+          if (strongestGov) {
+            (strongestGov as PoliticianCard).tempBuffs = ((strongestGov as PoliticianCard).tempBuffs || 0) + totalBonus;
+            events.unshift({
+              type: 'LOG',
+              msg: `Koalitionszwang: +${totalBonus} Einfluss (${bonusDetails.join(', ')})`
+            });
+          }
+        } else {
+          events.unshift({
+            type: 'LOG',
+            msg: 'Koalitionszwang: No bonus conditions met'
+          });
+        }
+        break;
+      }
 
     }
     // generic after snapshot diff for AP

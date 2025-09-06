@@ -8,6 +8,7 @@ import { HandCardModal } from './components/HandCardModal';
 import { GameLogModal } from './components/GameLogModal';
 import UILayoutEditor from './components/UILayoutEditor';
 import CardEffectTestSuite from './test/CardEffectTestSuite';
+import QTEFrame from './components/QTEFrame';
 import { useGameState } from './hooks/useGameState';
 import { BuilderEntry, PoliticianCard, Player } from './types/game';
 import { Specials, PRESET_DECKS, Pols } from './data/gameData';
@@ -35,7 +36,7 @@ function AppContent() {
   const [devMode, setDevMode] = useState(false);
 
   // UI Layout Editor Route
-  const [currentRoute, setCurrentRoute] = useState<'game' | 'ui-editor' | 'test-suite'>('game');
+  const [currentRoute, setCurrentRoute] = useState<'game' | 'ui-editor' | 'test-suite' | 'qte'>('game');
 
   const {
     gameState,
@@ -366,6 +367,8 @@ function AppContent() {
       return;
     }
 
+    console.log('🔥 PLAYING CARD:', card.name, 'effectKey:', card.effectKey);
+
     // effectKey sicherstellen (Legacy-Namen → Keys)
     try {
       const { resolveEffectKey } = require('./effects/resolveEffectKey');
@@ -507,12 +510,29 @@ function AppContent() {
         >
           🧪 Test Suite
         </button>
+        <button
+          onClick={() => setCurrentRoute('qte')}
+          style={{
+            background: currentRoute === 'qte' ? '#3b82f6' : '#374151',
+            color: 'white',
+            border: 'none',
+            padding: '8px 12px',
+            borderRadius: '6px',
+            fontSize: '12px',
+            fontWeight: 600,
+            cursor: 'pointer',
+          }}
+        >
+          🕹 QTE
+        </button>
       </div>
 
       {currentRoute === 'ui-editor' ? (
         <UILayoutEditor />
       ) : currentRoute === 'test-suite' ? (
         <CardEffectTestSuite />
+      ) : currentRoute === 'qte' ? (
+        <QTEFrame onBack={() => setCurrentRoute('game')} />
       ) : (
         <div style={{
           position: 'fixed',
@@ -586,14 +606,15 @@ function AppContent() {
               {/* Dice 3D - Dev utility */}
               <div style={{ position: 'fixed', left: 16, bottom: 16, zIndex: 1200 }}>
                 {/* use a stable ref declared at top-level of AppContent if you need to control it */}
-                <Dice3D
-                  size={120}
-                  duration={900}
-                  onRoll={(f) => {
-                    console.log('Dice rolled', f);
-                    try { window.dispatchEvent(new CustomEvent('pc:dice_roll', { detail: { face: f } })); } catch (e) {}
-                  }}
-                />
+                <Dice3D size={120} duration={900} onRoll={(f) => {
+                  console.log('Dice rolled', f);
+                  // Dispatch dice result for corruption system
+                  try {
+                    window.dispatchEvent(new CustomEvent('pc:dice_result', { detail: { roll: f } }));
+                  } catch(e) {
+                    console.error('Error dispatching dice result:', e);
+                  }
+                }} />
               </div>
 
               {/* 🔧 DEV MODE Indikator */}

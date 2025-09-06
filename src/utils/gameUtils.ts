@@ -63,10 +63,7 @@ export function sumGovernmentInfluenceWithAuras(state: GameState, player: Player
   govCards.forEach(card => {
     let influence = card.influence;
 
-    // Koalitionszwang: Tier 2 Regierungskarten +1 Einfluss
-    if (govSlot?.kind === 'spec' && (govSlot as SpecialCard).name === 'Koalitionszwang') {
-      if (card.T === 2) influence += 1;
-    }
+    // Koalitionszwang: Old Tier 2 bonus removed - now uses complex coalition bonus calculation
 
     // Napoleon Komplex: Tier 1 Regierungskarten +1 Einfluss
     if (govSlot?.kind === 'spec' && (govSlot as SpecialCard).name === 'Napoleon Komplex') {

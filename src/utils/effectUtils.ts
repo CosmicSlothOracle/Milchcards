@@ -315,5 +315,5 @@ export function hasInfluenceTransferBlock(player: Player, state: GameState): boo
   const govSlot = state.permanentSlots[player].government;
   if (!govSlot || govSlot.kind !== 'spec') return false;
   const spec = govSlot as SpecialCard;
-  return ['Koalitionszwang', 'Napoleon Komplex'].includes(spec.name);
+  return ['Napoleon Komplex'].includes(spec.name);
 }

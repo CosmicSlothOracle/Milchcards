@@ -1509,14 +1509,14 @@ export const SPECIAL_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Koalitionszwang': {
     name: 'Koalitionszwang',
     category: 'Dauerhaft-Initiative',
-    gameEffect: 'Kein Einflussverschieben erlaubt, Tier 2 Regierungskarten +1 Einfluss',
+    gameEffect: 'Für jede deiner Regierungskarten welche einen gleichhohen Einflusswert hat wie eine gegnerische Regierungskarte bekommst du +1 Einfluss +1 für jede Aktivisten und denker Karte welche in deinen Öffentlichkeitsslots liegt',
     deckCost: 2,
     subcategories: ['Regierung'],
     cardType: 'Dauerhaft-Initiative',
     tier: 'T2',
     slot: 'Regierung',
-    usage: 'Mit vielen Tier 2 Regierungskarten',
-    example: 'Alle deine mächtigen Regierungskarten bekommen +1 Einfluss'
+    usage: 'Mit Regierungskarten gleichen Einflusses und Aktivisten/Denkern',
+    example: 'Koalition bilden: Gleiche Einflusswerte + Aktivisten/Denker = Bonus-Einfluss'
   },
 
   'Zivilgesellschaft': {
@@ -1697,14 +1697,26 @@ export const SPECIAL_CARD_DETAILS: Record<string, DetailedCardInfo> = {
 
   'Bestechungsskandal 2.0': {
     name: 'Bestechungsskandal 2.0',
-    category: 'Intervention',
-    gameEffect: 'Du übernimmst die Regierungskarte bis Rundenende',
+    category: 'Sofort-Initiative',
+    gameEffect: 'Du versuchst eine gegnerische Regierungskarte zu übernehmen. Wähle eine Karte und würfle einen W6. Bei Erfolg wird die Karte übernommen.',
     deckCost: 3,
-    subcategories: ['Standard'],
-    cardType: 'Intervention',
+    subcategories: ['Corruption'],
+    cardType: 'Sofort-Initiative',
     tier: 'T3',
-    trigger: 'Gegner spielt eine Regierungskarte mit Einfluss 5 oder weniger',
-    example: 'Gegner spielt schwache Regierung → du kontrollierst sie'
+    trigger: 'Manuelle Zielauswahl - wähle gegnerische Regierungskarte',
+    example: 'Wähle Joschka Fischer → würfle W6 ≥ Einfluss + Oligarch-Bonus'
+  },
+
+  'Maulwurf': {
+    name: 'Maulwurf',
+    category: 'Sofort-Initiative',
+    gameEffect: 'Du versuchst die schwächste Regierungskarte deines Gegners zu übernehmen. Probe mit Würfel mindestens eine 2 oder höher würfeln und für jede gegnerische Regierungskarte auf dem Feld +1',
+    deckCost: 4,
+    subcategories: ['Corruption'],
+    cardType: 'Sofort-Initiative',
+    tier: 'T3',
+    trigger: 'Automatisch - schwächste Regierungskarte wird gewählt',
+    example: 'Gegner hat 2 Regierungskarten → du musst mindestens 3 würfeln'
   },
 
   'Grassroots-Widerstand': {
@@ -1803,16 +1815,6 @@ export const SPECIAL_CARD_DETAILS: Record<string, DetailedCardInfo> = {
     example: 'Gegner spielt Bill Gates → muss 1 Karte abwerfen'
   },
 
-  'Maulwurf': {
-    name: 'Maulwurf',
-    category: 'Intervention',
-    gameEffect: 'Du kopierst die schwächere Regierungskarte des Gegners',
-    deckCost: 3,
-    subcategories: ['Standard'],
-    cardType: 'Intervention',
-    tier: 'T3',
-    trigger: 'Gegner spielt eine Regierungskarte'
-  },
 
   'Skandalspirale': {
     name: 'Skandalspirale',
@@ -1828,14 +1830,14 @@ export const SPECIAL_CARD_DETAILS: Record<string, DetailedCardInfo> = {
 
   'Tunnelvision': {
     name: 'Tunnelvision',
-    category: 'Intervention',
-    gameEffect: 'Die Regierungskarte zählt nicht zur Runde',
+    category: 'Dauerhaft-Initiative',
+    gameEffect: 'Solange Tunnelvision aktiv ist, müssen beide Spieler bei Regierungskarten eine Probe bestehen. W6 ≥4 (≥5 bei Einfluss 9+). Bei Misserfolg: 1-3 Karte bleibt in Hand, 1 kritischer Misserfolg entfernt Karte dauerhaft. 1 AP wird immer abgezogen.',
     deckCost: 2,
-    subcategories: ['Standard'],
-    cardType: 'Intervention',
+    subcategories: ['Control'],
+    cardType: 'Dauerhaft-Initiative',
     tier: 'T2',
-    trigger: 'Gegner spielt eine Regierungskarte mit Einfluss 4 oder weniger',
-    example: 'Gegner spielt schwache Regierung → sie zählt nicht'
+    trigger: 'Dauerhaft aktiv - bei jeder Regierungskarte',
+    example: 'Spieler spielt Regierungskarte → Probe W6 ≥4 → bei Misserfolg Karte bleibt in Hand'
   },
 
   'Satire-Show': {

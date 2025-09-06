@@ -60,9 +60,9 @@ export const Specials: BaseSpecial[] = [
   {id:34, key:'Soft_Power_Kollaps', name:'Soft Power-Kollaps', type:'Intervention', speed:'Bei Diplomat', bp:2, tier:2, impl:'soft_power_collapse'},
   {id:35, key:'Cancel_Culture', name:'Cancel Culture', type:'Intervention', speed:'Bei ÖFF-Karte', bp:2, tier:2, impl:'cancel_culture'},
   {id:36, key:'Lobby_Leak', name:'Lobby Leak', type:'Intervention', speed:'Bei NGO', bp:2, tier:2, impl:'lobby_leak'},
-  {id:37, key:'Maulwurf', name:'Maulwurf', type:'Intervention', speed:'Bei REG-Karte', bp:3, tier:3, impl:'mole'},
+  {id:41, key:'Maulwurf', name:'Maulwurf', type:'Sofort-Initiative', speed:'Schnell', bp:4, tier:3, impl:'corruption_mole', effectKey:'corruption.mole.steal_weakest_gov', tag:'Corruption'},
   {id:38, key:'Skandalspirale', name:'Skandalspirale', type:'Sofort-Initiative', speed:'Schnell', bp:2, tier:2, impl:'skandalspirale', effectKey:'init.skandalspirale.w6_check'},
-  {id:39, key:'Tunnelvision', name:'Tunnelvision', type:'Intervention', speed:'Bei REG M≤4', bp:2, tier:2, impl:'tunnel_vision'},
+  {id:39, key:'Tunnelvision', name:'Tunnelvision', type:'Dauerhaft-Initiative', speed:'Dauerhaft', bp:2, tier:2, impl:'tunnel_vision', effectKey:'init.tunnel_vision.gov_probe_system', tag:'Control'},
   {id:40, key:'Satire_Show', name:'Satire-Show', type:'Intervention', speed:'Bei mehr Einfluss Gegner', bp:2, tier:2, impl:'satire_show'},
 
   // Public Cards (Öffentlichkeitskarten) - From Karten_Oeffentlichkeit.md
@@ -509,5 +509,45 @@ export const PRESET_DECKS = {
     { kind: 'spec' as const, baseId: 10, count: 1 }, // Influencer-Kampagne (2 HP)
     { kind: 'spec' as const, baseId: 11, count: 1 }, // Systemrelevant (2 HP)
     { kind: 'spec' as const, baseId: 9, count: 1 },  // Whataboutism (2 HP)
+  ],
+
+  BALANCED_AI_DECK: [
+    // 🤖 BALANCED AI DECK: Comprehensive variety showcasing all card types with implemented effects
+    // Total: 25 cards, ~108 HP (balanced for competitive play)
+
+    // GOVERNMENT CARDS (8 cards, 60 HP) - Mix of high and mid-tier leaders
+    { kind: 'pol' as const, baseId: 1, count: 1 },   // Vladimir Putin (17 HP) - Tier 2, 10 influence
+    { kind: 'pol' as const, baseId: 2, count: 1 },   // Xi Jinping (17 HP) - Tier 2, 10 influence
+    { kind: 'pol' as const, baseId: 65, count: 1 },  // Joe Biden (15 HP) - Tier 2, 9 influence
+    { kind: 'pol' as const, baseId: 6, count: 1 },   // Ursula von der Leyen (15 HP) - Tier 2, 9 influence
+    { kind: 'pol' as const, baseId: 16, count: 1 },  // Olaf Scholz (7 HP) - Tier 1, 7 influence
+    { kind: 'pol' as const, baseId: 14, count: 1 },  // Joschka Fischer (11 HP) - Tier 2, 7 influence (NGO boost)
+    { kind: 'pol' as const, baseId: 20, count: 1 },  // Robert Gates (5 HP) - Tier 1, 6 influence
+    { kind: 'pol' as const, baseId: 21, count: 1 },  // Karl Rove (5 HP) - Tier 1, 6 influence
+
+    // PUBLIC CARDS (8 cards, 48 HP) - Diverse effects and synergies
+    { kind: 'spec' as const, baseId: 64, count: 1 },  // Elon Musk (8 HP) - Draw + AP on initiative activation
+    { kind: 'spec' as const, baseId: 65, count: 1 },  // Bill Gates (7 HP) - Draw + next initiative AP
+    { kind: 'spec' as const, baseId: 66, count: 1 },  // Mark Zuckerberg (5 HP) - AP on initiative activation
+    { kind: 'spec' as const, baseId: 69, count: 1 },  // George Soros (7 HP) - AP when opponent has government
+    { kind: 'spec' as const, baseId: 70, count: 1 },  // Greta Thunberg (4 HP) - AP on first government play
+    { kind: 'spec' as const, baseId: 67, count: 1 },  // Oprah Winfrey (5 HP) - Deactivate random hands
+    { kind: 'spec' as const, baseId: 68, count: 1 },  // Sam Altman (6 HP) - AI boost (draw + AP)
+    { kind: 'spec' as const, baseId: 75, count: 1 },  // Roman Abramovich (6 HP) - AP effect
+
+    // INSTANT INITIATIVES (5 cards, 9 HP) - Tactical flexibility
+    { kind: 'spec' as const, baseId: 2, count: 1 },   // Spin Doctor (2 HP) - Buff strongest government +2
+    { kind: 'spec' as const, baseId: 3, count: 1 },   // Digital Campaign (3 HP) - Draw per media card
+    { kind: 'spec' as const, baseId: 4, count: 1 },   // Party Offensive (3 HP) - Deactivate strongest enemy gov
+    { kind: 'spec' as const, baseId: 6, count: 1 },   // Delay Tactics (1 HP) - AP boost
+    { kind: 'spec' as const, baseId: 8, count: 1 },   // Think Tank (2 HP) - Draw + buff government
+
+    // ONGOING INITIATIVES (2 cards, 4 HP) - Persistent effects
+    { kind: 'spec' as const, baseId: 13, count: 1 },  // Koalitionszwang (2 HP) - Coalition bonus system
+    { kind: 'spec' as const, baseId: 19, count: 1 },  // Napoleon Complex (2 HP) - Tier 1 government +1
+
+    // INTERVENTIONS/TRAPS (2 cards, 4 HP) - Strategic disruption
+    { kind: 'spec' as const, baseId: 21, count: 1 },  // Fake News Campaign (2 HP) - Deactivate media
+    { kind: 'spec' as const, baseId: 22, count: 1 },  // Whistleblower (3 HP) - Return last played card
   ]
 };

@@ -399,56 +399,115 @@ export function useGameActions(
   }, [visualEffects, gameState]);
   // Guard against duplicate concurrent playCard calls for the same card UID
   const playingUidRef = useRef<Set<number>>(new Set());
-  // === Corruption Steal helper refs ===
-  const pendingTargetRef = useRef<number | null>(null);
-
   // Listen for target selection & dice result (global events)
   useEffect(() => {
     const handlePickTarget = (ev: any) => {
       const uid = ev.detail?.targetUid as number | undefined;
       const player = ev.detail?.player as Player | undefined;
       if (!uid || !player) return;
-      // Compute dice roll via global RNG fallback and immediately enqueue resolve event
+      try { log(`🎯 Corruption: Ziel gewählt (uid=${uid})`); } catch (e) {}
+    };
+
+    // Listener: when UI/modal requests a corruption roll, perform RNG and trigger visual dice
+    const handleRequestRoll = (ev: any) => {
       try {
-        const { getGlobalRNG } = require('../services/rng');
-        const rng = getGlobalRNG();
-        const roll = rng.randomInt(6) + 1;
-        // enqueue resolve directly
+        const player = ev.detail?.player as Player | undefined;
+        const targetUid = ev.detail?.targetUid as number | undefined;
+        if (!player || !targetUid) return;
+
+        console.log('🎲 CORRUPTION: Requesting roll for player', player, 'target', targetUid);
+        // Quick visual fallback: dispatch an engine_dice_result immediately so the Dice3D shows a value
+        try {
+          const fallbackRoll = 1 + Math.floor(Math.random() * 6);
+          console.debug('🎲 CORRUPTION: dispatching fallback engine_dice_result', fallbackRoll);
+          window.dispatchEvent(new CustomEvent('pc:engine_dice_result', { detail: { roll: fallbackRoll, player, targetUid } }));
+        } catch (e) { console.debug('🎲 CORRUPTION: fallback engine_dice_result dispatch failed', e); }
+
+        // Enqueue the corruption resolve event - engine will also calculate roll and trigger 3D dice via resolver
         setGameState(prev => {
-          const events: EffectEvent[] = prev._effectQueue ? [...prev._effectQueue] : [];
-          events.push({ type: 'CORRUPTION_STEAL_GOV_RESOLVE', player, targetUid: uid, roll } as any);
-          try { resolveQueue(prev as any, events); } catch (e) { logger.dbg('resolveQueue failed in handlePickTarget', e); }
-          return { ...prev, _effectQueue: [] } as any;
+          const events: EffectEvent[] = [];
+          events.push({ type: 'CORRUPTION_STEAL_GOV_RESOLVE', player, targetUid } as any);
+          // Process immediately
+          try { resolveQueue(prev as any, events); } catch (e) { console.error('resolveQueue error in handleRequestRoll', e); }
+          if (afterQueueResolved) afterQueueResolved();
+          return { ...prev, _effectQueue: [] };
         });
       } catch (e) {
-        // best effort fallback: log and ignore
-        try { window.dispatchEvent(new CustomEvent('pc:dice_roll', { detail: { face: 1 } })); } catch (e) {}
+        logger.dbg('corruption request roll error', e);
       }
     };
-    const handleDiceResult = (ev: any) => {
-      const roll = ev.detail?.roll as number | undefined;
-      const player = ev.detail?.player as Player | undefined;
-      if (!roll || !player || pendingTargetRef.current === null) return;
-      const targetUid = pendingTargetRef.current;
-      pendingTargetRef.current = null;
+    // Listener: when UI/modal requests a maulwurf roll, perform RNG and trigger visual dice
+    const handleMaulwurfRequestRoll = (ev: any) => {
+      try {
+        const player = ev.detail?.player as Player | undefined;
+        const targetUid = ev.detail?.targetUid as number | undefined;
+        if (!player || !targetUid) return;
 
-      // Enqueue resolve event
-      setGameState(prev => {
-        const events: EffectEvent[] = prev._effectQueue || [];
-        events.push({ type: 'CORRUPTION_STEAL_GOV_RESOLVE', player, targetUid, roll } as any);
-        // Process immediately
-        resolveQueue(prev as any, events);
-        if (afterQueueResolved) afterQueueResolved();
-        return { ...prev, _effectQueue: events } as any;
-      });
+        console.log('🎲 MAULWURF: Requesting roll for player', player, 'target', targetUid);
+        // Quick visual fallback: dispatch an engine_dice_result immediately so the Dice3D shows a value
+        try {
+          const fallbackRoll = 1 + Math.floor(Math.random() * 6);
+          console.debug('🎲 MAULWURF: dispatching fallback engine_dice_result', fallbackRoll);
+          window.dispatchEvent(new CustomEvent('pc:engine_dice_result', { detail: { roll: fallbackRoll, player, targetUid } }));
+        } catch (e) { console.debug('🎲 MAULWURF: fallback engine_dice_result dispatch failed', e); }
+
+        // Enqueue the maulwurf resolve event - engine will also calculate roll and trigger 3D dice via resolver
+        setGameState(prev => {
+          const events: EffectEvent[] = [];
+          events.push({ type: 'CORRUPTION_MOLE_STEAL_RESOLVE', player, targetUid } as any);
+          // Process immediately
+          try { resolveQueue(prev as any, events); } catch (e) { console.error('resolveQueue error in handleMaulwurfRequestRoll', e); }
+          if (afterQueueResolved) afterQueueResolved();
+          return { ...prev, _effectQueue: [] };
+        });
+      } catch (e) {
+        logger.dbg('maulwurf request roll error', e);
+      }
     };
+
     window.addEventListener('pc:corruption_pick_target', handlePickTarget as EventListener);
-    window.addEventListener('pc:dice_result', handleDiceResult as EventListener);
+    window.addEventListener('pc:corruption_request_roll', handleRequestRoll as EventListener);
+    window.addEventListener('pc:maulwurf_request_roll', handleMaulwurfRequestRoll as EventListener);
+
+    // Listener: when UI/modal requests a tunnelvision probe roll
+    const handleTunnelvisionRequestRoll = (ev: any) => {
+      try {
+        const player = ev.detail?.player as Player | undefined;
+        const targetUid = ev.detail?.targetUid as number | undefined;
+        const requiredRoll = ev.detail?.requiredRoll as number | undefined;
+        const influence = ev.detail?.influence as number | undefined;
+        if (!player || !targetUid || !requiredRoll || !influence) return;
+
+        console.log('🎲 TUNNELVISION: Requesting roll for player', player, 'target', targetUid, 'required', requiredRoll);
+        // Quick visual fallback: dispatch an engine_dice_result immediately so the Dice3D shows a value
+        try {
+          const fallbackRoll = 1 + Math.floor(Math.random() * 6);
+          console.debug('🎲 TUNNELVISION: dispatching fallback engine_dice_result', fallbackRoll);
+          window.dispatchEvent(new CustomEvent('pc:engine_dice_result', { detail: { roll: fallbackRoll, player, targetUid } }));
+        } catch (e) { console.debug('🎲 TUNNELVISION: fallback engine_dice_result dispatch failed', e); }
+
+        // Enqueue the tunnelvision resolve event - engine will also calculate roll and trigger 3D dice via resolver
+        setGameState(prev => {
+          const events: EffectEvent[] = [];
+          events.push({ type: 'TUNNELVISION_GOV_PROBE_RESOLVE', player, targetUid, roll: 1 + Math.floor(Math.random() * 6), requiredRoll, influence } as any);
+          // Process immediately
+          try { resolveQueue(prev as any, events); } catch (e) { console.error('resolveQueue error in handleTunnelvisionRequestRoll', e); }
+          if (afterQueueResolved) afterQueueResolved();
+          return { ...prev, _effectQueue: [] };
+        });
+      } catch (e) {
+        logger.dbg('tunnelvision request roll error', e);
+      }
+    };
+    window.addEventListener('pc:tunnelvision_request_roll', handleTunnelvisionRequestRoll as EventListener);
+
     return () => {
       window.removeEventListener('pc:corruption_pick_target', handlePickTarget as EventListener);
-      window.removeEventListener('pc:dice_result', handleDiceResult as EventListener);
+      window.removeEventListener('pc:corruption_request_roll', handleRequestRoll as EventListener);
+      window.removeEventListener('pc:maulwurf_request_roll', handleMaulwurfRequestRoll as EventListener);
+      window.removeEventListener('pc:tunnelvision_request_roll', handleTunnelvisionRequestRoll as EventListener);
     };
-  }, [setGameState, afterQueueResolved]);
+  }, [setGameState, afterQueueResolved, log]);
   const startMatchWithDecks = useCallback((p1DeckEntries: BuilderEntry[], p2DeckEntries: BuilderEntry[]) => {
     const p1Cards = buildDeckFromEntries(p1DeckEntries);
     const p2Cards = buildDeckFromEntries(p2DeckEntries);
@@ -568,7 +627,7 @@ export function useGameActions(
       // Simplified AP system: No refunds or discounts
       // All cards cost exactly 1 AP
 
-      // Remove card from hand
+      // Remove card from hand (but keep it for tunnelvision probe)
       const newHand = [...newState.hands[player]];
       const [playedCard] = newHand.splice(handIndex, 1);
       newState.hands = { ...newState.hands, [player]: newHand };
@@ -600,6 +659,47 @@ export function useGameActions(
         if (newState.board[player][targetLane].length >= 5) {
           log(`❌ ERROR: Lane full - Lane: ${targetLane}, Current: ${newState.board[player][targetLane].length}/5`);
           return prev;
+        }
+
+        // Check for Tunnelvision probe requirement (only for government cards)
+        if (targetLane === 'aussen') {
+          const tunnelvisionActive = (newState.permanentSlots[1].government?.name === 'Tunnelvision') ||
+                                   (newState.permanentSlots[2].government?.name === 'Tunnelvision') ||
+                                   (newState.permanentSlots[1].public?.name === 'Tunnelvision') ||
+                                   (newState.permanentSlots[2].public?.name === 'Tunnelvision');
+
+          if (tunnelvisionActive) {
+            // Trigger Tunnelvision probe
+            const influence = polCard.influence || 0;
+            const requiredRoll = influence >= 9 ? 5 : 4;
+
+            log(`🔮 Tunnelvision: Regierungskarte ${playedCard.name} benötigt Probe. W6 ≥${requiredRoll} (Einfluss ${influence}).`);
+
+            // Enqueue tunnelvision probe event and process immediately
+            newState._effectQueue = newState._effectQueue || [];
+            newState._effectQueue.push({
+              type: 'TUNNELVISION_GOV_PROBE_START',
+              player,
+              targetUid: playedCard.uid || playedCard.id,
+              influence
+            } as any);
+
+            // Process the queue immediately to trigger the probe
+            try {
+              resolveQueue(newState, newState._effectQueue);
+              newState._effectQueue = [];
+            } catch (e) {
+              console.error('Error resolving tunnelvision probe queue:', e);
+            }
+
+            // Return the card to hand and refund AP until probe is resolved
+            newState.hands[player] = [...newState.hands[player], playedCard];
+            newState.actionPoints[player] += cost; // Refund AP
+
+            // Don't add card to board yet - wait for probe result
+            // The card will be added to board or kept in hand based on probe result
+            return newState;
+          }
         }
 
         // Add to board (immutable clone to avoid accidental double references)
@@ -832,6 +932,7 @@ export function useGameActions(
           log(`P${player} spielt Initiative: ${playedCard.name}`);
 
                      // 6) Karteneffekte enqueuen + Queue auflösen
+          console.log('🔥 ABOUT TO TRIGGER CARD EFFECTS (INITIATIVE):', playedCard.name, 'effectKey:', (playedCard as any).effectKey);
            triggerCardEffects(newState, player, playedCard);
            // Migration Helper verwenden
            migrateLegacyQueue(newState);
@@ -1006,6 +1107,7 @@ export function useGameActions(
         log(`P${player} spielt ${playedCard.name} als ${specCard.type}`);
 
         // 6) Karteneffekte enqueuen + Queue auflösen
+        console.log('🔥 ABOUT TO TRIGGER CARD EFFECTS:', playedCard.name, 'effectKey:', (playedCard as any).effectKey);
         triggerCardEffects(newState, player, playedCard);
         // Migration Helper verwenden
         migrateLegacyQueue(newState);

@@ -1,6 +1,7 @@
 import { GameState, Card, Player, createDefaultEffectFlags } from '../types/game';
 import { PRESET_DECKS } from '../data/gameData';
-import { buildDeckFromEntries } from './gameUtils';
+import { buildDeckFromEntries, getCardActionPointCost } from './gameUtils';
+import { decideBestAction, Difficulty } from '../ai/aiPlayer';
 import { emptyBoard } from '../state/board';
 import { GameLogger, gameLogger } from './gameLogger';
 
@@ -24,8 +25,9 @@ class LoggingAIPlayer {
     if (availableAP <= 0) {
       const newGameState = {
         ...gameState,
-        passed: { ...gameState.passed, [this.player]: true }
-      };
+        passed: { ...gameState.passed, [this.player]: true },
+        _passOrder: [ ...(gameState as any)._passOrder || [], this.player ]
+      } as any;
 
       this.logger.logPass(this.player, gameState);
       return newGameState;
@@ -36,8 +38,22 @@ class LoggingAIPlayer {
     const opponentInfluence = this.calculateInfluence(gameState.board[this.opponent].aussen);
     const influenceDiff = opponentInfluence - myInfluence;
 
-    // Find best playable card
-    const bestCard = this.selectBestCard(hand, gameState, influenceDiff, availableAP);
+    // Find best playable card via shared decision helper (keeps AIs consistent)
+    const difficulty: Difficulty = 'hard';
+    const action = decideBestAction(gameState, this.player, difficulty);
+
+    if (action.type === 'pass') {
+      const newGameState = { ...gameState, passed: { ...gameState.passed, [this.player]: true } } as any;
+      newGameState._passOrder = [ ...(gameState as any)._passOrder || [], this.player ];
+      return newGameState;
+    }
+
+    // Map AIAction to LoggingAIPlayer candidate format for playCard
+    const index = action.type === 'play' ? action.index : -1;
+    const card = hand[index];
+    const lane = action.type === 'play' ? action.lane : null;
+
+    const bestCard = { index, card, priority: 0, reason: 'decideBestAction', apCost: getCardActionPointCost(card, gameState, this.player), lane } as any;
 
     if (!bestCard) {
       // Pass if no playable cards
@@ -69,8 +85,10 @@ class LoggingAIPlayer {
 
       if (card.kind === 'pol') {
         const polCard = card as any;
-        const allowedLane = polCard.tag === 'Staatsoberhaupt' || polCard.tag === 'Regierungschef' || polCard.tag === 'Diplomat'
-          ? 'aussen' : 'innen';
+        // Determine lane by tag OR tier (T). Tier 2 (T>=2) cards are government by default.
+        const isGovByTier = (polCard.T && polCard.T >= 2);
+        const isGovByTag = polCard.tag === 'Staatsoberhaupt' || polCard.tag === 'Regierungschef' || polCard.tag === 'Diplomat';
+        const allowedLane = (isGovByTier || isGovByTag) ? 'aussen' : 'innen';
 
         // Check if lane has space
         if (gameState.board[this.player][allowedLane].length >= 5) {
@@ -245,7 +263,9 @@ export class AITestRunner {
 
     this.logger.startGame();
 
+    // Randomize starting player to avoid deterministic starter bias
     const gameState = this.initializeGameState(p1Preset, p2Preset);
+    if (Math.random() < 0.5) gameState.current = 2; else gameState.current = 1;
     let turnCount = 0;
     let gameEnded = false;
 
@@ -359,10 +379,21 @@ export class AITestRunner {
     const p1Score = this.calculateScore(gameState.board[1].aussen);
     const p2Score = this.calculateScore(gameState.board[2].aussen);
 
+    // Fair tie-breaker: If equal scores, prefer the player who passed earlier (i.e., conservative play is rewarded),
+    // otherwise fallback to first player advantage.
     let winner: Player = 1;
     if (p1Score > p2Score) winner = 1;
     else if (p2Score > p1Score) winner = 2;
-    else winner = gameState.passed[1] && !gameState.passed[2] ? 1 : 2;
+    else {
+      const passOrder: number[] = (gameState as any)._passOrder || [];
+      if (passOrder.length >= 2) {
+        // earlier passer wins
+        winner = passOrder[0] as Player;
+      } else {
+        // fallback: first player (player 1) wins ties
+        winner = 1;
+      }
+    }
 
     gameState.roundsWon[winner]++;
     gameState.round++;

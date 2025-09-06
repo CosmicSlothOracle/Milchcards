@@ -36,7 +36,7 @@ export function VisualEffectsProvider({ children }: { children: ReactNode }) {
   const spawnedGifIdsRef = useRef<Set<string|number>>(new Set());
   const playAnimsRef = useRef<Array<{ uid: string | number; started: number; duration: number }>>([]);
 
-  const reducedMotion = typeof window !== 'undefined' && (window as any).matchMedia && (window as any).matchMedia('(prefers-reduced-motion: reduce)').matches || !!(window as any).__pc_reduced_motion;
+  const reducedMotion = (typeof window !== 'undefined' && (window as any).matchMedia && (window as any).matchMedia('(prefers-reduced-motion: reduce)').matches) || !!(window as any).__pc_reduced_motion;
 
   const spawnParticles = (cx: number, cy: number, count = 12) => {
     if (reducedMotion) return;

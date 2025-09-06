@@ -775,23 +775,7 @@ export function useGameState() {
           continue;
         }
 
-        // Bestechungsskandal 2.0 (schwache Regierung M≤5)
-        if ((details?.name === 'Bestechungsskandal 2.0' || key === 'Bestechungsskandal_2_0') && isWeakGov) {
-          // Übernehme Karte bis Rundenende (vereinfacht: temporär deaktiviert)
-          tryApplyNegativeEffect(played, () => { played.deactivated = true; }, prev.round);
-          oppTraps.splice(i, 1); i--; trapsChanged = true;
-          log(`Intervention ausgelöst: Bestechungsskandal 2.0 → ${played.name} übernommen.`);
-          continue;
-        }
 
-        // Tunnelvision (M≤4 Regierung)
-        if ((details?.name === 'Tunnelvision' || key === 'Tunnelvision') && isLowPowerGov) {
-          // Karte zählt nicht zur Runde (vereinfacht: -100% Einfluss)
-          tryApplyNegativeEffect(played, () => { played.influence = 0; }, prev.round);
-          oppTraps.splice(i, 1); i--; trapsChanged = true;
-          log(`Intervention ausgelöst: Tunnelvision → ${played.name} zählt nicht zur Runde.`);
-          continue;
-        }
       }
 
       // Trigger: Board-Zustand
@@ -981,10 +965,7 @@ export function useGameState() {
       const govSlot = state.permanentSlots[player].government;
       const pubSlot = state.permanentSlots[player].public;
 
-      // Koalitionszwang: Tier 2 Regierungskarten +1 Einfluss
-      if (govSlot?.kind === 'spec' && (govSlot as SpecialCard).name === 'Koalitionszwang') {
-        if (card.T === 2) influence += 1;
-      }
+      // Koalitionszwang: Old Tier 2 bonus removed - now uses complex coalition bonus calculation
 
       // Napoleon Komplex: Tier 1 Regierungskarten +1 Einfluss
       if (govSlot?.kind === 'spec' && (govSlot as SpecialCard).name === 'Napoleon Komplex') {
@@ -1170,7 +1151,7 @@ export function useGameState() {
     const govSlot = state.permanentSlots[player].government;
     if (!govSlot || govSlot.kind !== 'spec') return false;
     const spec = govSlot as SpecialCard;
-    return ['Koalitionszwang', 'Napoleon Komplex'].includes(spec.name);
+    return ['Napoleon Komplex'].includes(spec.name);
   };
 
   // Helper: Kann Spieler mehrere Interventionen spielen? (Putin-Fähigkeit)

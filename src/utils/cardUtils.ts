@@ -26,7 +26,7 @@ export function makePolInstance(base: BasePolitician): PoliticianCard {
 }
 
 export function makeSpecInstance(base: BaseSpecial): SpecialCard {
-  return {
+  const card = {
     id: base.id,
     key: base.key,
     name: base.name,
@@ -40,6 +40,15 @@ export function makeSpecInstance(base: BaseSpecial): SpecialCard {
     uid: NEXT_UID++,
     deactivated: false,
   } as SpecialCard;
+
+  // Debug logging for Bestechungsskandal
+  if (base.name === 'Bestechungsskandal 2.0') {
+    console.log('🔥 CREATING BESTECHUNGSSKANDAL CARD:', card);
+    console.log('🔥 Base effectKey:', base.effectKey);
+    console.log('🔥 Card effectKey:', (card as any).effectKey);
+  }
+
+  return card;
 }
 
 // Card placement logic

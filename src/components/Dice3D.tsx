@@ -1,6 +1,6 @@
-import React, { useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
+import React, { useEffect, useRef, useImperativeHandle, forwardRef, useCallback } from 'react';
 import * as THREE from 'three';
-import { gsap } from 'gsap';
+import gsap from 'gsap';
 
 export interface Dice3DProps {
   /** pixel size of canvas */
@@ -34,6 +34,9 @@ const Dice3D = forwardRef<Dice3DHandle, Dice3DProps>(
     const rendererRef = useRef<THREE.WebGLRenderer>();
     const cameraRef = useRef<THREE.PerspectiveCamera>();
     const animIdRef = useRef(0);
+    const lastRequestRef = useRef<any>(null);
+    const isSettledRef = useRef<boolean>(true); // when true, dice remain static until next roll
+    const spinningTweenRef = useRef<any>(null);
 
     /** helper to create a texture with pips */
     const createFaceTexture = (face: number): THREE.Texture => {
@@ -168,27 +171,36 @@ const Dice3D = forwardRef<Dice3DHandle, Dice3DProps>(
         animIdRef.current = requestAnimationFrame(animate);
         // subtle idle rotate
         if (cube) {
-          cube.rotation.x *= 0.995;
-          cube.rotation.y *= 0.995;
+          // only apply subtle idle motion while an active roll timeline is running
+          if (!isSettledRef.current) {
+            cube.rotation.x *= 0.995;
+            cube.rotation.y *= 0.995;
 
-          // compute angular velocity
-          const dx = cube.rotation.x - prevRot.x;
-          const dy = cube.rotation.y - prevRot.y;
-          const dz = cube.rotation.z - prevRot.z;
-          const angSpeed = Math.sqrt(dx * dx + dy * dy + dz * dz);
+            // compute angular velocity
+            const dx = cube.rotation.x - prevRot.x;
+            const dy = cube.rotation.y - prevRot.y;
+            const dz = cube.rotation.z - prevRot.z;
+            const angSpeed = Math.sqrt(dx * dx + dy * dy + dz * dz);
 
-          // map angular speed to CSS blur (px)
-          const blurPx = Math.min(12, angSpeed * 120);
-          try {
-            const el = canvas as HTMLCanvasElement;
-            if (el && el.style) {
-              el.style.filter = blurPx > 0.3 ? `blur(${blurPx.toFixed(2)}px)` : 'none';
-            }
-          } catch (e) {}
+            // map angular speed to CSS blur (px)
+            const blurPx = Math.min(12, angSpeed * 120);
+            try {
+              const el = canvas as HTMLCanvasElement;
+              if (el && el.style) {
+                el.style.filter = blurPx > 0.3 ? `blur(${blurPx.toFixed(2)}px)` : 'none';
+              }
+            } catch (e) {}
 
-          prevRot.x = cube.rotation.x;
-          prevRot.y = cube.rotation.y;
-          prevRot.z = cube.rotation.z;
+            prevRot.x = cube.rotation.x;
+            prevRot.y = cube.rotation.y;
+            prevRot.z = cube.rotation.z;
+          } else {
+            // settled: ensure no blur and reset prevRot
+            try { const el = canvas as HTMLCanvasElement; if (el && el.style) el.style.filter = 'none'; } catch(e) {}
+            prevRot.x = cube.rotation.x;
+            prevRot.y = cube.rotation.y;
+            prevRot.z = cube.rotation.z;
+          }
         }
         renderer.render(scene, camera);
       };
@@ -201,7 +213,7 @@ const Dice3D = forwardRef<Dice3DHandle, Dice3DProps>(
     }, [size]);
 
     // roll logic (includes DOM motion)
-    const rollInternal = (targetFace?: number) => {
+    const rollInternal = useCallback((targetFace?: number) => {
       if (!cubeRef.current) return;
       const cube = cubeRef.current;
       // pick target if not provided
@@ -216,15 +228,55 @@ const Dice3D = forwardRef<Dice3DHandle, Dice3DProps>(
         5: [0, -Math.PI / 2, 0],
         6: [Math.PI, 0, 0],
       };
-      const [tx, ty, tz] = orientations[face];
+      // Support an override mapping from engine face -> visual orientation index for quick calibration
+      const faceMap = (window as any).__pc_dice_face_map as number[] | undefined;
+      const mappedFace = (faceMap && Number.isFinite(faceMap[face]) ? faceMap[face] : face) as number;
+      const [tx, ty, tz] = orientations[mappedFace];
+
+      // compute a target quaternion for exact-face alignment (prefer quaternion-based final set)
+      let targetQuat: THREE.Quaternion | null = null;
+      try {
+        const faceNormals: Record<number, THREE.Vector3> = {
+          1: new THREE.Vector3(1, 0, 0),   // +X
+          2: new THREE.Vector3(-1, 0, 0),  // -X
+          3: new THREE.Vector3(0, 1, 0),   // +Y
+          4: new THREE.Vector3(0, -1, 0),  // -Y
+          5: new THREE.Vector3(0, 0, 1),   // +Z
+          6: new THREE.Vector3(0, 0, -1),  // -Z
+        };
+        const normal = faceNormals[mappedFace];
+        if (normal) {
+          const target = new THREE.Vector3(0, 0, 1); // point towards camera
+          targetQuat = new THREE.Quaternion().setFromUnitVectors(normal.clone().normalize(), target);
+        }
+      } catch (e) { targetQuat = null; }
 
       const start = { x: cube.rotation.x, y: cube.rotation.y, z: cube.rotation.z };
       const end = { x: tx + 2 * Math.PI, y: ty + 2 * Math.PI, z: tz + 2 * Math.PI };
 
+      // Ensure any previous rotation tweens on cube are killed so they can't override final orientation
+      try { if (cube) { gsap.killTweensOf(cube); gsap.killTweensOf(cube.rotation); } } catch (e) {}
       // Use GSAP timeline for smooth rotation + bounces and DOM motion
-      const timeline = gsap.timeline({ onComplete: () => {
-        cube.rotation.set(tx, ty, tz);
-        if (onRoll) onRoll(face);
+      const timeline = gsap.timeline({ onStart: () => {
+        // mark as active so idle loop applies motion
+        try { isSettledRef.current = false; } catch(e) {}
+      }, onComplete: () => {
+        // explicitly kill any remaining tweens affecting cube
+        try { if (cube) { gsap.killTweensOf(cube); gsap.killTweensOf(cube.rotation); } } catch(e) {}
+        // if we could compute a target quaternion, apply it to show the correct face deterministically
+        if (targetQuat && cube) {
+          try {
+            cube.quaternion.copy(targetQuat);
+            try { gsap.set(cube.quaternion, { x: targetQuat.x, y: targetQuat.y, z: targetQuat.z, w: targetQuat.w }); } catch(e) {}
+          } catch(e) { /* fallback to euler */ }
+        } else {
+          cube.rotation.set(tx, ty, tz);
+          try { gsap.set(cube.rotation, { x: tx, y: ty, z: tz }); } catch(e) {}
+        }
+        // force a final render so the UI immediately reflects the exact face
+        try { rendererRef.current?.render(sceneRef.current as any, cameraRef.current as any); } catch(e) {}
+        try { isSettledRef.current = true; } catch(e) {}
+        enhancedOnRoll(face);
       }});
 
       // ensure any previous tweens are cleared and canvas anchored bottom-right
@@ -345,12 +397,12 @@ const Dice3D = forwardRef<Dice3DHandle, Dice3DProps>(
       timeline.to(cube.scale, { x: 0.95, y: 1.07, z: 0.95, duration: 0.06, ease: 'power2.in' });
       timeline.to(cube.scale, { x: 1.03, y: 0.98, z: 1.02, duration: 0.05, ease: 'power2.out' });
       timeline.to(cube.scale, { x: 1, y: 1, z: 1, duration: 0.04, ease: 'power2.out' });
-    };
+    }, [duration, onRoll, spinOnly, size]);
 
     useImperativeHandle(ref, () => ({
       roll: () => rollInternal(),
       rollTo: (face: number) => rollInternal(Math.max(1, Math.min(6, face))),
-    }), [duration, onRoll]);
+    }), [rollInternal]);
 
     // click to roll
     useEffect(() => {
@@ -359,7 +411,53 @@ const Dice3D = forwardRef<Dice3DHandle, Dice3DProps>(
       const handler = () => rollInternal();
       canvas.addEventListener('click', handler);
       return () => canvas.removeEventListener('click', handler);
-    }, []);
+    }, [rollInternal]);
+
+    // auto-roll when requested by corruption system
+    useEffect(() => {
+      const handler = (ev: any) => {
+        console.log('🎲 DICE: Received auto-roll request (start visual spin)', ev.detail);
+        lastRequestRef.current = ev.detail; // store player/targetUid
+        // start a visual spin without finalizing face - wait for engine result
+        try {
+          isSettledRef.current = false;
+          if (spinningTweenRef.current) { try { spinningTweenRef.current.kill(); } catch(e) {} }
+          const cube = cubeRef.current;
+          if (cube) {
+            spinningTweenRef.current = gsap.to(cube.rotation, { y: '+=6.283', duration: 0.6, repeat: -1, ease: 'none' });
+          }
+        } catch(e) { console.debug('dice spin start error', e); }
+      };
+      window.addEventListener('pc:ui_request_dice_roll', handler as EventListener);
+      return () => window.removeEventListener('pc:ui_request_dice_roll', handler as EventListener);
+    }, [rollInternal]);
+
+    // listen for engine-calculated dice result to display exact value
+    useEffect(() => {
+      const handler = (ev: any) => {
+        const { roll } = ev.detail || {};
+        if (roll && typeof roll === 'number' && roll >= 1 && roll <= 6) {
+          console.log('🎲 DICE: Engine calculated roll received:', roll, '- displaying exact value');
+          lastRequestRef.current = ev.detail; // store player/targetUid
+          // stop any visual spinning tween before finalizing to exact face
+          try { if (spinningTweenRef.current) { spinningTweenRef.current.kill(); spinningTweenRef.current = null; } } catch(e) {}
+          // ensure no lingering tweens apply, then display exact face
+          try { const cube = cubeRef.current; if (cube) { gsap.killTweensOf(cube); gsap.killTweensOf(cube.rotation); } } catch(e) {}
+          rollInternal(roll); // roll to exact face
+        }
+      };
+      window.addEventListener('pc:engine_dice_result', handler as EventListener);
+      return () => window.removeEventListener('pc:engine_dice_result', handler as EventListener);
+    }, [rollInternal]);
+
+    // dispatch dice result including player info
+    const enhancedOnRoll = useCallback((face:number)=>{
+      onRoll?.(face);
+      try {
+        const det = lastRequestRef.current || {};
+        window.dispatchEvent(new CustomEvent('pc:dice_result', { detail: { roll: face, player: det.player, targetUid: det.targetUid } }));
+      } catch(e){ console.error('dice_result dispatch error',e); }
+    },[onRoll]);
 
     return <canvas ref={canvasRef} width={size} height={size} className={className} style={{ cursor: 'pointer' }} />;
   });

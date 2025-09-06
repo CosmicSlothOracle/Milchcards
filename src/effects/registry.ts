@@ -266,21 +266,33 @@ export const EFFECTS: Record<string, EffectHandler> = {
     log('🟢 trap.cyber_attack.destroy_platform');
   },
 
-  'trap.bribery_v2.mind_control_weak_gov': ({ enqueue, player, log }) => {
-    enqueue({ type: 'REGISTER_TRAP', player, key: 'trap.bribery_v2.mind_control_weak_gov' } as any);
-    enqueue({ type: 'LOG', msg: 'Trap set: Bribery Scandal 2.0 (mind-control weak gov).' });
-    log('🟢 trap.bribery_v2.mind_control_weak_gov');
-  },
 
   // =============================
   // NEW CORRUPTION INITIATIVE
   // =============================
 
   'corruption.bribery_v2.steal_gov_w6': ({ enqueue, player, log }) => {
+    console.log('🔥 CORRUPTION HANDLER TRIGGERED - Player:', player);
+    // Begin corruption flow: open UI modal + mark pending selection
     enqueue({ type: 'CORRUPTION_STEAL_GOV_START', player } as any);
     enqueue({ type: 'INITIATIVE_ACTIVATED', player });
-    enqueue({ type: 'LOG', msg: 'Bribery Scandal 2.0: attempt to steal enemy government via W6.' });
+    enqueue({ type: 'LOG', msg: 'Bribery Scandal 2.0: Wähle eine gegnerische Regierungskarte und würfle einen W6.' });
+    // Provide UI hint message for modal (handled by frontend)
+    enqueue({ type: 'LOG', msg: '🔔 Corruption Modal: select target then press Würfeln.' });
+    console.log('🔥 CORRUPTION EVENTS ENQUEUED');
     log('🟢 corruption.bribery_v2.steal_gov_w6');
+  },
+
+  'corruption.mole.steal_weakest_gov': ({ enqueue, player, log }) => {
+    console.log('🔥 MAULWURF CORRUPTION HANDLER TRIGGERED - Player:', player);
+    // Begin corruption flow: automatically select weakest opponent government card
+    enqueue({ type: 'CORRUPTION_MOLE_STEAL_START', player } as any);
+    enqueue({ type: 'INITIATIVE_ACTIVATED', player });
+    enqueue({ type: 'LOG', msg: 'Maulwurf: Automatische Auswahl der schwächsten gegnerischen Regierungskarte.' });
+    // Provide UI hint message for modal (handled by frontend)
+    enqueue({ type: 'LOG', msg: '🔔 Maulwurf: Automatische Zielauswahl, dann Würfeln.' });
+    console.log('🔥 MAULWURF CORRUPTION EVENTS ENQUEUED');
+    log('🟢 corruption.mole.steal_weakest_gov');
   },
 
   'trap.grassroots_resistance.deactivate_public': ({ enqueue, player, log }) => {
@@ -331,11 +343,6 @@ export const EFFECTS: Record<string, EffectHandler> = {
     log('🟢 trap.lobby_leak.force_discard_on_ngo');
   },
 
-  'trap.mole.copy_weaker_gov': ({ enqueue, player, log }) => {
-    enqueue({ type: 'REGISTER_TRAP', player, key: 'trap.mole.copy_weaker_gov' } as any);
-    enqueue({ type: 'LOG', msg: 'Trap set: Mole (copy weaker gov).' });
-    log('🟢 trap.mole.copy_weaker_gov');
-  },
 
   'trap.scandal_spiral.cancel_one_of_two': ({ enqueue, player, log }) => {
     enqueue({ type: 'REGISTER_TRAP', player, key: 'trap.scandal_spiral.cancel_one_of_two' } as any);
@@ -343,10 +350,12 @@ export const EFFECTS: Record<string, EffectHandler> = {
     log('🟢 trap.scandal_spiral.cancel_one_of_two');
   },
 
-  'trap.tunnel_vision.ignore_weak_gov': ({ enqueue, player, log }) => {
-    enqueue({ type: 'REGISTER_TRAP', player, key: 'trap.tunnel_vision.ignore_weak_gov' } as any);
-    enqueue({ type: 'LOG', msg: 'Trap set: Tunnel Vision (ignore weak gov).' });
-    log('🟢 trap.tunnel_vision.ignore_weak_gov');
+  'init.tunnel_vision.gov_probe_system': ({ enqueue, player, log }) => {
+    console.log('🔥 TUNNELVISION INITIATIVE HANDLER TRIGGERED - Player:', player);
+    enqueue({ type: 'LOG', msg: 'Tunnelvision: Dauerhafte Initiative aktiviert - Regierungskarten benötigen Probe.' });
+    enqueue({ type: 'LOG', msg: '🔔 Tunnelvision: W6 ≥4 (≥5 bei Einfluss 9+) - bei Misserfolg Karte bleibt in Hand.' });
+    console.log('🔥 TUNNELVISION INITIATIVE EVENTS ENQUEUED');
+    log('🟢 init.tunnel_vision.gov_probe_system');
   },
 
   'trap.satire_show.minus2_enemy_gov': ({ enqueue, player, log }) => {
@@ -513,9 +522,10 @@ export const EFFECTS: Record<string, EffectHandler> = {
   // === GOVERNMENT KARTEN - ENTFERNT (nur Einfluss, keine Effekte) ===
 
   // === ONGOING INITIATIVES - Aura Effekte ===
-  'init.koalitionszwang.gov_aura': ({ enqueue, player, log }) => {
-    enqueue({ type: 'LOG', msg: 'Koalitionszwang: Government aura activated.' });
-    log('🟢 init.koalitionszwang.gov_aura');
+  'gov.koalitionszwang.coalition_bonus': ({ enqueue, player, log }) => {
+    enqueue({ type: 'LOG', msg: 'Koalitionszwang: Coalition bonus calculation triggered.' });
+    enqueue({ type: 'KOALITIONSZWANG_CALCULATE_BONUS', player });
+    log('🟢 gov.koalitionszwang.coalition_bonus');
   },
 
   'init.algorithmischer_diskurs.media_aura': ({ enqueue, player, log }) => {
@@ -621,7 +631,7 @@ export const LEGACY_NAME_TO_KEY: Record<string, string> = {
   'Boykott-Kampagne': 'trap.boycott.deactivate_ngo_movement',
   'Deepfake-Skandal': 'trap.deepfake.lock_diplomat_transfer',
   'Cyber-Attacke': 'trap.cyber_attack.destroy_platform',
-  'Bestechungsskandal 2.0': 'trap.bribery_v2.mind_control_weak_gov',
+  'Bestechungsskandal 2.0': 'corruption.bribery_v2.steal_gov_w6',
   'Grassroots-Widerstand': 'trap.grassroots_resistance.deactivate_public',
   'Massenproteste': 'trap.mass_protests.debuff_two_govs',
   'Berater-Affäre': 'trap.advisor_scandal.minus2_gov_tier1',
@@ -630,8 +640,8 @@ export const LEGACY_NAME_TO_KEY: Record<string, string> = {
   'Soft Power-Kollaps': 'trap.soft_power_collapse.minus3_diplomat',
   'Cancel Culture': 'trap.cancel_culture.deactivate_public',
   'Lobby Leak': 'trap.lobby_leak.force_discard_on_ngo',
-  'Maulwurf': 'trap.mole.copy_weaker_gov',
-  'Tunnelvision': 'trap.tunnel_vision.ignore_weak_gov',
+  'Maulwurf': 'corruption.mole.steal_weakest_gov',
+  'Tunnelvision': 'init.tunnel_vision.gov_probe_system',
   'Satire-Show': 'trap.satire_show.minus2_enemy_gov',
 
   // Legacy fallbacks for old cards without new effectKeys
@@ -649,6 +659,7 @@ export const LEGACY_NAME_TO_KEY: Record<string, string> = {
   'Larry Page': 'public.larry_page.draw1_ap1',
   'Sergey Brin': 'public.sergey_brin.draw1_ap1',
   'Tim Cook': 'public.tim_cook.ap2',
+  'Koalitionszwang': 'gov.koalitionszwang.coalition_bonus',
   // Government cards removed - no effects, only influence
 };
 
@@ -672,10 +683,13 @@ export function triggerCardEffect(state: GameState, player: Player, card: Card):
 
   // Diagnostic logging for effect resolution
   logger.dbg(`triggerCardEffect: card=${card.name} effectKey=${String(effectKey)}`);
+  console.log('🔥 TRIGGER CARD EFFECT:', card.name, 'effectKey:', effectKey);
   if (effectKey) {
     const effectFn = EFFECTS[effectKey];
     logger.dbg(`triggerCardEffect: lookup effectKey=${effectKey} found=${Boolean(effectFn)}`);
+    console.log('🔥 EFFECT FUNCTION FOUND:', Boolean(effectFn));
     if (effectFn) {
+      console.log('🔥 CALLING EFFECT FUNCTION FOR:', card.name);
       effectFn({ enqueue, player, log });
       return;
     }

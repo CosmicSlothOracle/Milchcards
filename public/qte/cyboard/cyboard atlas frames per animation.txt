@@ -1,0 +1,11 @@
+cyboard atlas frames per animation
+attack 4
+blast 4
+defeat 6
+idle 4
+jump 5
+parry 4
+porjectile 6
+ranged 4
+spawn 6
+walk 4
