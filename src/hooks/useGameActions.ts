@@ -773,15 +773,6 @@ export function useGameActions(
         // Release playing UID after queue resolved
         if ((playedCard as any).uid) playingUidRef.current.delete((playedCard as any).uid);
 
-        // Check for trap triggers
-        applyTrapsOnCardPlayed(
-          newState,
-          player,
-          playedCard,
-          (e) => (newState._effectQueue ??= []).push(e),
-          (m) => (newState._effectQueue ??= []).push({ type: 'LOG', msg: m })
-        );
-
         // 🔥 ROMAN ABRAMOVICH EFFEKT: Wenn Regierungskarte mit Einfluss ≤5 gespielt wird
         if (playedCard.kind === 'pol' && (playedCard as any).influence <= 5) {
           const opponent = player === 1 ? 2 : 1;

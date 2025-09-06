@@ -32,7 +32,15 @@ export function makeSpecInstance(base: BaseSpecial): SpecialCard {
     name: base.name,
     kind: 'spec',
     baseId: base.id,
-    type: base.type,
+    // Normalize type strings so downstream logic (German/English mixes) recognizes Public cards
+    type: ((): string => {
+      if (!base.type) return '';
+      const t = String(base.type).toLowerCase();
+      // Common mappings
+      if (t === 'public' || t === 'öffentlichkeitskarte' || t === 'oeffentlichkeitskarte' || t === 'öffentlichkeit') return 'Öffentlichkeitskarte';
+      if (/sofort/i.test(base.type) || /initiative/i.test(base.type) || /sofort-?initiative/i.test(base.type)) return base.type; // keep initiative labels as-is
+      return base.type;
+    })(),
     impl: base.impl,
     bp: base.bp,
     ...(base.effectKey && { effectKey: base.effectKey }),
