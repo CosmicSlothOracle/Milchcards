@@ -20,7 +20,7 @@
 *.mkv filter=lfs diff=lfs merge=lfs -text
 *.flac filter=lfs diff=lfs merge=lfs -text
 public/assets/** filter=lfs diff=lfs merge=lfs -text
-tmp/*.json filter=lfs diff=lfs merge=lfs -text
 node_modules/.cache/**/*.pack filter=lfs diff=lfs merge=lfs -text
 *.pack filter=lfs diff=lfs merge=lfs -text
 tmp/*.pack filter=lfs diff=lfs merge=lfs -text
+tmp/*.json filter=lfs diff=lfs merge=lfs -text
