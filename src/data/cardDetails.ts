@@ -1135,9 +1135,9 @@ export const PUBLIC_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Warren Buffett': {
     name: 'Warren Buffett',
     category: 'Öffentlichkeit',
-    gameEffect: 'Ziehe 1 Karte. Bei einer Initiative: +1 Effekt.',
+    gameEffect: '+1 AP beim Ausspielen. Wenn auf dem Board: +1 Einfluss pro Zug, wenn keine Regierungskarte gespielt wird.',
     deckCost: 7,
-    subcategories: ['Oligarch', 'Denker'],
+    subcategories: ['Finance'],
     nationality: 'US-Amerikanisch',
     birthDate: '30. August 1930',
     highestPosition: 'CEO von Berkshire Hathaway',
@@ -1315,9 +1315,9 @@ export const PUBLIC_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Alexei Navalny': {
     name: 'Alexei Navalny',
     category: 'Öffentlichkeit',
-    gameEffect: 'Bei Auslösen einer gegnerischen Intervention: ziehe 1 Karte.',
+    gameEffect: 'Wenn auf dem Board: Gegner erhält -1 auf W6-Proben bei Corruption-Steal-Versuchen.',
     deckCost: 5,
-    subcategories: ['Aktivist', 'Denker'],
+    subcategories: ['Opposition'],
     nationality: 'Russisch',
     birthDate: '4. Juni 1976',
     highestPosition: 'Oppositioneller und Aktivist',
@@ -1345,7 +1345,7 @@ export const PUBLIC_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Gautam Adani': {
     name: 'Gautam Adani',
     category: 'Öffentlichkeit',
-    gameEffect: 'Ziehe 1 Karte. Bei einer Initiative: +1 Effekt.',
+    gameEffect: 'Wenn einziger Oligarch in deiner Public-Reihe: +1 auf alle Corruption-Proben.',
     deckCost: 6,
     subcategories: ['Oligarch'],
     nationality: 'Indisch',

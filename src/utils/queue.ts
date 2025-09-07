@@ -378,7 +378,7 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
         const victim: Player = actor === 1 ? 2 : 1;
 
         // Calculate W6 roll first
-        const roll = 1 + rng.randomInt(6);
+        let roll = 1 + rng.randomInt(6);
         console.log('🎲 ENGINE: Calculated W6 roll:', roll);
 
         // Locate target card
@@ -389,18 +389,28 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
         }
         const target = state.board[victim].aussen[targetIdx] as any;
 
-        // Oligarch bonus
-        const oligarchCount = state.board[actor as Player].innen.filter((c: any) => {
+        // Oligarch bonus (existing) + special Gautam Adani rule
+        const pubCards = state.board[actor as Player].innen || [];
+        const oligarchList = pubCards.filter((c: any) => {
           const sub = (require('../data/cardDetails') as any).getCardDetails?.(c.name)?.subcategories as string[] | undefined;
           const hasNewTag = Array.isArray(sub) && sub.includes('Oligarch');
           const legacy = (c as any).tag === 'Oligarch';
           return hasNewTag || legacy;
-        }).length;
+        });
+        const oligarchCount = oligarchList.length;
 
-        const total = roll + oligarchCount;
+        // Adani special: if the actor has exactly one oligarch and it's Gautam Adani, grant +1 to the corruption roll
+        let adaniBonus = 0;
+        if (oligarchCount === 1 && oligarchList[0] && (oligarchList[0] as any).name === 'Gautam Adani' && !(oligarchList[0] as any).deactivated) {
+          adaniBonus = 1;
+          events.unshift({ type: 'LOG', msg: 'Gautam Adani: sole oligarch -> +1 corruption bonus applied.' });
+        }
+
+        // Apply oligarchCount as existing bonus and Adani bonus (Adani stacks with count to allow future designs)
+        const total = roll + oligarchCount + adaniBonus;
         const targetInfluence = target.influence + (target.tempBuffs||0) - (target.tempDebuffs||0);
 
-        // Dispatch the calculated roll to UI for 3D dice display
+        // Dispatch the calculated roll to UI for 3D dice display (send raw roll without modifiers for visual fidelity)
         if (typeof window !== 'undefined') {
           try {
             console.log('🎲 ENGINE: Dispatching calculated roll to UI:', roll);
@@ -411,10 +421,20 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
             console.error('🎲 ENGINE: Error dispatching dice result:', e);
           }
         }
+        events.unshift({ type: 'LOG', msg: `Bribery Scandal 2.0: Roll ${roll} +${oligarchCount}${adaniBonus ? ' +Adani' : ''} = ${total} vs ${targetInfluence} (${target.name}).` });
 
-        events.unshift({ type: 'LOG', msg: `Bribery Scandal 2.0: Roll ${roll} +${oligarchCount} Bonus = ${total} vs ${targetInfluence} (${target.name}).` });
+        // Navalny defensive effect: if victim has Alexei Navalny on board, subtract 1 from total (applies before comparison)
+        const victimPub = state.board[victim].innen || [];
+        const hasNavalny = victimPub.some((c:any) => c.kind === 'spec' && c.name === 'Alexei Navalny' && !c.deactivated);
+        let navalnyPenalty = 0;
+        if (hasNavalny) {
+          navalnyPenalty = 1;
+          events.unshift({ type: 'LOG', msg: 'Alexei Navalny: defensive modifier -> -1 to opponent corruption roll.' });
+        }
 
-        if (total >= targetInfluence) {
+        const effectiveTotal = total - navalnyPenalty;
+
+        if (effectiveTotal >= targetInfluence) {
           const maxSlots = 3;
           if (state.board[actor as Player].aussen.length < maxSlots) {
             // Transfer card

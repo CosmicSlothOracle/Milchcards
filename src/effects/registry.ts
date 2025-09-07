@@ -439,10 +439,10 @@ export const EFFECTS: Record<string, EffectHandler> = {
   },
 
   'public.warren_buffett.draw2_ap1': ({ enqueue, player, log }) => {
-    enqueue({ type: 'DRAW_CARDS', player, amount: 2 });
+    // Reworked: remove draw effect. Now: +1 AP on play and aura (handled separately in start-of-turn hooks)
     enqueue({ type: 'ADD_AP', player, amount: 1 });
-    enqueue({ type: 'LOG', msg: 'Warren Buffett: +2 Karten, +1 AP' });
-    log('🟢 public.warren_buffett.draw2_ap1');
+    enqueue({ type: 'LOG', msg: 'Warren Buffett: +1 AP on play. Aura: +1 influence each turn if no government card played.' });
+    log('🟢 public.warren_buffett.draw2_ap1 (reworked)');
   },
 
   'public.jeff_bezos.ap2': ({ enqueue, player, log }) => {
@@ -508,15 +508,15 @@ export const EFFECTS: Record<string, EffectHandler> = {
   },
 
   'public.alexei_navalny.opposition': ({ enqueue, player, log }) => {
-    enqueue({ type: 'ADD_AP', player, amount: 1 });
-    enqueue({ type: 'LOG', msg: 'Alexei Navalny: +1 AP (Opposition)' });
-    log('🟢 public.alexei_navalny.opposition');
+    // Reworked: navalny grants a defensive corruption modifier handled in resolver
+    enqueue({ type: 'LOG', msg: 'Alexei Navalny: defensive corruption modifier registered (applies -1 to opponent corruption W6).' });
+    log('🟢 public.alexei_navalny.opposition (reworked)');
   },
 
   'public.gautam_adani.oligarch': ({ enqueue, player, log }) => {
-    enqueue({ type: 'ADD_AP', player, amount: 1 });
-    enqueue({ type: 'LOG', msg: 'Gautam Adani: +1 AP (Oligarch)' });
-    log('🟢 public.gautam_adani.oligarch');
+    // Reworked: Adani provides a corruption-probe bonus when sole oligarch on your public row
+    enqueue({ type: 'LOG', msg: 'Gautam Adani: corruption bonus intent registered (resolved during corruption probes).' });
+    log('🟢 public.gautam_adani.oligarch (reworked)');
   },
 
   // === GOVERNMENT KARTEN - ENTFERNT (nur Einfluss, keine Effekte) ===

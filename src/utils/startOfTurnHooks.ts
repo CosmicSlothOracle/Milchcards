@@ -36,6 +36,20 @@ export function startOfTurn(state: GameState, p: Player) {
   // Determine active public cards (inner lane)
   const pubNames: string[] = (state.board[p]?.innen ?? []).map(c => c.name);
 
+  // Buffett aura: if Buffett is on board, and player did NOT play a government card last turn, grant +1 influence to strongest gov
+  const buffettOnBoard = (state.board[p]?.innen || []).some((c:any) => c.kind === 'spec' && c.name === 'Warren Buffett' && !c.deactivated);
+  if (buffettOnBoard) {
+    const playedGovFlag = (state as any)._playedGovernmentThisTurn?.[p];
+    if (!playedGovFlag) {
+      // Apply +1 influence to strongest government card via intent
+      if (!state._effectQueue) state._effectQueue = [];
+      state._effectQueue.push({ type: 'BUFF_STRONGEST_GOV', player: p, amount: 1, reason: 'BUFFETT_AURA_NO_GOV_PLAYED' } as any);
+      state._effectQueue.push({ type: 'LOG', msg: 'Warren Buffett: No government played last turn -> strongest gov +1 influence.' } as any);
+    }
+    // Reset played-government tracking for this player for the upcoming turn
+    if ((state as any)._playedGovernmentThisTurn) (state as any)._playedGovernmentThisTurn[p] = false;
+  }
+
   // Apply auras via events instead of direct state mutation
   if (pubNames.includes('Jennifer Doudna')) {
     const doubled = consumeDouble();

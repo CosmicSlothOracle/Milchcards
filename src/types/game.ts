@@ -181,6 +181,7 @@ export interface GameState {
   blocked?: { initiatives?: boolean };
   shields?: Set<UID>;
   _effectQueue?: EffectEvent[];
+  _playedGovernmentThisTurn?: { 1: boolean; 2: boolean };
   effectFlags: {
     1: EffectFlags;
     2: EffectFlags;

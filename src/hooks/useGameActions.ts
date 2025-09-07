@@ -755,6 +755,12 @@ export function useGameActions(
 
         // 6) Karteneffekte enqueuen + Queue auflösen
         triggerCardEffects(newState, player, playedCard);
+
+        // Track that a government card was played this turn for Buffett aura logic
+        if (playedCard.kind === 'pol' && targetLane === 'aussen') {
+          newState._playedGovernmentThisTurn = newState._playedGovernmentThisTurn || { 1: false, 2: false };
+          newState._playedGovernmentThisTurn[player] = true;
+        }
         // UI visual: particle burst + pop scale for played card (prototype hook)
         try { spawnCardVisual(playedCard, newState); } catch (e) {}
         // Migration Helper verwenden
