@@ -400,34 +400,37 @@ export const GameInfoModal: React.FC<GameInfoModalProps> = ({
         {((gameState.current === 1 && !gameState.passed[1]) || (devMode && gameState.current === 2 && !gameState.passed[2])) && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
 
-            {/* End Turn Button - Blue */}
-            <button
-              onClick={() => {
-                console.log(`🔧 DEBUG: End turn clicked for player ${gameState.current}`);
-                onCardClick({ type: 'button_end_turn', player: gameState.current });
-              }}
-              style={{
-                background: 'linear-gradient(45deg, #3b82f6, #2563eb)',
-                border: 'none',
-                borderRadius: '6px',
-                padding: '6px 12px',
-                color: 'white',
-                fontSize: '12px',
-                fontWeight: '600',
-                cursor: 'pointer',
-                boxShadow: '0 2px 8px rgba(59, 130, 246, 0.4)',
-                transition: 'all 0.2s ease'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'scale(1.05)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'scale(1)';
-              }}
-              title="Ends only your turn – the round continues."
-            >
-              End Turn
-            </button>
+            {/* End Turn Button - Blue - Only show if player has cards in hand or deck */}
+            {((gameState.current === 1 && (gameState.hands[1].length > 0 || gameState.decks[1].length > 0)) ||
+              (devMode && gameState.current === 2 && (gameState.hands[2].length > 0 || gameState.decks[2].length > 0))) && (
+              <button
+                onClick={() => {
+                  console.log(`🔧 DEBUG: End turn clicked for player ${gameState.current}`);
+                  onCardClick({ type: 'button_end_turn', player: gameState.current });
+                }}
+                style={{
+                  background: 'linear-gradient(45deg, #3b82f6, #2563eb)',
+                  border: 'none',
+                  borderRadius: '6px',
+                  padding: '6px 12px',
+                  color: 'white',
+                  fontSize: '12px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  boxShadow: '0 2px 8px rgba(59, 130, 246, 0.4)',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'scale(1.05)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'scale(1)';
+                }}
+                title="Ends only your turn – the round continues."
+              >
+                End Turn
+              </button>
+            )}
 
             {/* Pass Button - Red */}
             {showPassConfirmation ? (

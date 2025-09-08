@@ -1,8 +1,8 @@
 import { useCallback, useRef, useEffect } from 'react';
 import { GameState, Card, Player, BuilderEntry, PoliticianCard } from '../types/game';
 import { createDefaultEffectFlags } from '../types/game';
-import { buildDeckFromEntries, sumGovernmentInfluenceWithAuras } from '../utils/gameUtils';
-import { PRESET_DECKS } from '../data/gameData';
+import { buildDeckFromEntries, sumGovernmentInfluenceWithAuras, removeCardFromDeck, drawCardsAtRoundEnd } from '../utils/gameUtils';
+import { Pols, Specials } from '../data/gameData';
 import { getCardActionPointCost, getNetApCost, canPlayCard, isInitiativeCard, isGovernmentCard } from '../utils/ap';
 import { triggerCardEffects } from '../effects/cards';
 import { ensureTestBaselineAP } from '../utils/testCompat';
@@ -11,6 +11,7 @@ import { applyStartOfTurnFlags } from '../utils/startOfTurnHooks';
 import { registerTrap, applyTrapsOnCardPlayed } from '../utils/traps';
 import { recomputeAuraFlags } from '../state/effects';
 import { activateInstantInitiative as activateInstantInitiativeRuntime } from '../state/instantRuntime';
+import { EffectQueueManager } from '../utils/gameUtils';
 import { isInstantInitiative } from '../utils/initiative';
 import { emptyBoard } from '../state/board';
 import type { EffectEvent } from '../types/effects';
@@ -76,13 +77,7 @@ const isCardPlayableNow = (state: GameState, player: Player, card: Card): boolea
   return false;
 };
 
-export const hasPlayableZeroCost = (state: GameState, player: Player): boolean => {
-  for (const c of state.hands[player]) {
-    const { cost } = getCardActionPointCost(state, player, c);
-    if (cost === 0 && isCardPlayableNow(state, player, c)) return true;
-  }
-  return false;
-};
+// REMOVED: hasPlayableZeroCost - alle Karten kosten immer 1 AP
 
 // Helper function to apply auras for a player (instant updates for Joschka Fischer + NGO synergy)
 function applyAurasForPlayer(state: GameState, player: Player, log?: (msg: string) => void) {
@@ -163,8 +158,7 @@ function reallyEndTurn(gameState: GameState, log: (msg: string) => void): GameSt
   gameState.actionPoints = { ...gameState.actionPoints, [newCurrent]: 2 };
   gameState.passed = { ...gameState.passed, [newCurrent]: false };
 
-            // Apply new start-of-turn hooks
-          applyStartOfTurnFlags(gameState, newCurrent, log);
+  // Note: applyStartOfTurnFlags is called in useGameState.ts - avoid duplicate calls
 
         // 🔥 CLUSTER 3: Auren-Flags beim Zugstart neu berechnen
         recomputeAuraFlags(gameState);
@@ -262,19 +256,17 @@ function resolveRound(gameState: GameState, log: (msg: string) => void): GameSta
       2: { government: null, public: null, initiativePermanent: null }
     },
     // instantSlot wird nicht mehr verwendet - Sofort-Initiativen gehen in board[player].sofort
-    // New hands with 5 cards each
-    hands: {
-      1: newP1Hand,
-      2: newP2Hand
-    },
-    // Update decks (cards were removed during drawing)
-    decks: {
-      1: gameState.decks[1].slice(newP1Hand.length),
-      2: gameState.decks[2].slice(newP2Hand.length)
-    },
+    // Hands and decks will be updated by drawCardsAtRoundEnd
+    hands: gameState.hands,
+    decks: gameState.decks,
     // Update discard pile
     discard: [...gameState.discard, ...cardsToDiscard]
   };
+
+  // 🔥 PERSISTENT DECK LOGIC: Use drawCardsAtRoundEnd for consistent card drawing
+  const { newHands, newDecks } = drawCardsAtRoundEnd(newState, log);
+  newState.hands = newHands;
+  newState.decks = newDecks;
 
   log(`🆕 Runde ${newState.round} startet! Spieler ${roundWinner} beginnt. (Rundenstand: P1 ${newState.roundsWon[1]} - P2 ${newState.roundsWon[2]})`);
   log(`🃏 Beide Spieler erhalten 5 neue Handkarten.`);
@@ -534,6 +526,7 @@ export function useGameActions(
       round: 1,
       current: 1,
       passed: { 1: false, 2: false },
+      actionPoints: { 1: 2, 2: 2 }, // FIX: Reset AP to 2 for both players
       decks: { 1: d1, 2: d2 },
       hands: { 1: h1, 2: h2 },
       board: { 1: { innen: [], aussen: [], sofort: [] }, 2: { innen: [], aussen: [], sofort: [] } },
@@ -550,6 +543,11 @@ export function useGameActions(
         2: createDefaultEffectFlags()
       },
       actionsUsed: { 1: 0, 2: 0 },
+      roundsWon: { 1: 0, 2: 0 }, // FIX: Reset rounds won
+      gameWinner: null, // FIX: Reset game winner
+      effectQueue: EffectQueueManager.initializeQueue(), // FIX: Reset effect queue
+      activeAbilities: { 1: [], 2: [] }, // FIX: Reset active abilities
+      pendingAbilitySelect: undefined, // FIX: Reset pending ability selection
       log: [
         `Match gestartet. P1 und P2 erhalten je ${h1.length}/${h2.length} Startkarten.`,
         `🔍 DECK DEBUG P1: ${p1Cards.length} Karten total`,
@@ -567,8 +565,79 @@ export function useGameActions(
     }));
   }, [gameState, setGameState, log]);
 
-  const startMatchVsAI = useCallback((p1DeckEntries: BuilderEntry[], presetKey: keyof typeof PRESET_DECKS = 'AUTORITAERER_REALIST') => {
-    const p2DeckEntries = PRESET_DECKS[presetKey] as BuilderEntry[];
+  const startMatchVsAI = useCallback((p1DeckEntries: BuilderEntry[], presetKey: string = '') => {
+    // Generate random AI deck from presets
+    const AI_PRESETS: { name: string; cards: string[] }[] = [
+      {
+        name: 'Tech Oligarchs',
+        cards: [
+          'Vladimir Putin', 'Xi Jinping', 'Donald Trump', 'Mohammed bin Salman', 'Recep Tayyip Erdoğan',
+          'Elon Musk', 'Bill Gates', 'Mark Zuckerberg', 'Tim Cook', 'Sam Altman'
+        ]
+      },
+      {
+        name: 'Diplomatic Power',
+        cards: [
+          'Jens Stoltenberg', 'Olaf Scholz', 'Rishi Sunak', 'Kamala Harris', 'Helmut Schmidt',
+          'Greta Thunberg', 'Warren Buffett', 'George Soros', 'Spin Doctor', 'Think-tank'
+        ]
+      },
+      {
+        name: 'Activist Movement',
+        cards: [
+          'Benjamin Netanyahu', 'Volodymyr Zelenskyy', 'Ursula von der Leyen', 'Narendra Modi', 'Luiz Inácio Lula da Silva',
+          'Greta Thunberg', 'Malala Yousafzai', 'Ai Weiwei', 'Alexei Navalny', 'Jennifer Doudna'
+        ]
+      },
+      {
+        name: 'Initiative Rush',
+        cards: [
+          'Benjamin Netanyahu', 'Volodymyr Zelenskyy', 'Ursula von der Leyen', 'Olaf Scholz', 'Kamala Harris',
+          'Greta Thunberg', 'Verzoegerungsverfahren', 'Symbolpolitik', 'Shadow Lobbying', 'Opportunist'
+        ]
+      },
+      {
+        name: 'Media Control',
+        cards: [
+          'Vladimir Putin', 'Xi Jinping', 'Donald Trump', 'Mohammed bin Salman', 'Recep Tayyip Erdoğan',
+          'Oprah Winfrey', 'Mark Zuckerberg', 'Tim Cook', 'Influencer-Kampagne', 'Whataboutism'
+        ]
+      },
+      {
+        name: 'Economic Influence',
+        cards: [
+          'Jens Stoltenberg', 'Olaf Scholz', 'Rishi Sunak', 'Kamala Harris', 'Helmut Schmidt',
+          'Warren Buffett', 'George Soros', 'Jeff Bezos', 'Mukesh Ambani', 'Roman Abramovich'
+        ]
+      }
+    ];
+
+    // Select random preset for AI
+    const randomPreset = AI_PRESETS[Math.floor(Math.random() * AI_PRESETS.length)];
+    log(`🤖 KI erhält zufälliges Deck: "${randomPreset.name}"`);
+
+    // Convert preset to BuilderEntry format
+    const p2DeckEntries: BuilderEntry[] = [];
+    randomPreset.cards.forEach(name => {
+      // Try to find as politician first
+      const pol = Pols.find((p: any) => p.name === name);
+      if (pol) {
+        p2DeckEntries.push({ kind: 'pol', baseId: pol.id, count: 1 });
+        return;
+      }
+
+      // Try to find as special card
+      const spec = Specials.find((s: any) => s.name === name);
+      if (spec) {
+        p2DeckEntries.push({ kind: 'spec', baseId: spec.id, count: 1 });
+        return;
+      }
+
+      log(`⚠️ Karte "${name}" aus Preset "${randomPreset.name}" nicht gefunden`);
+    });
+
+    log(`🤖 KI-Deck erstellt: ${p2DeckEntries.length} Karten`);
+
     // Enable AI for P2 first so nextTurn/auto-run sees the flag immediately
     setGameState(prev => ({ ...prev, aiEnabled: { ...(prev.aiEnabled || { 1: false, 2: false }), 2: true } }));
     log('🔧 AI aktiviert für Spieler 2');
@@ -616,9 +685,14 @@ export function useGameActions(
 
       const newState = { ...prev };
 
-      // Simplified AP system: All cards cost exactly 1 AP
-      newState.actionPoints[player] = Math.max(0, newState.actionPoints[player] - cost);
-      log(`💳 Kosten verbucht: AP ${prevAp}→${newState.actionPoints[player]}`);
+      // AP will be deducted AFTER queue processing to avoid showing 0 AP temporarily
+      // Store the cost for later deduction
+      (newState as any)._pendingApCost = cost;
+
+      // Enhanced AP counter logging
+      const cardName = (selectedCard as any).name || 'Unknown Card';
+      const cardType = selectedCard.kind === 'pol' ? 'Government' : 'Special';
+      log(`💳 AP Counter: ${cardName} (${cardType}) kostet 1 AP | Vorher: ${prevAp} AP → Nachher: ${prevAp - cost} AP`);
 
       // Flags KONSUMIEREN (einheitlich, NUR HIER!)
       ensureFlags(newState, player);
@@ -631,6 +705,24 @@ export function useGameActions(
       const newHand = [...newState.hands[player]];
       const [playedCard] = newHand.splice(handIndex, 1);
       newState.hands = { ...newState.hands, [player]: newHand };
+
+      // 🔥 PERSISTENT DECK LOGIC: Entferne die Karte dauerhaft aus dem Deck
+      const { newDecks } = removeCardFromDeck(player, playedCard, newState, log);
+      newState.decks = newDecks;
+
+      // 🔥 PERSISTENT DECK LOGIC: Prüfe ob Spieler noch Karten spielen kann
+      const remainingCards = newHand.length + newDecks[player].length;
+      if (remainingCards === 0) {
+        log(`⚠️ P${player} hat keine Karten mehr - kann nur noch passen`);
+        // Automatisch passen, wenn keine Karten mehr verfügbar
+        newState.passed = { ...newState.passed, [player]: true };
+
+        // Prüfe ob beide Spieler gepasst haben (Spielende)
+        if (newState.passed[1] && newState.passed[2]) {
+          log(`🏁 Beide Spieler haben gepasst - Runde wird beendet`);
+          // Die Rundenende-Logik wird automatisch durch nextTurn() ausgelöst
+        }
+      }
 
       // Prevent double-playing the same UID concurrently
       if ((playedCard as any).uid) {
@@ -774,6 +866,14 @@ export function useGameActions(
           // Nach Queue-Auflösung: Hand-Arrays immutabel neu zuweisen
           afterQueueResolved?.();
           log(`DEBUG AP after resolve (pol play): P1=${newState.actionPoints[1]} P2=${newState.actionPoints[2]}`);
+        }
+
+        // AP-Kosten NACH Queue-Verarbeitung abziehen (verhindert temporäres 0 AP)
+        const pendingCost = (newState as any)._pendingApCost;
+        if (pendingCost !== undefined) {
+          newState.actionPoints[player] = Math.max(0, newState.actionPoints[player] - pendingCost);
+          log(`💳 Kosten abgezogen: AP ${newState.actionPoints[player] + pendingCost}→${newState.actionPoints[player]}`);
+          delete (newState as any)._pendingApCost;
         }
 
         // Release playing UID after queue resolved
@@ -1375,8 +1475,7 @@ export function useGameActions(
                      newState.current = otherPlayer;
            newState.actionPoints = { ...newState.actionPoints, [otherPlayer]: 2 };
 
-          // Apply new start-of-turn hooks
-          applyStartOfTurnFlags(newState, otherPlayer, log);
+          // Note: applyStartOfTurnFlags is called in useGameState.ts - avoid duplicate calls
 
         // 🔥 CLUSTER 3: Auren-Flags beim Zugstart neu berechnen
         recomputeAuraFlags(newState);

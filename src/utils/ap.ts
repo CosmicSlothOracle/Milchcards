@@ -16,8 +16,8 @@ export const BASE_AP_COST = 1; // fixed cost for every card
 const apCache = new Map<string, { cost: number; refund: number; net: number; reasons: string[] }>();
 
 function getCacheKey(state: GameState, player: Player, card: Card, lane?: string): string {
-  const flags = state.effectFlags[player];
-  return `${player}-${card.uid}-${lane}-${flags?.initiativeDiscount}-${flags?.initiativeRefund}-${flags?.govRefundAvailable}`;
+  // Simplified AP system: no discounts/refunds, so cache key is simple
+  return `${player}-${card.uid}-${lane}`;
 }
 
 function clearApCache(): void {

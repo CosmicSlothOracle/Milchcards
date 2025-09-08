@@ -1135,7 +1135,7 @@ export const PUBLIC_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Warren Buffett': {
     name: 'Warren Buffett',
     category: 'Öffentlichkeit',
-    gameEffect: '+1 AP beim Ausspielen. Wenn auf dem Board: +1 Einfluss pro Zug, wenn keine Regierungskarte gespielt wird.',
+    gameEffect: '+1 AP beim Ausspielen. Wenn auf dem Board: +1 Einfluss auf stärkste Regierungskarte pro Zug, wenn keine Regierungskarte gespielt wird (nur wenn Regierungskarten vorhanden sind).',
     deckCost: 7,
     subcategories: ['Finance'],
     nationality: 'US-Amerikanisch',
@@ -1210,7 +1210,7 @@ export const PUBLIC_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Jeff Bezos': {
     name: 'Jeff Bezos',
     category: 'Öffentlichkeit',
-    gameEffect: 'Draw 1 card when played. When you have a platform: +1 AP.',
+    gameEffect: 'Entfernt beim Spielen alle anderen Oligarchenkarten auf dem Spielfeld.',
     deckCost: 6,
     subcategories: ['Oligarch'],
     nationality: 'US-Amerikanisch',

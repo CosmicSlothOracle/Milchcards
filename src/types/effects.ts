@@ -13,6 +13,7 @@ export type EffectEvent =
   | { type: 'REACTIVATE_CARD'; player: Player; targetUid: number }
   | { type: 'RETURN_TO_HAND'; player: Player; targetUid: number }
   | { type: 'CANCEL_CARD'; player: Player; targetUid: number }
+  | { type: 'REMOVE_OTHER_OLIGARCHS'; player: Player }
   | { type: 'BUFF_STRONGEST_GOV'; player: Player; amount: number }
   | { type: 'INITIATIVE_ACTIVATED'; player: Player }
   | { type: 'DEBUFF_CARD'; player: Player; targetUid: number; amount: number }
@@ -57,7 +58,11 @@ export type EffectEvent =
   | { type: 'PROJECTILE_SPAWN'; characterId: string; position: { x: number; y: number }; velocity: { x: number; y: number } }
   | { type: 'PROJECTILE_HIT'; projectileId: string; targetId: string; damage: number }
   | { type: 'EFFECT_SPAWN'; effectId: string; position: { x: number; y: number }; animationName: string }
-  | { type: 'DAMAGE_DEALT'; targetId: string; amount: number; knockback?: { x: number; y: number }; hitstun?: number };
+  | { type: 'DAMAGE_DEALT'; targetId: string; amount: number; knockback?: { x: number; y: number }; hitstun?: number }
+  // Visual Effects Events
+  | { type: 'VISUAL_AP_GAIN'; player: Player; amount: number; x?: number; y?: number; color?: string; size?: number }
+  | { type: 'VISUAL_INFLUENCE_BUFF'; player: Player; amount: number; targetUid?: number; x?: number; y?: number; color?: string }
+  | { type: 'VISUAL_CARD_PLAY'; player: Player; cardName: string; x?: number; y?: number; effectType?: string };
 
 // Optional: tolerant fallback in der Migrationsphase
 // | { type: string; [k: string]: any };

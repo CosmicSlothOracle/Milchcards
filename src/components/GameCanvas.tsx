@@ -1514,7 +1514,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     // --- VISUAL EFFECTS: Particle bursts, card pop scale, initiative ripple & AP pop ---
     try {
       const now = performance.now();
-      const { particlesRef, popsRef, ripplesRef, apLabelsRef, reducedMotion } = (visualEffects || {}) as any;
+      const { particlesRef, popsRef, ripplesRef, apLabelsRef, visualEffectsRef, reducedMotion } = (visualEffects || {}) as any;
 
       const parts: any[] = particlesRef.current || [];
       if (!reducedMotion) {
@@ -1607,6 +1607,68 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
           ctx.restore();
         }
         apLabelsRef.current = apl;
+
+        // --- NEW VISUAL EFFECTS ---
+        const visualEffects: any[] = visualEffectsRef.current || [];
+        for (let i = visualEffects.length - 1; i >= 0; i--) {
+          const effect = visualEffects[i];
+          const progress = Math.min(1, Math.max(0, (now - effect.started) / effect.duration));
+
+          if (progress >= 1) {
+            visualEffects.splice(i, 1);
+            continue;
+          }
+
+          ctx.save();
+
+          // Different effects based on type
+          switch (effect.type) {
+            case 'ap_gain':
+              // Gelblicher +1 AP Effekt - groß startend, größer werdend, dann fade out
+              const apScale = 0.8 + (progress * 0.4); // 0.8 -> 1.2
+              const apAlpha = progress < 0.3 ? 0.9 : (1 - progress) * 1.2; // 90% opacity start, fade out
+              const apY = effect.y - (progress * 60); // Move up
+
+              ctx.globalAlpha = Math.max(0, apAlpha);
+              ctx.fillStyle = effect.color || '#ffd700';
+              ctx.font = `bold ${(effect.size || 24) * apScale}px sans-serif`;
+              ctx.textAlign = 'center';
+              ctx.textBaseline = 'middle';
+              ctx.fillText(effect.text || '+1', effect.x, apY);
+              break;
+
+            case 'influence_buff':
+              // Grüner Einfluss-Buff Effekt
+              const infScale = 0.9 + (progress * 0.2);
+              const infAlpha = (1 - progress) * 0.8;
+              const infY = effect.y - (progress * 40);
+
+              ctx.globalAlpha = Math.max(0, infAlpha);
+              ctx.fillStyle = effect.color || '#4ade80';
+              ctx.font = `bold ${(effect.size || 20) * infScale}px sans-serif`;
+              ctx.textAlign = 'center';
+              ctx.textBaseline = 'middle';
+              ctx.fillText(effect.text || '+1', effect.x, infY);
+              break;
+
+            case 'card_play':
+              // Karten-Spiel Effekt
+              const cardScale = 0.8 + (progress * 0.3);
+              const cardAlpha = (1 - progress) * 0.7;
+              const cardY = effect.y - (progress * 30);
+
+              ctx.globalAlpha = Math.max(0, cardAlpha);
+              ctx.fillStyle = effect.color || '#60a5fa';
+              ctx.font = `bold ${(effect.size || 16) * cardScale}px sans-serif`;
+              ctx.textAlign = 'center';
+              ctx.textBaseline = 'middle';
+              ctx.fillText(effect.text || 'Card', effect.x, cardY);
+              break;
+          }
+
+          ctx.restore();
+        }
+        visualEffectsRef.current = visualEffects;
       }
     } catch (e) {}
 
@@ -2011,7 +2073,6 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
 
     const hit = clickZonesRef.current.find(z => mx >= z.x && mx <= z.x + z.w && my >= z.y && my <= z.y + z.h);
     if (hit) {
-      console.log('[hover]', hit.data.type, hit.data.card?.name);
       onCardHover({ ...hit.data, x: e.clientX, y: e.clientY });
     } else {
       onCardHover(null);

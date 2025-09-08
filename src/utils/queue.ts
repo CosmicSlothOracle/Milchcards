@@ -16,7 +16,12 @@ function strongestGovernmentUid(state: GameState, p: Player): number | null {
   if (!govRow || govRow.length === 0) return null;
   const alive = govRow.filter(g => !(g as any).deactivated);
   if (!alive.length) return null;
-  const sorted = alive.slice().sort((a,b) => (b.influence + (b.tempBuffs||0) - (b.tempDebuffs||0)) - (a.influence + (a.tempBuffs||0) - (a.tempDebuffs||0)));
+  const sorted = alive.slice().sort((a,b) => {
+    const aInfluence = a.influence + (a.tempBuffs||0) - (a.tempDebuffs||0);
+    const bInfluence = b.influence + (b.tempBuffs||0) - (b.tempDebuffs||0);
+    if (bInfluence !== aInfluence) return bInfluence - aInfluence;
+    return b.uid - a.uid; // Tie-break: higher UID (last played)
+  });
   return sorted[0].uid;
 }
 
@@ -28,7 +33,12 @@ function strongestGov(state: GameState, p: Player): PoliticianCard | null {
   if (!row.length) return null;
   const alive = row.filter(c => !c.deactivated);
   if (alive.length === 0) return null;
-  return alive.slice().sort((a,b) => (b.influence + (b.tempBuffs||0) - (b.tempDebuffs||0)) - (a.influence + (a.tempBuffs||0) - (a.tempDebuffs||0)))[0];
+  return alive.slice().sort((a,b) => {
+    const aInfluence = a.influence + (a.tempBuffs||0) - (a.tempDebuffs||0);
+    const bInfluence = b.influence + (b.tempBuffs||0) - (b.tempDebuffs||0);
+    if (bInfluence !== aInfluence) return bInfluence - aInfluence;
+    return b.uid - a.uid; // Tie-break: higher UID (last played)
+  })[0];
 }
 
 function publicNames(state: GameState, p: Player): string[] {
@@ -92,6 +102,17 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
         const next = Math.max(0, cur + ev.amount);
         state.actionPoints[ev.player] = next;
         logger.dbg(`ADD_AP before=${cur} amount=${ev.amount} after=${state.actionPoints[ev.player]}`);
+
+        // Trigger visual effect for AP gain
+        if (ev.amount > 0) {
+          events.unshift({
+            type: 'VISUAL_AP_GAIN',
+            player: ev.player,
+            amount: ev.amount,
+            color: '#ffd700', // Gelblich
+            size: 24
+          } as EffectEvent);
+        }
 
         // Opportunist AP-Spiegelung (falls aktiv beim Gegner)
         if (state.effectFlags[other(ev.player)]?.opportunistActive && ev.amount > 0) {
@@ -231,6 +252,35 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
         break;
       }
 
+      case 'REMOVE_OTHER_OLIGARCHS': {
+        const oligarchNames = ['Elon Musk', 'Bill Gates', 'George Soros', 'Warren Buffett', 'Mukesh Ambani', 'Jeff Bezos', 'Alisher Usmanov', 'Gautam Adani', 'Jack Ma', 'Zhang Yiming', 'Roman Abramovich'];
+        let removedCount = 0;
+
+        // Durchsuche alle Spieler und alle Lanes nach Oligarchen (außer Jeff Bezos selbst)
+        for (const p of [1, 2] as const) {
+          for (const lane of ['innen', 'aussen', 'sofort'] as const) {
+            const cards = state.board[p][lane];
+            for (let i = cards.length - 1; i >= 0; i--) {
+              const card = cards[i];
+              if (oligarchNames.includes(card.name) && card.name !== 'Jeff Bezos') {
+                // Entferne die Karte vom Spielfeld
+                const removedCard = cards.splice(i, 1)[0];
+                state.discard.push(removedCard);
+                removedCount++;
+                logPush(state, `🗑️ ${removedCard.name} wurde von Jeff Bezos entfernt`);
+              }
+            }
+          }
+        }
+
+        if (removedCount > 0) {
+          logPush(state, `🔥 Jeff Bezos hat ${removedCount} Oligarchen vom Spielfeld entfernt`);
+        } else {
+          logPush(state, `ℹ️ Jeff Bezos: Keine anderen Oligarchen auf dem Spielfeld gefunden`);
+        }
+        break;
+      }
+
       case 'REGISTER_TRAP': {
         registerTrap(state, ev.player, (ev as any).key);
         logPush(state, `Trap registered: ${(ev as any).key} (P${ev.player})`);
@@ -293,6 +343,17 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
             (tgt as PoliticianCard).tempDebuffs = ((tgt as PoliticianCard).tempDebuffs || 0) + Math.abs(amount);
           }
           logPush(state, logBuffStrongest(player, tgt.name, amount));
+
+          // Trigger visual effect for influence buff
+          if (amount > 0) {
+            events.unshift({
+              type: 'VISUAL_INFLUENCE_BUFF',
+              player,
+              amount,
+              targetUid: tgt.uid,
+              color: '#4ade80' // Default green for influence buffs
+            } as EffectEvent);
+          }
 
           // Opportunist-Spiegelung (falls aktiv beim Gegner)
           if (state.effectFlags[other(player)]?.opportunistActive && amount > 0) {
@@ -830,6 +891,120 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
             type: 'LOG',
             msg: 'Koalitionszwang: No bonus conditions met'
           });
+        }
+        break;
+      }
+
+      // === VISUAL EFFECTS ===
+      case 'VISUAL_AP_GAIN': {
+        const { player, amount, x, y, color, size } = ev as any;
+
+        // Calculate position based on player and board layout
+        let effectX = x;
+        let effectY = y;
+
+        if (effectX === undefined || effectY === undefined) {
+          // Default positions for each player's AP area
+          if (player === 1) {
+            effectX = 200; // Left side
+            effectY = 100;
+          } else {
+            effectX = 1720; // Right side
+            effectY = 100;
+          }
+        }
+
+        // Trigger visual effect via VisualEffectsContext
+        if (typeof window !== 'undefined' && (window as any).__pc_visual_effects) {
+          try {
+            (window as any).__pc_visual_effects.spawnVisualEffect({
+              type: 'ap_gain',
+              x: effectX,
+              y: effectY,
+              amount: amount,
+              text: `+${amount}`,
+              color: color || '#ffd700',
+              size: size || 24,
+              duration: 1200
+            });
+          } catch (e) {
+            console.warn('Failed to spawn AP gain visual effect:', e);
+          }
+        }
+        break;
+      }
+
+      case 'VISUAL_INFLUENCE_BUFF': {
+        const { player, amount, targetUid, x, y, color } = ev as any;
+
+        // Find target card position if targetUid provided
+        let effectX = x;
+        let effectY = y;
+
+        if (targetUid && (effectX === undefined || effectY === undefined)) {
+          const slot = findCardSlotByUid(state, targetUid);
+          if (slot) {
+            // Convert slot to screen coordinates (simplified)
+            const baseX = slot.player === 1 ? 200 : 1200;
+            const baseY = slot.lane === 'aussen' ? 200 : 400;
+            effectX = baseX + (slot.index * 120);
+            effectY = baseY;
+          }
+        }
+
+        if (effectX === undefined || effectY === undefined) {
+          // Fallback to player center
+          effectX = player === 1 ? 400 : 1400;
+          effectY = 300;
+        }
+
+        // Trigger visual effect
+        if (typeof window !== 'undefined' && (window as any).__pc_visual_effects) {
+          try {
+            (window as any).__pc_visual_effects.spawnVisualEffect({
+              type: 'influence_buff',
+              x: effectX,
+              y: effectY,
+              amount: amount,
+              text: `+${amount}`,
+              color: color || '#4ade80', // Green for influence, or custom color
+              size: 20,
+              duration: 1000
+            });
+          } catch (e) {
+            console.warn('Failed to spawn influence buff visual effect:', e);
+          }
+        }
+        break;
+      }
+
+      case 'VISUAL_CARD_PLAY': {
+        const { player, cardName, x, y, effectType } = ev as any;
+
+        let effectX = x;
+        let effectY = y;
+
+        if (effectX === undefined || effectY === undefined) {
+          // Default to player's hand area
+          effectX = player === 1 ? 200 : 1400;
+          effectY = 600;
+        }
+
+        // Trigger visual effect
+        if (typeof window !== 'undefined' && (window as any).__pc_visual_effects) {
+          try {
+            (window as any).__pc_visual_effects.spawnVisualEffect({
+              type: 'card_play',
+              x: effectX,
+              y: effectY,
+              text: cardName,
+              color: effectType === 'initiative' ? '#ff6b6b' : '#60a5fa',
+              size: 16,
+              duration: 800
+            });
+          } catch (e) {
+            console.warn('Failed to spawn card play visual effect:', e);
+          }
         }
         break;
       }

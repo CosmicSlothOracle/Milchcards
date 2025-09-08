@@ -6,6 +6,17 @@ export function startOfTurn(state: GameState, p: Player) {
   // AP reset
   state.actionPoints[p] = 2;
 
+  // 🔥 CRITICAL FIX: Reset temporary buffs and debuffs at start of turn
+  for (const lane of ['innen', 'aussen', 'sofort'] as const) {
+    const cards = state.board[p][lane];
+    cards.forEach(card => {
+      if (card.kind === 'pol') {
+        (card as any).tempBuffs = 0;
+        (card as any).tempDebuffs = 0;
+      }
+    });
+  }
+
   // Flags reset
   const f = state.effectFlags[p];
   // Flags reset

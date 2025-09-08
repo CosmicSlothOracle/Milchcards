@@ -46,7 +46,7 @@ export const CARDS: CardDef[] = [
   P('public.roman_abramovich', 'Roman Abramovich', ['Oligarch'], 4, 'public.roman_abramovich.ap1'),
   P('public.tim_cook', 'Tim Cook', ['Tech'], 3, 'public.tim_cook.ap2'),
   P('public.mukesh_ambani', 'Mukesh Ambani', ['Oligarch'], 4, 'public.mukesh_ambani.ap1'),
-  P('public.jeff_bezos', 'Jeff Bezos', ['Tech'], 4, 'public.jeff_bezos.ap2'),
+  P('public.jeff_bezos', 'Jeff Bezos', ['Tech'], 4, 'public.jeff_bezos.oligarch_removal'),
   P('public.edward_sn0wden', 'Edward Snowden', ['Whistleblower'], 3, 'public.edward_sn0wden.whistleblower'),
   P('public.julian_assange', 'Julian Assange', ['Whistleblower'], 3, 'public.julian_assange.leak'),
   P('public.yuval_noah_harari', 'Yuval Noah Harari', ['Academia'], 3, 'public.yuval_noah_harari.academia'),
@@ -56,14 +56,11 @@ export const CARDS: CardDef[] = [
   // Legacy PUBLIC Karten (existieren in Legacy Handlern)
   P('public.zhang_yiming', 'Zhang Yiming', ['Tech'], 3, 'public.zhang_yiming.draw1_ap1'),
   P('public.alisher_usmanov', 'Alisher Usmanov', ['Oligarch'], 4, 'public.alisher_usmanov.draw1'),
-  P('public.larry_page', 'Larry Page', ['Tech'], 3, 'public.larry_page.draw1_ap1'),
-  P('public.sergey_brin', 'Sergey Brin', ['Tech'], 3, 'public.sergey_brin.draw1_ap1'),
 
   // ----- GOVERNMENT (nur Einfluss, keine Effekte) -----
   G('gov.vladimir_putin', 'Vladimir Putin', [], 8),
   G('gov.xi_jinping', 'Xi Jinping', [], 8),
   G('gov.ursula_von_der_leyen', 'Ursula von der Leyen', [], 6),
-  G('gov.joe_biden', 'Joe Biden', [], 7),
   G('gov.olaf_scholz', 'Olaf Scholz', [], 6),
 
   // ----- INITIATIVES — INSTANT (mit implementierten Effekten) -----

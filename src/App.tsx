@@ -9,15 +9,21 @@ import { GameLogModal } from './components/GameLogModal';
 import UILayoutEditor from './components/UILayoutEditor';
 import CardEffectTestSuite from './test/CardEffectTestSuite';
 import QTEFrame from './components/QTEFrame';
+import SpriteAtlasDemo from './components/SpriteAtlasDemo';
 import { useGameState } from './hooks/useGameState';
 import { BuilderEntry, PoliticianCard, Player } from './types/game';
-import { Specials, PRESET_DECKS, Pols } from './data/gameData';
+import { Specials, Pols } from './data/gameData';
 import { buildDeckFromEntries } from './utils/gameUtils';
 import { copyDebugSnapshotToClipboard, downloadDebugSnapshot } from './utils/debugExport';
 import { GameProvider } from './context/GameContext';
 import { VisualEffectsProvider } from './context/VisualEffectsContext';
+import { AudioProvider } from './context/AudioContext';
 import { getCardDetails } from './data/cardDetails';
 import { CardHoverInfoPanel } from './components/CardHoverInfoPanel';
+import { IntroVideo } from './components/IntroVideo';
+import { SequentialVideoPlayer } from './components/SequentialVideoPlayer';
+import { MusicToggle } from './components/MusicToggle';
+import { AIBalanceTester } from './components/AIBalanceTester';
 import Dice3D, { Dice3DHandle } from './components/Dice3D';
 // Temporarily disabled for build
 // import { hasAnyZeroApPlay } from './utils/ap';
@@ -25,18 +31,20 @@ import Dice3D, { Dice3DHandle } from './components/Dice3D';
 function AppContent() {
   // Old image atlas/background removed; cards load their own images per file mapping
 
-  const [deckBuilderOpen, setDeckBuilderOpen] = useState(true);
+  const [showIntro, setShowIntro] = useState(true);
+  const [deckBuilderOpen, setDeckBuilderOpen] = useState(false);
   const [gameInfoModalOpen, setGameInfoModalOpen] = useState(true);
   const [eventLogModalOpen, setEventLogModalOpen] = useState(false);
   const [handCardModalOpen, setHandCardModalOpen] = useState(false);
   const [gameLogModalOpen, setGameLogModalOpen] = useState(false);
+  const [aiBalanceTesterOpen, setAiBalanceTesterOpen] = useState(false);
   const [hoveredCard, setHoveredCard] = useState<any>(null);
 
   // 🔧 DEV MODE: Toggle für lokales Testing ohne KI
   const [devMode, setDevMode] = useState(false);
 
   // UI Layout Editor Route
-  const [currentRoute, setCurrentRoute] = useState<'game' | 'ui-editor' | 'test-suite' | 'qte'>('game');
+  const [currentRoute, setCurrentRoute] = useState<'game' | 'ui-editor' | 'test-suite' | 'qte' | 'sprite-demo'>('game');
 
   const {
     gameState,
@@ -101,6 +109,11 @@ function AppContent() {
       // Test Suite Toggle mit 'T' Taste
       if (event.key === 't' || event.key === 'T') {
         setCurrentRoute(currentRoute === 'game' ? 'test-suite' : 'game');
+      }
+
+      // Sprite Demo Toggle mit 'S' Taste
+      if (event.key === 's' || event.key === 'S') {
+        setCurrentRoute(currentRoute === 'game' ? 'sprite-demo' : 'game');
       }
 
       // Debug snapshot: Ctrl+D copies to clipboard, Shift+D downloads file
@@ -334,23 +347,25 @@ function AppContent() {
       startMatchWithDecks(p1Deck, p2Deck);
     } else if (p1Deck && p1Deck.length > 0) {
       if (devMode) {
-        // Dev Mode: Beide Spieler manuell steuern - nutze preset für P2 aber ohne KI
-        const defaultP2Deck = PRESET_DECKS.AUTORITAERER_REALIST as BuilderEntry[];
-        startMatchWithDecks(p1Deck, defaultP2Deck);
+        // Dev Mode: Beide Spieler manuell steuern - nutze leere Decks
+        startMatchWithDecks(p1Deck, []);
         log('🔧 DEV MODE: Spiel gestartet ohne KI - beide Spieler manuell steuerbar');
       } else {
-        // Versus AI with a default preset if only P1 provided
-        startMatchVsAI(p1Deck, 'AUTORITAERER_REALIST');
+        // Versus AI with empty deck if only P1 provided
+        startMatchVsAI(p1Deck, '');
         log('🤖 KI-Spiel gestartet');
       }
     } else {
-      // Use default preset decks if no decks are provided
-      const defaultP1Deck = PRESET_DECKS.NEOLIBERAL_TECHNOKRAT as BuilderEntry[];
-      const defaultP2Deck = PRESET_DECKS.AUTORITAERER_REALIST as BuilderEntry[];
-      startMatchWithDecks(defaultP1Deck, defaultP2Deck);
-      log('🎮 Spiel gestartet mit Standard-Decks');
+      // Use empty decks if no decks are provided
+      startMatchWithDecks([], []);
+      log('🎮 Spiel gestartet mit leeren Decks');
     }
   }, [startMatchWithDecks, startMatchVsAI, devMode, log]);
+
+  const handleIntroComplete = useCallback(() => {
+    setShowIntro(false);
+    setDeckBuilderOpen(true);
+  }, []);
 
   const handlePlayCardFromModal = useCallback((index: number, targetSlot?: string) => {
     console.log('🔧 DEBUG: handlePlayCardFromModal called with:', index, targetSlot);
@@ -432,19 +447,30 @@ function AppContent() {
       height: '100vh',
       overflow: 'hidden',
     }}>
-      {/* Route Navigation */}
+      {/* Sequential Video Player - Brand then Intro */}
+      {showIntro && (
+        <SequentialVideoPlayer
+          onComplete={handleIntroComplete}
+          brandVideoSrc="/assets/brand/apocallippo_brand.mp4"
+          introVideoSrc="/assets/brand/intro.mp4"
+          musicSrc="/assets/music/theme.mp3"
+        />
+      )}
+      {/* Route Navigation Dropdown */}
       <div style={{
         position: 'fixed',
         top: '10px',
         left: '10px',
         zIndex: 1001,
-        display: 'flex',
-        gap: '8px',
       }}>
-        <button
-          onClick={() => setCurrentRoute('game')}
+        <select
+          value={currentRoute}
+          onChange={(e) => {
+            const route = e.target.value as 'game' | 'ui-editor' | 'test-suite' | 'qte' | 'sprite-demo';
+            setCurrentRoute(route);
+          }}
           style={{
-            background: currentRoute === 'game' ? '#3b82f6' : '#374151',
+            background: '#374151',
             color: 'white',
             border: 'none',
             padding: '8px 12px',
@@ -452,79 +478,15 @@ function AppContent() {
             fontSize: '12px',
             fontWeight: 600,
             cursor: 'pointer',
+            minWidth: '150px',
           }}
         >
-          🎮 Game
-        </button>
-        <button
-          onClick={() => {
-            // Start a quick match vs AI using default presets
-            try {
-              startMatchVsAI(PRESET_DECKS.NEOLIBERAL_TECHNOKRAT as any);
-              log('🤖 Schnellstart: Spiel vs KI gestartet');
-            } catch (e) {
-              console.error('Start vs AI failed', e);
-              log('❌ Fehler: KI-Start fehlgeschlagen');
-            }
-          }}
-          style={{
-            background: '#10b981',
-            color: 'white',
-            border: 'none',
-            padding: '8px 12px',
-            borderRadius: '6px',
-            fontSize: '12px',
-            fontWeight: 600,
-            cursor: 'pointer',
-          }}
-        >
-          🤖 Start vs KI
-        </button>
-        <button
-          onClick={() => setCurrentRoute('ui-editor')}
-          style={{
-            background: currentRoute === 'ui-editor' ? '#3b82f6' : '#374151',
-            color: 'white',
-            border: 'none',
-            padding: '8px 12px',
-            borderRadius: '6px',
-            fontSize: '12px',
-            fontWeight: 600,
-            cursor: 'pointer',
-          }}
-        >
-          🎨 UI Editor
-        </button>
-        <button
-          onClick={() => setCurrentRoute('test-suite')}
-          style={{
-            background: currentRoute === 'test-suite' ? '#3b82f6' : '#374151',
-            color: 'white',
-            border: 'none',
-            padding: '8px 12px',
-            borderRadius: '6px',
-            fontSize: '12px',
-            fontWeight: 600,
-            cursor: 'pointer',
-          }}
-        >
-          🧪 Test Suite
-        </button>
-        <button
-          onClick={() => setCurrentRoute('qte')}
-          style={{
-            background: currentRoute === 'qte' ? '#3b82f6' : '#374151',
-            color: 'white',
-            border: 'none',
-            padding: '8px 12px',
-            borderRadius: '6px',
-            fontSize: '12px',
-            fontWeight: 600,
-            cursor: 'pointer',
-          }}
-        >
-          🕹 QTE
-        </button>
+          <option value="game">🎮 Game</option>
+          <option value="ui-editor">🎨 UI Editor</option>
+          <option value="test-suite">🧪 Test Suite</option>
+          <option value="qte">🕹 QTE</option>
+          <option value="sprite-demo">🦾 Sprite Demo</option>
+        </select>
       </div>
 
       {currentRoute === 'ui-editor' ? (
@@ -533,6 +495,8 @@ function AppContent() {
         <CardEffectTestSuite />
       ) : currentRoute === 'qte' ? (
         <QTEFrame onBack={() => setCurrentRoute('game')} />
+      ) : currentRoute === 'sprite-demo' ? (
+        <SpriteAtlasDemo />
       ) : (
         <div style={{
           position: 'fixed',
@@ -561,7 +525,28 @@ function AppContent() {
                 onClose={() => setDeckBuilderOpen(false)}
                 onApplyDeck={handleApplyDeck}
                 onStartMatch={handleStartMatch}
+                onStartVsAI={(p1Deck) => {
+                  try {
+                    startMatchVsAI(p1Deck, '');
+                    log('🤖 Spiel vs KI mit zufälligem Premade-Deck gestartet');
+                  } catch (error) {
+                    console.error('Start vs AI failed', error);
+                    log('❌ Fehler: KI-Start fehlgeschlagen');
+                  }
+                }}
               />
+
+              {/* Music Toggle for DeckBuilder */}
+              {deckBuilderOpen && (
+                <div style={{
+                  position: 'fixed',
+                  top: '20px',
+                  right: '20px',
+                  zIndex: 1000,
+                }}>
+                  <MusicToggle size="medium" />
+                </div>
+              )}
 
               {!deckBuilderOpen && (
                 <GameInfoModal
@@ -636,6 +621,18 @@ function AppContent() {
                 </div>
               )}
 
+              {/* Music Toggle for In-Game */}
+              {!deckBuilderOpen && (
+                <div style={{
+                  position: 'fixed',
+                  top: '20px',
+                  right: devMode ? '120px' : '20px',
+                  zIndex: 1000,
+                }}>
+                  <MusicToggle size="medium" />
+                </div>
+              )}
+
               {/* 🎯 Current Player Indicator (immer sichtbar im Dev Mode) */}
               {devMode && (
                 <div style={{
@@ -663,6 +660,42 @@ function AppContent() {
                   </div>
                 </div>
               )}
+
+              {/* 🤖 AI Balance Tester Button (Dev Mode) */}
+              {devMode && (
+                <div style={{
+                  position: 'fixed',
+                  top: '140px',
+                  right: '10px',
+                  zIndex: 1000,
+                }}>
+                  <button
+                    onClick={() => setAiBalanceTesterOpen(true)}
+                    style={{
+                      background: '#8b5cf6',
+                      color: 'white',
+                      border: 'none',
+                      padding: '12px 16px',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                    }}
+                  >
+                    🤖 AI Balance Tester
+                  </button>
+                </div>
+              )}
+
+              {/* AI Balance Tester Modal */}
+              <AIBalanceTester
+                isOpen={aiBalanceTesterOpen}
+                onClose={() => setAiBalanceTesterOpen(false)}
+              />
             </div>
           </VisualEffectsProvider>
         </div>
@@ -673,9 +706,11 @@ function AppContent() {
 
 function App() {
   return (
-    <GameProvider>
-      <AppContent />
-    </GameProvider>
+    <AudioProvider>
+      <GameProvider>
+        <AppContent />
+      </GameProvider>
+    </AudioProvider>
   );
 }
 

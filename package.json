@@ -33,6 +33,12 @@
     "test:ui": "node tools/ui_automator.js",
     "validate:effects": "ts-node src/utils/effectKeyValidator.ts",
     "sim": "node tools/run_ai_simulations_wrapper.js",
+    "balance:test": "node scripts/run_balance_test.js",
+    "balance:test:quick": "node scripts/run_balance_test.js 50",
+    "balance:test:full": "node scripts/run_balance_test.js 500",
+    "balance:proper": "node scripts/run_proper_balance_test.js",
+    "balance:proper:quick": "node scripts/run_proper_balance_test.js 50",
+    "balance:proper:full": "node scripts/run_proper_balance_test.js 500",
     "atlas:ninja": "node tools/buildAtlas.js public/qte/ninja",
     "atlas:cyboard": "node tools/buildAtlas.js public/qte/cyboard"
   },

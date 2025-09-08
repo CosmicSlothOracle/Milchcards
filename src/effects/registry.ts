@@ -11,11 +11,68 @@ export type EffectHandler = (params: {
 
 // Main effects registry with clean structure
 export const EFFECTS: Record<string, EffectHandler> = {
+  // Standard government card - no special effects, just influence
+  'gov.standard': ({ enqueue, player, log }) => {
+    // Standard government cards provide only influence - no special effects
+    log('🟢 gov.standard');
+  },
+
+  // Joschka Fischer - NGO boost effect
+  'gov.ngo_boost': ({ enqueue, player, log }) => {
+    // Joschka Fischer provides NGO synergy - handled by aura system
+    log('🟢 gov.ngo_boost');
+  },
   // Bill Gates — +1 AP
   'public.bill_gates.next_initiative_ap1': ({ enqueue, player, log }) => {
     enqueue({ type: 'ADD_AP', player, amount: 1 });
     enqueue({ type: 'LOG', msg: 'Bill Gates: +1 AP.' });
     log('🟢 public.bill_gates.next_initiative_ap1');
+  },
+
+  // Beispiel-Karte für visuelle Effekte - Symbolpolitik mit gelblichem +1 AP Effekt
+  'init.symbolic_politics.visual_demo': ({ enqueue, player, log }) => {
+    enqueue({ type: 'DRAW_CARDS', player, amount: 1 });
+    enqueue({ type: 'ADD_AP', player, amount: 1 }); // Dies triggert automatisch VISUAL_AP_GAIN
+    enqueue({ type: 'LOG', msg: 'Symbolpolitik: Ziehe 1 Karte, erhalte +1 AP (mit visueller Animation).' });
+    log('🟢 init.symbolic_politics.visual_demo');
+  },
+
+  // Erweiterte Demo-Karte mit verschiedenen visuellen Effekten
+  'init.visual_effects_demo.comprehensive': ({ enqueue, player, log }) => {
+    // 1. AP Gain mit automatischem visuellen Effekt (emit as two atomic +1 events)
+    enqueue({ type: 'ADD_AP', player, amount: 1 });
+    enqueue({ type: 'ADD_AP', player, amount: 1 });
+
+    // 2. Manueller AP Gain Effekt mit spezieller Farbe
+    enqueue({
+      type: 'VISUAL_AP_GAIN',
+      player,
+      amount: 1,
+      color: '#ff6b6b', // Rot für zusätzlichen AP
+      size: 28
+    });
+
+    // 3. Einfluss-Buff mit automatischem visuellen Effekt
+    enqueue({ type: 'BUFF_STRONGEST_GOV', player, amount: 3 });
+
+    // 4. Manueller Einfluss-Buff mit spezieller Farbe
+    enqueue({
+      type: 'VISUAL_INFLUENCE_BUFF',
+      player,
+      amount: 2,
+      color: '#a855f7' // Lila für speziellen Buff
+    });
+
+    // 5. Karten-Spiel Effekt
+    enqueue({
+      type: 'VISUAL_CARD_PLAY',
+      player,
+      cardName: 'Visual Effects Demo',
+      effectType: 'initiative'
+    });
+
+    enqueue({ type: 'LOG', msg: 'Visual Effects Demo: Zeigt alle verfügbaren visuellen Effekte.' });
+    log('🟢 init.visual_effects_demo.comprehensive');
   },
 
   // Greta Thunberg — +1 AP
@@ -100,7 +157,9 @@ export const EFFECTS: Record<string, EffectHandler> = {
   },
 
   'init.surprise_funding.ap2': ({ enqueue, player, log }) => {
-    enqueue({ type: 'ADD_AP', player, amount: 2 });
+    // Emit as two atomic +1 events to keep ADD_AP semantics consistent
+    enqueue({ type: 'ADD_AP', player, amount: 1 });
+    enqueue({ type: 'ADD_AP', player, amount: 1 });
     enqueue({ type: 'INITIATIVE_ACTIVATED', player });
     enqueue({ type: 'LOG', msg: 'Surprise Funding: +2 AP now.' });
     log('🟢 init.surprise_funding.ap2');
@@ -445,28 +504,18 @@ export const EFFECTS: Record<string, EffectHandler> = {
     log('🟢 public.warren_buffett.draw2_ap1 (reworked)');
   },
 
-  'public.jeff_bezos.ap2': ({ enqueue, player, log }) => {
-    enqueue({ type: 'ADD_AP', player, amount: 2 });
-    enqueue({ type: 'LOG', msg: 'Jeff Bezos: +2 AP' });
-    log('🟢 public.jeff_bezos.ap2');
+  'public.jeff_bezos.oligarch_removal': ({ enqueue, player, log }) => {
+    // Jeff Bezos entfernt alle anderen Oligarchen vom Spielfeld
+    enqueue({ type: 'REMOVE_OTHER_OLIGARCHS', player });
+    enqueue({ type: 'LOG', msg: 'Jeff Bezos: Entfernt alle anderen Oligarchen vom Spielfeld' });
+    log('🟢 public.jeff_bezos.oligarch_removal');
   },
 
-  'public.larry_page.draw1_ap1': ({ enqueue, player, log }) => {
-    enqueue({ type: 'DRAW_CARDS', player, amount: 1 });
-    enqueue({ type: 'ADD_AP', player, amount: 1 });
-    enqueue({ type: 'LOG', msg: 'Larry Page: +1 Karte, +1 AP' });
-    log('🟢 public.larry_page.draw1_ap1');
-  },
-
-  'public.sergey_brin.draw1_ap1': ({ enqueue, player, log }) => {
-    enqueue({ type: 'DRAW_CARDS', player, amount: 1 });
-    enqueue({ type: 'ADD_AP', player, amount: 1 });
-    enqueue({ type: 'LOG', msg: 'Sergey Brin: +1 Karte, +1 AP' });
-    log('🟢 public.sergey_brin.draw1_ap1');
-  },
 
   'public.tim_cook.ap2': ({ enqueue, player, log }) => {
-    enqueue({ type: 'ADD_AP', player, amount: 2 });
+    // Tim Cook grants +2 AP; emit as two +1 events for atomicity
+    enqueue({ type: 'ADD_AP', player, amount: 1 });
+    enqueue({ type: 'ADD_AP', player, amount: 1 });
     enqueue({ type: 'LOG', msg: 'Tim Cook: +2 AP' });
     log('🟢 public.tim_cook.ap2');
   },
@@ -655,9 +704,7 @@ export const LEGACY_NAME_TO_KEY: Record<string, string> = {
   'Oprah Winfrey': 'public.oprah_winfrey.deactivate_hands',
   'George Soros': 'public.george_soros.ap1',
   'Warren Buffett': 'public.warren_buffett.draw2_ap1',
-  'Jeff Bezos': 'public.jeff_bezos.ap2',
-  'Larry Page': 'public.larry_page.draw1_ap1',
-  'Sergey Brin': 'public.sergey_brin.draw1_ap1',
+  'Jeff Bezos': 'public.jeff_bezos.oligarch_removal',
   'Tim Cook': 'public.tim_cook.ap2',
   'Koalitionszwang': 'gov.koalitionszwang.coalition_bonus',
   // Government cards removed - no effects, only influence

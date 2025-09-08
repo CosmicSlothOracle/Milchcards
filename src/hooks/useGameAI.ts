@@ -1,6 +1,5 @@
 import { useCallback, useState } from 'react';
 import { GameState, Card, Player } from '../types/game';
-import { PRESET_DECKS } from '../data/gameData';
 import { sumRow, getCardActionPointCost } from '../utils/gameUtils';
 import { takeTurn as aiTakeTurn, Difficulty } from '../ai/aiPlayer';
 
@@ -10,12 +9,12 @@ export function useGameAI(
   log: (msg: string) => void
 ) {
   const aiEnabled = gameState.aiEnabled?.[2] ?? false;
-  const [aiPreset, setAiPreset] = useState<keyof typeof PRESET_DECKS>('AUTORITAERER_REALIST');
+  const [aiPreset, setAiPreset] = useState<string>('');
 
-  // Debug logging for AI state changes (only in development)
-  if (process.env.NODE_ENV === 'development') {
-    console.log('🔧 DEBUG: useGameAI state - aiEnabled:', aiEnabled, 'aiPreset:', aiPreset);
-  }
+  // Debug logging for AI state changes (only in development) - disabled to reduce log spam
+  // if (process.env.NODE_ENV === 'development') {
+  //   console.log('🔧 DEBUG: useGameAI state - aiEnabled:', aiEnabled, 'aiPreset:', aiPreset);
+  // }
 
   // AI enabled state - controlled by game logic
   // const forceAIEnabled = true; // Removed force-enable hack
@@ -32,22 +31,22 @@ export function useGameAI(
 
     // Only set preset when AI is enabled
     if (enabled) {
-      setAiPreset('AUTORITAERER_REALIST');
+      setAiPreset('');
     }
   }, [setGameState]);
 
   // Enhanced setAiPreset with logging - only when AI is enabled
-  const setAiPresetWithLog = useCallback((preset: keyof typeof PRESET_DECKS) => {
+  const setAiPresetWithLog = useCallback((preset: string) => {
     if (aiEnabled) {
-      console.log('🔧 DEBUG: setAiPreset called with:', preset);
+      // console.log('🔧 DEBUG: setAiPreset called with:', preset);
       setAiPreset(preset);
     } else {
-      console.log('🔧 DEBUG: setAiPreset ignored - AI not enabled');
+      // console.log('🔧 DEBUG: setAiPreset ignored - AI not enabled');
     }
   }, [aiEnabled]);
 
   const runAITurn = useCallback(() => {
-    console.log('🔧 DEBUG: runAITurn called - aiEnabled:', aiEnabled, 'current player:', gameState.current);
+    // console.log('🔧 DEBUG: runAITurn called - aiEnabled:', aiEnabled, 'current player:', gameState.current);
 
     // Determine difficulty mapping (default to medium)
     const difficulty: Difficulty = 'medium';

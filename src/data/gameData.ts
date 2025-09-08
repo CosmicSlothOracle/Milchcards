@@ -98,76 +98,72 @@ export const Specials: BaseSpecial[] = [
 // Politicians data - Only government cards from MD files
 export const Pols: BasePolitician[] = [
   // Government Cards (Regierung) - From Karten_Regierung.md
-  {id:1,  key:'Vladimir_Putin', name:'Vladimir Putin', influence:10, T:2, BP:17},
-  {id:2,  key:'Xi_Jinping', name:'Xi Jinping', influence:10, T:2, BP:17},
-  {id:3,  key:'Recep_Tayyip_Erdogan', name:'Recep Tayyip Erdoğan', influence:10, T:2, BP:17},
-  {id:4,  key:'Justin_Trudeau', name:'Justin Trudeau', influence:8, T:2, BP:13},
-  {id:5,  key:'Volodymyr_Zelenskyy', name:'Volodymyr Zelenskyy', influence:9, T:2, BP:13},
-  {id:6,  key:'Ursula_von_der_Leyen', name:'Ursula von der Leyen', influence:9, T:2, BP:15},
-  {id:7,  key:'Narendra_Modi', name:'Narendra Modi', influence:9, T:2, BP:13},
-  {id:8,  key:'Luiz_Inacio_Lula', name:'Luiz Inácio Lula da Silva', influence:9, T:2, BP:13},
-  {id:9,  key:'Sergey_Lavrov', name:'Sergey Lavrov', influence:9, T:2, BP:13},
-  {id:10, key:'Wolfgang_Schaeuble', name:'Wolfgang Schäuble', influence:8, T:2, BP:13},
-  {id:11, key:'Jens_Stoltenberg', name:'Jens Stoltenberg', influence:8, T:2, BP:12},
-  {id:12, key:'Helmut_Schmidt', name:'Helmut Schmidt', influence:9, T:2, BP:15},
-  {id:13, key:'Javier_Milei', name:'Javier Milei', influence:7, T:2, BP:11},
-  {id:14, key:'Joschka_Fischer', name:'Joschka Fischer', influence:7, T:2, BP:11, effect:'ngo_boost'},
-  {id:15, key:'Kamala_Harris', name:'Kamala Harris', influence:7, T:2, BP:11},
-  {id:16, key:'Olaf_Scholz', name:'Olaf Scholz', influence:7, T:1, BP:7},
-  {id:17, key:'Rishi_Sunak', name:'Rishi Sunak', influence:7, T:1, BP:6},
-  {id:18, key:'Pedro_Sanchez', name:'Pedro Sánchez', influence:6, T:1, BP:5},
-  {id:19, key:'Keir_Starmer', name:'Keir Starmer', influence:6, T:1, BP:5},
-  {id:20, key:'Robert_Gates', name:'Robert Gates', influence:6, T:1, BP:5},
-  {id:21, key:'Karl_Rove', name:'Karl Rove', influence:6, T:1, BP:5},
-  {id:22, key:'Shigeru_Ishiba', name:'Shigeru Ishiba', influence:6, T:1, BP:5},
-  {id:23, key:'Heidemarie_Wieczorek_Zeul', name:'Heidemarie Wieczorek-Zeul', influence:5, T:1, BP:4},
-  {id:24, key:'Renate_Kuenast', name:'Renate Künast', influence:5, T:1, BP:4},
-  {id:25, key:'Rudolf_Scharping', name:'Rudolf Scharping', influence:5, T:1, BP:4},
-  {id:26, key:'John_Ashcroft', name:'John Ashcroft', influence:5, T:1, BP:4},
-  {id:27, key:'Tedros_Adhanom_Ghebreyesus', name:'Tedros Adhanom Ghebreyesus', influence:5, T:1, BP:4},
-  {id:28, key:'Tom_Ridge', name:'Tom Ridge', influence:5, T:1, BP:4},
-  {id:29, key:'Henry_Paulson', name:'Henry Paulson', influence:6, T:1, BP:5},
-  {id:30, key:'Horst_köhler', name:'Horst Köhler', influence:7, T:1, BP:6},
-  {id:31, key:'Johannes_Rau', name:'Johannes Rau', influence:6, T:1, BP:5},
-  {id:32, key:'John_Snow', name:'John Snow', influence:4, T:1, BP:3},
-  {id:33, key:'Karl_Carstens', name:'Karl Carstens', influence:4, T:1, BP:3},
-  {id:34, key:'Hans_Eichel', name:'Hans Eichel', influence:4, T:1, BP:3},
-  {id:35, key:'Walter_Scheel', name:'Walter Scheel', influence:4, T:1, BP:4},
-  {id:36, key:'Werner_Maihofer', name:'Werner Maihofer', influence:3, T:1, BP:2},
-  {id:37, key:'Andrzej_Duda', name:'Andrzej Duda', influence:8, T:2, BP:13},
-  {id:38, key:'Anthony_Albanese', name:'Anthony Albanese', influence:8, T:2, BP:13},
-  {id:39, key:'Benjamin_Netanyahu', name:'Benjamin Netanyahu', influence:9, T:2, BP:15},
-  {id:40, key:'Dick_Cheney', name:'Dick Cheney', influence:8, T:2, BP:13},
-  {id:41, key:'Donald_Trump', name:'Donald Trump', influence:10, T:2, BP:17},
-  {id:42, key:'Ebrahim_Raisi', name:'Ebrahim Raisi', influence:9, T:2, BP:15},
-  {id:43, key:'Emmanuel_Macron', name:'Emmanuel Macron', influence:9, T:2, BP:15},
-  {id:44, key:'Giorgia_Meloni', name:'Giorgia Meloni', influence:9, T:2, BP:15},
-  {id:45, key:'King_Charles_III', name:'King Charles III', influence:7, T:2, BP:12},
-  {id:46, key:'Mohammed_bin_Salman', name:'Mohammed bin Salman', influence:10, T:2, BP:17},
-  {id:47, key:'Alberto_Gonzales', name:'Alberto Gonzales', influence:5, T:1, BP:4},
-  {id:48, key:'Annette_Schavan', name:'Annette Schavan', influence:5, T:1, BP:4},
-  {id:49, key:'Edelgard_Bulmahn', name:'Edelgard Bulmahn', influence:4, T:1, BP:3},
-  {id:50, key:'Erhard_Eppler', name:'Erhard Eppler', influence:6, T:1, BP:5},
-  {id:51, key:'Franz_Josef_Jung', name:'Franz Josef Jung', influence:5, T:1, BP:4},
-  {id:52, key:'Friedrich_Merz', name:'Friedrich Merz', influence:6, T:1, BP:5},
-  {id:53, key:'Georg_Leber', name:'Georg Leber', influence:5, T:1, BP:4},
-  {id:54, key:'Gerhart_Baum', name:'Gerhart Baum', influence:4, T:1, BP:3},
-  {id:55, key:'Hans_Apel', name:'Hans Apel', influence:5, T:1, BP:4},
-  {id:56, key:'Hans_Dietrich_Genscher', name:'Hans Dietrich Genscher', influence:8, T:2, BP:13},
-  {id:57, key:'Otto_Schily', name:'Otto Schily', influence:6, T:1, BP:5},
-  {id:58, key:'Peter_Struck', name:'Peter Struck', influence:5, T:1, BP:4},
-  {id:59, key:'Rainer_Offergeld', name:'Rainer Offergeld', influence:4, T:1, BP:3},
-  {id:60, key:'Colin_Powell', name:'Colin Powell', influence:7, T:2, BP:12},
-  {id:61, key:'Condoleezza_Rice', name:'Condoleezza Rice', influence:7, T:2, BP:12},
-  {id:62, key:'Donald_Rumsfeld', name:'Donald Rumsfeld', influence:7, T:2, BP:12},
-  {id:63, key:'Christine_Lagarde', name:'Christine Lagarde', influence:8, T:2, BP:13},
+  {id:1,  key:'Vladimir_Putin', name:'Vladimir Putin', influence:10, T:2, BP:17, effectKey:'gov.standard'},
+  {id:2,  key:'Xi_Jinping', name:'Xi Jinping', influence:10, T:2, BP:17, effectKey:'gov.standard'},
+  {id:3,  key:'Recep_Tayyip_Erdogan', name:'Recep Tayyip Erdoğan', influence:10, T:2, BP:17, effectKey:'gov.standard'},
+  {id:4,  key:'Justin_Trudeau', name:'Justin Trudeau', influence:8, T:2, BP:13, effectKey:'gov.standard'},
+  {id:5,  key:'Volodymyr_Zelenskyy', name:'Volodymyr Zelenskyy', influence:9, T:2, BP:13, effectKey:'gov.standard'},
+  {id:6,  key:'Ursula_von_der_Leyen', name:'Ursula von der Leyen', influence:9, T:2, BP:15, effectKey:'gov.standard'},
+  {id:7,  key:'Narendra_Modi', name:'Narendra Modi', influence:9, T:2, BP:13, effectKey:'gov.standard'},
+  {id:8,  key:'Luiz_Inacio_Lula', name:'Luiz Inácio Lula da Silva', influence:9, T:2, BP:13, effectKey:'gov.standard'},
+  {id:9,  key:'Sergey_Lavrov', name:'Sergey Lavrov', influence:9, T:2, BP:13, effectKey:'gov.standard'},
+  {id:10, key:'Wolfgang_Schaeuble', name:'Wolfgang Schäuble', influence:8, T:2, BP:13, effectKey:'gov.standard'},
+  {id:11, key:'Jens_Stoltenberg', name:'Jens Stoltenberg', influence:8, T:2, BP:12, effectKey:'gov.standard'},
+  {id:12, key:'Helmut_Schmidt', name:'Helmut Schmidt', influence:9, T:2, BP:15, effectKey:'gov.standard'},
+  {id:13, key:'Javier_Milei', name:'Javier Milei', influence:7, T:2, BP:11, effectKey:'gov.standard'},
+  {id:14, key:'Joschka_Fischer', name:'Joschka Fischer', influence:7, T:2, BP:11, effect:'ngo_boost', effectKey:'gov.ngo_boost'},
+  {id:15, key:'Kamala_Harris', name:'Kamala Harris', influence:7, T:2, BP:11, effectKey:'gov.standard'},
+  {id:16, key:'Olaf_Scholz', name:'Olaf Scholz', influence:7, T:1, BP:7, effectKey:'gov.standard'},
+  {id:17, key:'Rishi_Sunak', name:'Rishi Sunak', influence:7, T:1, BP:6, effectKey:'gov.standard'},
+  {id:18, key:'Pedro_Sanchez', name:'Pedro Sánchez', influence:6, T:1, BP:5, effectKey:'gov.standard'},
+  {id:19, key:'Keir_Starmer', name:'Keir Starmer', influence:6, T:1, BP:5, effectKey:'gov.standard'},
+  {id:20, key:'Robert_Gates', name:'Robert Gates', influence:6, T:1, BP:5, effectKey:'gov.standard'},
+  {id:21, key:'Karl_Rove', name:'Karl Rove', influence:6, T:1, BP:5, effectKey:'gov.standard'},
+  {id:22, key:'Shigeru_Ishiba', name:'Shigeru Ishiba', influence:6, T:1, BP:5, effectKey:'gov.standard'},
+  {id:23, key:'Heidemarie_Wieczorek_Zeul', name:'Heidemarie Wieczorek-Zeul', influence:5, T:1, BP:4, effectKey:'gov.standard'},
+  {id:24, key:'Renate_Kuenast', name:'Renate Künast', influence:5, T:1, BP:4, effectKey:'gov.standard'},
+  {id:25, key:'Rudolf_Scharping', name:'Rudolf Scharping', influence:5, T:1, BP:4, effectKey:'gov.standard'},
+  {id:26, key:'John_Ashcroft', name:'John Ashcroft', influence:5, T:1, BP:4, effectKey:'gov.standard'},
+  {id:27, key:'Tedros_Adhanom_Ghebreyesus', name:'Tedros Adhanom Ghebreyesus', influence:5, T:1, BP:4, effectKey:'gov.standard'},
+  {id:28, key:'Tom_Ridge', name:'Tom Ridge', influence:5, T:1, BP:4, effectKey:'gov.standard'},
+  {id:29, key:'Henry_Paulson', name:'Henry Paulson', influence:6, T:1, BP:5, effectKey:'gov.standard'},
+  {id:30, key:'Horst_köhler', name:'Horst Köhler', influence:7, T:1, BP:6, effectKey:'gov.standard'},
+  {id:31, key:'Johannes_Rau', name:'Johannes Rau', influence:6, T:1, BP:5, effectKey:'gov.standard'},
+  {id:32, key:'John_Snow', name:'John Snow', influence:4, T:1, BP:3, effectKey:'gov.standard'},
+  {id:33, key:'Karl_Carstens', name:'Karl Carstens', influence:4, T:1, BP:3, effectKey:'gov.standard'},
+  {id:34, key:'Hans_Eichel', name:'Hans Eichel', influence:4, T:1, BP:3, effectKey:'gov.standard'},
+  {id:35, key:'Walter_Scheel', name:'Walter Scheel', influence:4, T:1, BP:4, effectKey:'gov.standard'},
+  {id:36, key:'Werner_Maihofer', name:'Werner Maihofer', influence:3, T:1, BP:2, effectKey:'gov.standard'},
+  {id:37, key:'Andrzej_Duda', name:'Andrzej Duda', influence:8, T:2, BP:13, effectKey:'gov.standard'},
+  {id:38, key:'Anthony_Albanese', name:'Anthony Albanese', influence:8, T:2, BP:13, effectKey:'gov.standard'},
+  {id:39, key:'Benjamin_Netanyahu', name:'Benjamin Netanyahu', influence:9, T:2, BP:15, effectKey:'gov.standard'},
+  {id:40, key:'Dick_Cheney', name:'Dick Cheney', influence:8, T:2, BP:13, effectKey:'gov.standard'},
+  {id:41, key:'Donald_Trump', name:'Donald Trump', influence:10, T:2, BP:17, effectKey:'gov.standard'},
+  {id:42, key:'Ebrahim_Raisi', name:'Ebrahim Raisi', influence:9, T:2, BP:15, effectKey:'gov.standard'},
+  {id:43, key:'Emmanuel_Macron', name:'Emmanuel Macron', influence:9, T:2, BP:15, effectKey:'gov.standard'},
+  {id:44, key:'Giorgia_Meloni', name:'Giorgia Meloni', influence:9, T:2, BP:15, effectKey:'gov.standard'},
+  {id:45, key:'King_Charles_III', name:'King Charles III', influence:7, T:2, BP:12, effectKey:'gov.standard'},
+  {id:46, key:'Mohammed_bin_Salman', name:'Mohammed bin Salman', influence:10, T:2, BP:17, effectKey:'gov.standard'},
+  {id:47, key:'Alberto_Gonzales', name:'Alberto Gonzales', influence:5, T:1, BP:4, effectKey:'gov.standard'},
+  {id:48, key:'Annette_Schavan', name:'Annette Schavan', influence:5, T:1, BP:4, effectKey:'gov.standard'},
+  {id:49, key:'Edelgard_Bulmahn', name:'Edelgard Bulmahn', influence:4, T:1, BP:3, effectKey:'gov.standard'},
+  {id:50, key:'Erhard_Eppler', name:'Erhard Eppler', influence:6, T:1, BP:5, effectKey:'gov.standard'},
+  {id:51, key:'Franz_Josef_Jung', name:'Franz Josef Jung', influence:5, T:1, BP:4, effectKey:'gov.standard'},
+  {id:52, key:'Friedrich_Merz', name:'Friedrich Merz', influence:6, T:1, BP:5, effectKey:'gov.standard'},
+  {id:53, key:'Georg_Leber', name:'Georg Leber', influence:5, T:1, BP:4, effectKey:'gov.standard'},
+  {id:54, key:'Gerhart_Baum', name:'Gerhart Baum', influence:4, T:1, BP:3, effectKey:'gov.standard'},
+  {id:55, key:'Hans_Apel', name:'Hans Apel', influence:5, T:1, BP:4, effectKey:'gov.standard'},
+  {id:56, key:'Hans_Dietrich_Genscher', name:'Hans Dietrich Genscher', influence:8, T:2, BP:13, effectKey:'gov.standard'},
+  {id:57, key:'Otto_Schily', name:'Otto Schily', influence:6, T:1, BP:5, effectKey:'gov.standard'},
+  {id:58, key:'Peter_Struck', name:'Peter Struck', influence:5, T:1, BP:4, effectKey:'gov.standard'},
+  {id:59, key:'Rainer_Offergeld', name:'Rainer Offergeld', influence:4, T:1, BP:3, effectKey:'gov.standard'},
+  {id:60, key:'Colin_Powell', name:'Colin Powell', influence:7, T:2, BP:12, effectKey:'gov.standard'},
+  {id:61, key:'Condoleezza_Rice', name:'Condoleezza Rice', influence:7, T:2, BP:12, effectKey:'gov.standard'},
+  {id:62, key:'Donald_Rumsfeld', name:'Donald Rumsfeld', influence:7, T:2, BP:12, effectKey:'gov.standard'},
+  {id:63, key:'Christine_Lagarde', name:'Christine Lagarde', influence:8, T:2, BP:13, effectKey:'gov.standard'},
 
   // --- Neue Politiker gemäß Guidelines §9 ---
-  {id:64, key:'Angela_Merkel', name:'Angela Merkel', influence:9, T:2, BP:15},
-  {id:65, key:'Joe_Biden', name:'Joe Biden', influence:9, T:2, BP:15},
-  {id:66, key:'Shinzo_Abe', name:'Shinzo Abe', influence:8, T:2, BP:13},
-  {id:67, key:'Larry_Page', name:'Larry Page', influence:7, T:2, BP:11},
-  {id:68, key:'Sergey_Brin', name:'Sergey Brin', influence:7, T:2, BP:11},
+  // Removed: Angela Merkel, Joe Biden, Shinzo Abe, Larry Page, Sergey Brin
 ];
 
 // Filename mapping for card images
@@ -338,216 +334,3 @@ export const UI_ZONES: Record<string, { x: number; y: number; w: number; h: numb
   MODAL: { x: 100, y: 100, w: 600, h: 400 }
 };
 
-// Preset deck configurations based on Vorgefertigte_Decks.md
-export const PRESET_DECKS = {
-  INITIATIVE_TEST_DECK: [
-    // 🧪 INITIATIVE TEST DECK: Phase 1 - Alle 4 implementierten Sofort-Initiativen
-    // Minimaler Deck für fokussiertes Testing der neuen Engine
-
-    // Regierungskarten (4 Karten) - Verschiedene Stärken für Spin Doctor Test
-    { kind: 'pol' as const, baseId: 21, count: 1 }, // Karl Rove (Berater, 6 I) - SCHWÄCHSTE
-    { kind: 'pol' as const, baseId: 20, count: 1 }, // Robert Gates (Minister, 6 I)
-    { kind: 'pol' as const, baseId: 16, count: 1 }, // Olaf Scholz (Regierungschef, 7 I) - STÄRKSTE
-    { kind: 'pol' as const, baseId: 14, count: 1 }, // Joschka Fischer (Diplomat, 7 I) - Think-tank Test
-
-    // Alle 4 Phase-1-Initiativen (4 Karten)
-    { kind: 'spec' as const, baseId: 12, count: 1 }, // Symbolpolitik (1 BP) - DRAW_1
-    { kind: 'spec' as const, baseId: 6, count: 1 },  // Verzögerungsverfahren (1 BP) - AP_PLUS_1
-    { kind: 'spec' as const, baseId: 8, count: 1 },  // Think-tank (2 BP) - THINK_TANK
-    { kind: 'spec' as const, baseId: 2, count: 1 },  // Spin Doctor (2 BP) - SPIN_DOCTOR
-
-    // Support-Karten (2 Karten) - Zum Testen der Kombinationen
-    { kind: 'spec' as const, baseId: 69, count: 1 }, // George Soros (7 BP) - Autoritär-Bonus
-    { kind: 'spec' as const, baseId: 70, count: 1 }, // Greta Thunberg (4 BP) - +1 AP
-  ],
-
-  TEST_DECK_WITH_DRAW_EFFECTS: [
-    // 🧪 TEST DECK: "Ziehe 1 Karte" Effekt-Testing für alle 6 Karten + Shadow Lobbying
-    // Regierungskarten (3 Karten)
-    { kind: 'pol' as const, baseId: 14, count: 1 }, // Joschka Fischer (Diplomat, 7 M) - NGO BOOST EFFEKT
-    { kind: 'pol' as const, baseId: 21, count: 1 }, // Karl Rove (Berater, 6 M)
-    { kind: 'pol' as const, baseId: 20, count: 1 }, // Robert Gates (Minister, 6 M)
-
-    // Öffentlichkeitskarten (8 Karten) - Alle "Ziehe 1 Karte" Effekte
-    { kind: 'spec' as const, baseId: 64, count: 1 }, // Elon Musk (8 BP) - ZIEHE 1 KARTE + erste Initiative -1 AP
-    { kind: 'spec' as const, baseId: 65, count: 1 }, // Bill Gates (7 BP) - ZIEHE 1 KARTE + nächste Initiative -1 AP
-    { kind: 'spec' as const, baseId: 78, count: 1 }, // Jeff Bezos (6 BP) - ZIEHE 1 KARTE + bei Plattform +1 AP
-    { kind: 'spec' as const, baseId: 87, count: 1 }, // Warren Buffett (7 BP) - ZIEHE 1 KARTE + bei Wirtschafts-Initiative +1 Effect
-    { kind: 'spec' as const, baseId: 88, count: 1 }, // Gautam Adani (6 BP) - ZIEHE 1 KARTE + bei Infrastruktur-Initiative +1 Effect
-    { kind: 'spec' as const, baseId: 80, count: 1 }, // Zhang Yiming (6 BP) - ZIEHE 1 KARTE + bei Medien +1 AP
-    { kind: 'spec' as const, baseId: 69, count: 1 }, // George Soros (7 BP) - +1 AP bei autoritärer Regierung
-    { kind: 'spec' as const, baseId: 86, count: 1 }, // Anthony Fauci (5 BP) - Gesundheits-Initiative +1 Effect
-
-    // Initiativen (1 Karte) - Shadow Lobbying für Effekt-Testing
-    { kind: 'spec' as const, baseId: 1, count: 1 }, // Shadow Lobbying (2 BP) - ÖFFENTLICHKEITS-EFFEKTE ZÄHLEN DOPPELT
-  ],
-
-  TEST_DECK_5_CARDS: [
-    // 🧪 TEST DECK: 5 Karten für isoliertes Effekt-Testing (Legacy)
-    // Regierungskarten (3 Karten)
-    { kind: 'pol' as const, baseId: 14, count: 1 }, // Joschka Fischer (Diplomat, 7 M) - NGO BOOST EFFEKT
-    { kind: 'pol' as const, baseId: 21, count: 1 }, // Karl Rove (Berater, 6 M)
-    { kind: 'pol' as const, baseId: 20, count: 1 }, // Robert Gates (Minister, 6 M)
-
-    // Öffentlichkeitskarten (2 Karten)
-    { kind: 'spec' as const, baseId: 65, count: 1 }, // Bill Gates (7 BP) - ZIEHE 1 KARTE + AP EFFEKT
-    { kind: 'spec' as const, baseId: 69, count: 1 }, // George Soros (7 BP) - AP BEI AUTORITÄR EFFEKT
-  ],
-
-  NEOLIBERAL_TECHNOKRAT: [
-    // Regierungskarten (8 Karten, 52 HP) - mit Joschka Fischer für NGO-Test!
-    { kind: 'pol' as const, baseId: 4, count: 1 },   // Justin Trudeau (13 HP)
-    { kind: 'pol' as const, baseId: 5, count: 1 },   // Volodymyr Zelenskyy (13 HP)
-    { kind: 'pol' as const, baseId: 14, count: 1 },  // Joschka Fischer (11 HP) - NGO BOOST!
-    { kind: 'pol' as const, baseId: 16, count: 1 },  // Olaf Scholz (7 HP)
-    { kind: 'pol' as const, baseId: 18, count: 1 },  // Pedro Sánchez (5 HP)
-    { kind: 'pol' as const, baseId: 19, count: 1 },  // Keir Starmer (5 HP)
-    { kind: 'pol' as const, baseId: 20, count: 1 },  // Robert Gates (5 HP)
-    { kind: 'pol' as const, baseId: 21, count: 1 },  // Karl Rove (5 HP)
-
-    // Öffentlichkeitskarten (10 Karten, 51 HP) - mit NGOs für Joschka Fischer Test!
-    { kind: 'spec' as const, baseId: 64, count: 1 },  // Elon Musk (8 HP)
-    { kind: 'spec' as const, baseId: 65, count: 1 },  // Bill Gates (7 HP)
-    { kind: 'spec' as const, baseId: 66, count: 1 },  // Mark Zuckerberg (5 HP)
-    { kind: 'spec' as const, baseId: 67, count: 1 },  // Oprah Winfrey (5 HP)
-    { kind: 'spec' as const, baseId: 68, count: 1 },  // Sam Altman (6 HP)
-    { kind: 'spec' as const, baseId: 69, count: 1 },  // George Soros (7 HP)
-    { kind: 'spec' as const, baseId: 70, count: 1 },  // Greta Thunberg (4 HP)
-
-    // Initiativen (9 Karten, 12 HP)
-    { kind: 'spec' as const, baseId: 6, count: 1 },  // Verzögerungsverfahren (1 HP)
-    { kind: 'spec' as const, baseId: 12, count: 1 }, // Symbolpolitik (1 HP)
-    { kind: 'spec' as const, baseId: 1, count: 1 },  // Shadow Lobbying (2 HP)
-    { kind: 'spec' as const, baseId: 2, count: 1 },  // Spin Doctor (2 HP)
-    { kind: 'spec' as const, baseId: 8, count: 1 },  // Think-tank (2 HP)
-    { kind: 'spec' as const, baseId: 10, count: 1 }, // Influencer-Kampagne (2 HP)
-    { kind: 'spec' as const, baseId: 11, count: 1 }, // Systemrelevant (2 HP)
-  ],
-
-  AUTORITAERER_REALIST: [
-    // Regierungskarten (7 Karten, 45 HP)
-    { kind: 'pol' as const, baseId: 1, count: 1 },   // Vladimir Putin (17 HP)
-    { kind: 'pol' as const, baseId: 2, count: 1 },   // Xi Jinping (17 HP)
-    { kind: 'pol' as const, baseId: 3, count: 1 },   // Recep Tayyip Erdoğan (17 HP)
-    { kind: 'pol' as const, baseId: 14, count: 1 },  // Joschka Fischer (11 HP)
-
-    // Öffentlichkeitskarten (6 Karten, 30 HP)
-    { kind: 'spec' as const, baseId: 75, count: 1 },  // Roman Abramovich (6 HP)
-    { kind: 'spec' as const, baseId: 79, count: 1 },  // Alisher Usmanov (6 HP)
-    { kind: 'spec' as const, baseId: 80, count: 1 },  // Zhang Yiming (6 HP)
-    { kind: 'spec' as const, baseId: 71, count: 1 },  // Jack Ma (7 HP)
-    { kind: 'spec' as const, baseId: 77, count: 1 },  // Mukesh Ambani (6 HP)
-
-    // Initiativen (6 Karten, 18 HP)
-    { kind: 'spec' as const, baseId: 4, count: 1 },  // Partei-Offensive (3 HP)
-    { kind: 'spec' as const, baseId: 5, count: 1 },  // Oppositionsblockade (4 HP)
-    { kind: 'spec' as const, baseId: 7, count: 1 },  // Opportunist (3 HP)
-    { kind: 'spec' as const, baseId: 13, count: 1 }, // Koalitionszwang (2 HP)
-    { kind: 'spec' as const, baseId: 15, count: 1 }, // Wirtschaftlicher Druck (2 HP)
-    { kind: 'spec' as const, baseId: 19, count: 1 }, // Napoleon Komplex (2 HP)
-
-    // Interventionen (6 Karten, 15 HP)
-    { kind: 'spec' as const, baseId: 21, count: 1 }, // Fake News-Kampagne (2 HP)
-    { kind: 'spec' as const, baseId: 22, count: 1 }, // Whistleblower (3 HP)
-    { kind: 'spec' as const, baseId: 23, count: 1 }, // Strategische Enthüllung (3 HP)
-    { kind: 'spec' as const, baseId: 24, count: 1 }, // Interne Fraktionskämpfe (2 HP)
-    { kind: 'spec' as const, baseId: 25, count: 1 }, // Boykott-Kampagne (2 HP)
-    { kind: 'spec' as const, baseId: 33, count: 1 }, // "Unabhängige" Untersuchung (2 HP)
-  ],
-
-  PROGRESSIVER_AKTIVISMUS: [
-    // Regierungskarten (8 Karten, 56 HP)
-    { kind: 'pol' as const, baseId: 8, count: 1 },   // Luiz Inácio Lula da Silva (13 HP)
-    { kind: 'pol' as const, baseId: 6, count: 1 },   // Ursula von der Leyen (15 HP)
-    { kind: 'pol' as const, baseId: 43, count: 1 },  // Emmanuel Macron (15 HP)
-    { kind: 'pol' as const, baseId: 14, count: 1 },  // Joschka Fischer (11 HP)
-    { kind: 'pol' as const, baseId: 16, count: 1 },  // Olaf Scholz (7 HP)
-
-    // Öffentlichkeitskarten (8 Karten, 47 HP)
-    { kind: 'spec' as const, baseId: 70, count: 1 },  // Greta Thunberg (4 HP)
-    { kind: 'spec' as const, baseId: 73, count: 1 },  // Malala Yousafzai (4 HP)
-    { kind: 'spec' as const, baseId: 65, count: 1 },  // Bill Gates (7 HP)
-    { kind: 'spec' as const, baseId: 69, count: 1 },  // George Soros (7 HP)
-    { kind: 'spec' as const, baseId: 74, count: 1 },  // Noam Chomsky (5 HP)
-    { kind: 'spec' as const, baseId: 86, count: 1 },  // Anthony Fauci (5 HP)
-    { kind: 'spec' as const, baseId: 84, count: 1 },  // Ai Weiwei (5 HP)
-    { kind: 'spec' as const, baseId: 85, count: 1 },  // Alexei Navalny (5 HP)
-
-    // Initiativen (9 Karten, 12 HP)
-    { kind: 'spec' as const, baseId: 6, count: 1 },  // Verzögerungsverfahren (1 HP)
-    { kind: 'spec' as const, baseId: 12, count: 1 }, // Symbolpolitik (1 HP)
-    { kind: 'spec' as const, baseId: 1, count: 1 },  // Shadow Lobbying (2 HP)
-    { kind: 'spec' as const, baseId: 2, count: 1 },  // Spin Doctor (2 HP)
-    { kind: 'spec' as const, baseId: 8, count: 1 },  // Think-tank (2 HP)
-    { kind: 'spec' as const, baseId: 10, count: 1 }, // Influencer-Kampagne (2 HP)
-    { kind: 'spec' as const, baseId: 11, count: 1 }, // Systemrelevant (2 HP)
-  ],
-
-  POPULISTISCHER_OPPORTUNIST: [
-    // Regierungskarten (7 Karten, 49 HP)
-    { kind: 'pol' as const, baseId: 41, count: 1 },  // Donald Trump (17 HP)
-    { kind: 'pol' as const, baseId: 39, count: 1 },  // Benjamin Netanyahu (15 HP)
-    { kind: 'pol' as const, baseId: 13, count: 1 },  // Javier Milei (11 HP)
-    { kind: 'pol' as const, baseId: 40, count: 1 },  // Dick Cheney (13 HP)
-
-    // Öffentlichkeitskarten (8 Karten, 48 HP)
-    { kind: 'spec' as const, baseId: 67, count: 1 },  // Oprah Winfrey (5 HP)
-    { kind: 'spec' as const, baseId: 64, count: 1 },  // Elon Musk (8 HP)
-    { kind: 'spec' as const, baseId: 71, count: 1 },  // Jack Ma (7 HP)
-    { kind: 'spec' as const, baseId: 80, count: 1 },  // Zhang Yiming (6 HP)
-    { kind: 'spec' as const, baseId: 78, count: 1 },  // Jeff Bezos (6 HP)
-    { kind: 'spec' as const, baseId: 87, count: 1 },  // Warren Buffett (7 HP)
-    { kind: 'spec' as const, baseId: 88, count: 1 },  // Gautam Adani (6 HP)
-    { kind: 'spec' as const, baseId: 83, count: 1 },  // Yuval Noah Harari (5 HP)
-
-    // Initiativen (10 Karten, 11 HP)
-    { kind: 'spec' as const, baseId: 6, count: 1 },  // Verzögerungsverfahren (1 HP)
-    { kind: 'spec' as const, baseId: 12, count: 1 }, // Symbolpolitik (1 HP)
-    { kind: 'spec' as const, baseId: 1, count: 1 },  // Shadow Lobbying (2 HP)
-    { kind: 'spec' as const, baseId: 2, count: 1 },  // Spin Doctor (2 HP)
-    { kind: 'spec' as const, baseId: 8, count: 1 },  // Think-tank (2 HP)
-    { kind: 'spec' as const, baseId: 10, count: 1 }, // Influencer-Kampagne (2 HP)
-    { kind: 'spec' as const, baseId: 11, count: 1 }, // Systemrelevant (2 HP)
-    { kind: 'spec' as const, baseId: 9, count: 1 },  // Whataboutism (2 HP)
-  ],
-
-  BALANCED_AI_DECK: [
-    // 🤖 BALANCED AI DECK: Comprehensive variety showcasing all card types with implemented effects
-    // Total: 25 cards, ~108 HP (balanced for competitive play)
-
-    // GOVERNMENT CARDS (8 cards, 60 HP) - Mix of high and mid-tier leaders
-    { kind: 'pol' as const, baseId: 1, count: 1 },   // Vladimir Putin (17 HP) - Tier 2, 10 influence
-    { kind: 'pol' as const, baseId: 2, count: 1 },   // Xi Jinping (17 HP) - Tier 2, 10 influence
-    { kind: 'pol' as const, baseId: 65, count: 1 },  // Joe Biden (15 HP) - Tier 2, 9 influence
-    { kind: 'pol' as const, baseId: 6, count: 1 },   // Ursula von der Leyen (15 HP) - Tier 2, 9 influence
-    { kind: 'pol' as const, baseId: 16, count: 1 },  // Olaf Scholz (7 HP) - Tier 1, 7 influence
-    { kind: 'pol' as const, baseId: 14, count: 1 },  // Joschka Fischer (11 HP) - Tier 2, 7 influence (NGO boost)
-    { kind: 'pol' as const, baseId: 20, count: 1 },  // Robert Gates (5 HP) - Tier 1, 6 influence
-    { kind: 'pol' as const, baseId: 21, count: 1 },  // Karl Rove (5 HP) - Tier 1, 6 influence
-
-    // PUBLIC CARDS (8 cards, 48 HP) - Diverse effects and synergies
-    { kind: 'spec' as const, baseId: 64, count: 1 },  // Elon Musk (8 HP) - Draw + AP on initiative activation
-    { kind: 'spec' as const, baseId: 65, count: 1 },  // Bill Gates (7 HP) - Draw + next initiative AP
-    { kind: 'spec' as const, baseId: 66, count: 1 },  // Mark Zuckerberg (5 HP) - AP on initiative activation
-    { kind: 'spec' as const, baseId: 69, count: 1 },  // George Soros (7 HP) - AP when opponent has government
-    { kind: 'spec' as const, baseId: 70, count: 1 },  // Greta Thunberg (4 HP) - AP on first government play
-    { kind: 'spec' as const, baseId: 67, count: 1 },  // Oprah Winfrey (5 HP) - Deactivate random hands
-    { kind: 'spec' as const, baseId: 68, count: 1 },  // Sam Altman (6 HP) - AI boost (draw + AP)
-    { kind: 'spec' as const, baseId: 75, count: 1 },  // Roman Abramovich (6 HP) - AP effect
-
-    // INSTANT INITIATIVES (5 cards, 9 HP) - Tactical flexibility
-    { kind: 'spec' as const, baseId: 2, count: 1 },   // Spin Doctor (2 HP) - Buff strongest government +2
-    { kind: 'spec' as const, baseId: 3, count: 1 },   // Digital Campaign (3 HP) - Draw per media card
-    { kind: 'spec' as const, baseId: 4, count: 1 },   // Party Offensive (3 HP) - Deactivate strongest enemy gov
-    { kind: 'spec' as const, baseId: 6, count: 1 },   // Delay Tactics (1 HP) - AP boost
-    { kind: 'spec' as const, baseId: 8, count: 1 },   // Think Tank (2 HP) - Draw + buff government
-
-    // ONGOING INITIATIVES (2 cards, 4 HP) - Persistent effects
-    { kind: 'spec' as const, baseId: 13, count: 1 },  // Koalitionszwang (2 HP) - Coalition bonus system
-    { kind: 'spec' as const, baseId: 19, count: 1 },  // Napoleon Complex (2 HP) - Tier 1 government +1
-
-    // INTERVENTIONS/TRAPS (2 cards, 4 HP) - Strategic disruption
-    { kind: 'spec' as const, baseId: 21, count: 1 },  // Fake News Campaign (2 HP) - Deactivate media
-    { kind: 'spec' as const, baseId: 22, count: 1 },  // Whistleblower (3 HP) - Return last played card
-  ]
-};

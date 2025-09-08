@@ -47,6 +47,12 @@ export function takeTurn(
     }
 
     const apCost = getCardActionPointCost(chosenCard, prev, 2);
+    const prevAp = prev.actionPoints[2];
+
+    // Enhanced AP counter logging for AI
+    const cardName = (chosenCard as any).name || 'Unknown Card';
+    const cardType = chosenCard.kind === 'pol' ? 'Government' : 'Special';
+    log(`🤖 AP Counter: ${cardName} (${cardType}) kostet 1 AP | Vorher: ${prevAp} AP → Nachher: ${prevAp - apCost} AP`);
 
     function detectLaneForCard(card: any): 'innen' | 'aussen' {
       // Government cards (politicians) go to 'aussen' (government lane)
@@ -113,15 +119,74 @@ export function decideBestAction(state: GameState, player: Player, difficulty: D
   const hand = state.hands[player];
   const aiAP = state.actionPoints[player];
   if (aiAP <= 0) return { type: 'pass' };
-  // Policy: maximize influence placed per round. If current lead is already durable, pass.
+
   const candidates: Array<{ index: number; card: Card; score: number; lane?: 'innen' | 'aussen' }> = [];
   const myInf = sumRow([...state.board[player].aussen]);
   const opponent = player === 1 ? 2 : 1;
   const oppInf = sumRow([...state.board[opponent].aussen]);
-
-  // If already holding a durable lead, pass
   const currentLead = myInf - oppInf;
-  if (currentLead >= 3) return { type: 'pass' };
+
+  // NEW STRATEGY: If AI has 20+ influence lead and many cards already played, pass
+  const totalCardsPlayed = state.board[player].aussen.length + state.board[player].innen.length;
+  if (currentLead >= 20 && totalCardsPlayed >= 4) {
+    return { type: 'pass' };
+  }
+
+  // Check if opponent has passed and AI can still play
+  const opponentPassed = state.passed[opponent];
+
+  // NEW STRATEGY: If opponent passed and AI can still play, prioritize government cards
+  if (opponentPassed && aiAP >= 1) {
+    const governmentCards = hand.filter(card => card.kind === 'pol');
+    if (governmentCards.length > 0) {
+      // Find the best government card to play
+      const bestGovCard = governmentCards.reduce((best, card, idx) => {
+        const cardIdx = hand.findIndex(c => c === card);
+        const influence = (card as any).influence || 0;
+        const apCost = getCardActionPointCost(card, state, player);
+        const score = influence / Math.max(1, apCost);
+        return score > best.score ? { index: cardIdx, card, score } : best;
+      }, { index: -1, card: null as Card | null, score: 0 });
+
+      if (bestGovCard.index >= 0) {
+        return { type: 'play', index: bestGovCard.index, lane: 'aussen' };
+      }
+    }
+  }
+
+  // NEW STRATEGY: If no government cards in hand, prioritize draw effect cards
+  const governmentCards = hand.filter(card => card.kind === 'pol');
+  if (governmentCards.length === 0) {
+    const drawEffectCards = hand.filter(card => {
+      if (card.kind === 'spec') {
+        const spec = card as any;
+        const effect = spec.effect || '';
+        const effectKey = spec.effectKey || '';
+        return effect.toLowerCase().includes('draw') ||
+               effect.toLowerCase().includes('karte') ||
+               effectKey.toLowerCase().includes('draw');
+      }
+      return false;
+    });
+
+    if (drawEffectCards.length > 0) {
+      // Find the best draw effect card
+      const bestDrawCard = drawEffectCards.reduce((best, card, idx) => {
+        const cardIdx = hand.findIndex(c => c === card);
+        const apCost = getCardActionPointCost(card, state, player);
+        // Prioritize lower AP cost for draw effects
+        const score = 100 / Math.max(1, apCost);
+        return score > best.score ? { index: cardIdx, card, score } : best;
+      }, { index: -1, card: null as Card | null, score: 0 });
+
+      if (bestDrawCard.index >= 0) {
+        return { type: 'play', index: bestDrawCard.index };
+      }
+    }
+  }
+
+  // Legacy strategy: Only pass if holding a very large lead (10+ points)
+  if (currentLead >= 10) return { type: 'pass' };
 
   hand.forEach((card, idx) => {
     const apCost = getCardActionPointCost(card, state, player);

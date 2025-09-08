@@ -499,7 +499,6 @@
             for (const config of animationConfigs) {
               const animator = new SpriteAnimator(image, 256, 256, {
                 [config.name]: {
-                  src: `${this.currentCharacter}/${config.name}_256x256_${config.frames}.png`,
                   frames: config.frames,
                   fps: config.fps,
                   loop: config.loop,

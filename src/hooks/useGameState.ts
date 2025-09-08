@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { GameState, Card, PoliticianCard, SpecialCard, Player, BuilderEntry, createDefaultEffectFlags } from '../types/game';
-import { Pols, Specials, PRESET_DECKS } from '../data/gameData';
+import { Pols, Specials } from '../data/gameData';
 import {
   sumRow,
   shuffle,
@@ -194,13 +194,13 @@ export function useGameState() {
   }, [dealStartingHands]);
 
   const startMatchWithDecks = useCallback((p1DeckEntries: BuilderEntry[], p2DeckEntries: BuilderEntry[]) => {
-    console.log('🔧 DEBUG: startMatchWithDecks called - activating AI for player 2');
+    // console.log('🔧 DEBUG: startMatchWithDecks called - activating AI for player 2');
     // Automatically enable AI for player 2 when starting with decks
-    console.log('🔧 DEBUG: About to call gameAI.setAiEnabled(true)');
+    // console.log('🔧 DEBUG: About to call gameAI.setAiEnabled(true)');
     gameAI.setAiEnabled(true);
-    console.log('🔧 DEBUG: About to call gameAI.setAiPreset(AUTORITAERER_REALIST)');
+    // console.log('🔧 DEBUG: About to call gameAI.setAiPreset(AUTORITAERER_REALIST)');
     gameAI.setAiPreset('AUTORITAERER_REALIST');
-    console.log('🔧 DEBUG: AI setup completed');
+    // console.log('🔧 DEBUG: AI setup completed');
 
     console.log('[DIAG] startMatchWithDecks - p1DeckEntries', p1DeckEntries.length, 'p2DeckEntries', p2DeckEntries.length);
     console.log('[DIAG] startMatchWithDecks - sample entries:', p1DeckEntries.slice(0, 2), p2DeckEntries.slice(0, 2));
@@ -238,8 +238,8 @@ export function useGameState() {
     console.log('[DIAG] setGameState called in startMatchWithDecks');
   }, [gameAI]);
 
-  const startMatchVsAI = useCallback((p1DeckEntries: BuilderEntry[], presetKey: keyof typeof PRESET_DECKS = 'AUTORITAERER_REALIST') => {
-    const p2DeckEntries = PRESET_DECKS[presetKey] as BuilderEntry[];
+  const startMatchVsAI = useCallback((p1DeckEntries: BuilderEntry[], presetKey: string = '') => {
+    const p2DeckEntries: BuilderEntry[] = [];
     gameAI.setAiEnabled(true);
     gameAI.setAiPreset(presetKey);
     gameActions.startMatchWithDecks(p1DeckEntries, p2DeckEntries);
@@ -588,7 +588,17 @@ export function useGameState() {
     const newTraps = { 1: [], 2: [] };
 
     // Verbesserte Karten-Nachzieh-Mechanik (ziehe bis Hand voll ist)
-    const { newHands, newDecks } = drawCardsAtRoundEnd(state, log);
+    const { newHands, newDecks, gameEnded, winner: deckWinner } = drawCardsAtRoundEnd(state, log);
+
+    // 🔥 PERSISTENT DECK LOGIC: Prüfe ob Spiel durch leere Decks beendet wurde
+    if (gameEnded && deckWinner) {
+      log(`🎉 SPIEL ENDE: Spieler ${deckWinner} gewinnt das Spiel durch leere Decks!`);
+      return {
+        ...state,
+        gameWinner: deckWinner,
+        roundsWon: { ...state.roundsWon, [deckWinner]: (state.roundsWon[deckWinner] || 0) + 1 }
+      };
+    }
 
     const newRound = state.round + 1;
     const newPassed = { 1: false, 2: false };
@@ -1294,7 +1304,7 @@ export function useGameState() {
 
   // Manual turn advancement for testing
   const manualAdvanceTurn = useCallback(() => {
-    console.log('🔧 DEBUG: Manual turn advancement triggered');
+    // console.log('🔧 DEBUG: Manual turn advancement triggered');
     log('🔧 DEBUG: Manual turn advancement triggered');
     nextTurn();
   }, [nextTurn, log]);

@@ -92,7 +92,9 @@ export function applyTrapsOnCardPlayed(
 
       // neu: AP -2 für Gegner beim nächsten Play
       case 'trap.budget_freeze.opp_ap_minus2':
-        enqueue({ type: 'ADD_AP', player: playedBy, amount: -2 });
+        // Emit as two atomic -1 events instead of a single -2 for consistency
+        enqueue({ type: 'ADD_AP', player: playedBy, amount: -1 });
+        enqueue({ type: 'ADD_AP', player: playedBy, amount: -1 });
         log('Trap: Budget Freeze – opponent AP -2.');
         consumed.push(t);
         break;

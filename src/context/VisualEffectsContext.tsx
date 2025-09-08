@@ -4,17 +4,20 @@ import { getUiTransform, UI_BASE } from '../ui/layout';
 type Particle = { start: number; life: number; x: number; y: number; vx: number; vy: number; size?: number; color?: string; gravity?: number };
 type Pop = { uid: number | string; started: number; duration: number };
 type Ripple = { cx: number; cy: number; started: number; duration: number; radius: number; showAp?: boolean; apX?: number; apY?: number; _apSpawned?: boolean };
-type ApLabel = { x: number; y: number; started: number; duration: number; text: string };
+type ApLabel = { x: number; y: number; started: number; duration: number; text: string; color?: string; size?: number; scale?: number };
+type VisualEffect = { id: string; x: number; y: number; started: number; duration: number; type: 'ap_gain' | 'influence_buff' | 'card_play'; amount?: number; text?: string; color?: string; size?: number };
 
 interface VisualEffectsContextType {
   particlesRef: React.MutableRefObject<Particle[]>;
   popsRef: React.MutableRefObject<Pop[]>;
   ripplesRef: React.MutableRefObject<Ripple[]>;
   apLabelsRef: React.MutableRefObject<ApLabel[]>;
+  visualEffectsRef: React.MutableRefObject<VisualEffect[]>;
   reducedMotion: boolean;
   spawnParticles: (cx: number, cy: number, count?: number) => void;
   spawnPop: (uid: number | string) => void;
   spawnRipple: (cx: number, cy: number, opts?: { radius?: number; showAp?: boolean; apX?: number; apY?: number }) => void;
+  spawnVisualEffect: (opts: { type: 'ap_gain' | 'influence_buff' | 'card_play'; x: number; y: number; amount?: number; text?: string; color?: string; size?: number; duration?: number }) => void;
   // New: gif overlays and per-card play animations
   gifOverlaysRef: React.MutableRefObject<Array<{ id: string | number; cx: number; cy: number; w: number; h: number; src: string; started: number; duration: number }>>;
   playAnimsRef: React.MutableRefObject<Array<{ uid: string | number; started: number; duration: number }>>;
@@ -32,6 +35,7 @@ export function VisualEffectsProvider({ children }: { children: ReactNode }) {
   const popsRef = useRef<Pop[]>([]);
   const ripplesRef = useRef<Ripple[]>([]);
   const apLabelsRef = useRef<ApLabel[]>([]);
+  const visualEffectsRef = useRef<VisualEffect[]>([]);
   const gifOverlaysRef = useRef<Array<{ id: string | number; cx: number; cy: number; w: number; h: number; src: string; started: number; duration: number }>>([]);
   const spawnedGifIdsRef = useRef<Set<string|number>>(new Set());
   const playAnimsRef = useRef<Array<{ uid: string | number; started: number; duration: number }>>([]);
@@ -58,6 +62,24 @@ export function VisualEffectsProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const spawnVisualEffect = (opts: { type: 'ap_gain' | 'influence_buff' | 'card_play'; x: number; y: number; amount?: number; text?: string; color?: string; size?: number; duration?: number }) => {
+    if (reducedMotion) return;
+    const id = `visual_${opts.type}_${Date.now()}_${Math.random()}`;
+    const effect: VisualEffect = {
+      id,
+      x: opts.x,
+      y: opts.y,
+      started: performance.now(),
+      duration: opts.duration ?? 1200,
+      type: opts.type,
+      amount: opts.amount,
+      text: opts.text,
+      color: opts.color,
+      size: opts.size
+    };
+    visualEffectsRef.current.push(effect);
+  };
+
   const spawnGifOverlay = (opts: { id?: string | number; cx: number; cy: number; w: number; h: number; src: string; duration?: number }) => {
     return; // overlay disabled
   };
@@ -67,7 +89,7 @@ export function VisualEffectsProvider({ children }: { children: ReactNode }) {
     try { playAnimsRef.current.push({ uid: opts.id ?? performance.now(), started: performance.now(), duration: 420 }); } catch (e) {}
   };
 
-  const value = useMemo(() => ({ particlesRef, popsRef, ripplesRef, apLabelsRef, reducedMotion, spawnParticles, spawnPop, spawnRipple, gifOverlaysRef, playAnimsRef, spawnGifOverlay, spawnGifOverlayUi }), []);
+  const value = useMemo(() => ({ particlesRef, popsRef, ripplesRef, apLabelsRef, visualEffectsRef, reducedMotion, spawnParticles, spawnPop, spawnRipple, spawnVisualEffect, gifOverlaysRef, playAnimsRef, spawnGifOverlay, spawnGifOverlayUi }), []);
   // Expose value for non-hook callsites (fallback)
   React.useEffect(() => {
     try {

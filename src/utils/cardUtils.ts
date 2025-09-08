@@ -108,31 +108,8 @@ export function findCardLocation(card: Card, state: GameState): { player: Player
 
 // Action point calculation
 export function getCardActionPointCost(card: Card, state: GameState, player: Player): number {
-  if (card.kind !== 'pol' && card.kind !== 'spec') return 1;
-
-  let baseCost = 1;
-  const flags = state.effectFlags?.[player];
-
-  if (card.kind === 'pol') {
-    const polCard = card as PoliticianCard;
-    const lane = getAllowedLaneForCard(card);
-
-    // ⚠️ Keine harte Freistellung mehr für Regierungskarten – Refund-Modell wird in getNetApCost angewandt
-  } else if (card.kind === 'spec') {
-    const specCard = card as SpecialCard;
-
-    // Free initiative from leadership
-    if (flags?.freeInitiativeAvailable) {
-      return 0;
-    }
-
-    // NGO discount
-    if (flags?.ngoInitiativeDiscount && flags.ngoInitiativeDiscount > 0) {
-      baseCost = Math.max(0, baseCost - flags.ngoInitiativeDiscount);
-    }
-  }
-
-  return baseCost;
+  // ALLE KARTEN KOSTEN IMMER 1 AP - KEINE AUSNAHMEN!
+  return 1;
 }
 
 // Card sorting and filtering

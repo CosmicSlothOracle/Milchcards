@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Top‑Down Split‑Screen Racer</title>
+  <style>
+    :root { --bg:#0b0d10; --fg:#e8eaed; --muted:#7c8896; --accent:#6cf; }
+    html,body{height:100%;margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif}
+    .wrap{display:flex;flex-direction:column;gap:.5rem;max-width:1280px;margin:0 auto;padding:12px}
+    header{display:flex;align-items:center;gap:12px;justify-content:space-between}
+    h1{font-size:18px;font-weight:600;letter-spacing:.2px;margin:0}
+    .hud{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+    .hud b{color:var(--fg)}
+    .board{position:relative;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    canvas{width:100%;height:auto;background:#0e1116;border-radius:14px;box-shadow:0 8px 24px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.05)}
+    .label{position:absolute;top:10px;left:14px;font-size:12px;color:#9aa8b4;background:rgba(255,255,255,.04);padding:4px 8px;border-radius:12px;backdrop-filter:blur(4px)}
+    .pane{position:relative}
+    .sep{height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.08),transparent);margin:4px 0}
+    .btns{display:flex;gap:8px;flex-wrap:wrap}
+    button{all:unset;cursor:pointer;background:#121821;border:1px solid rgba(255,255,255,.08);color:var(--fg);padding:8px 12px;border-radius:10px;font-size:12px}
+    button:active{transform:translateY(1px)}
+    footer{font-size:11px;color:var(--muted);text-align:center;margin-top:4px}
+    .win{color:#a6e3a1}
+    .fail{color:#f28b82}
+    .tip{opacity:.9}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Top‑Down Split‑Screen Racer</h1>
+      <div class="btns">
+        <button id="resetBtn" title="Neu starten (R)">Neu starten</button>
+        <button id="ghostBtn" title="Ghost‑Mode (nur Debug)">Ghost an/aus</button>
+      </div>
+    </header>
+    <div class="hud" id="hud">
+      <div>Spieler 1: <b>WASD</b></div>
+      <div>Spieler 2: <b>←↑→↓</b></div>
+      <div>Rückwärts: <b>S / ↓</b></div>
+      <div>Bremse: <b>S / ↓ (kurz)</b></div>
+      <div>Reset: <b>R</b></div>
+      <div class="tip">Berühre kein Hindernis. Fahre von <b>Start</b> zu <b>Ziel</b>.</div>
+    </div>
+    <div class="board">
+      <div class="pane">
+        <div class="label">Spieler 1</div>
+        <canvas id="view1" width="640" height="360"></canvas>
+      </div>
+      <div class="pane">
+        <div class="label">Spieler 2</div>
+        <canvas id="view2" width="640" height="360"></canvas>
+      </div>
+    </div>
+    <div class="sep"></div>
+    <div class="hud" id="status"></div>
+    <footer>
+      Minimal‑Style • identischer Parcours • getrennter Bildschirm • reine HTML‑Datei (Canvas)
+    </footer>
+  </div>
+
+  <script>
+  // —— Minimalistisches Top‑Down‑Racing mit Splitscreen ——
+  (()=>{
+    const view1 = document.getElementById('view1');
+    const view2 = document.getElementById('view2');
+    const ctx1 = view1.getContext('2d');
+    const ctx2 = view2.getContext('2d');
+    const hud = document.getElementById('status');
+
+    // Weltgröße
+    const WORLD_W = 2000, WORLD_H = 1200;
+
+    // Parcours: identisch für beide
+    const obstacles = [];
+    const track = [];
+
+    // Hilfsfunktion: add obstacle rect
+    function addRect(x,y,w,h){ obstacles.push({x,y,w,h}); }
+    function addTrack(x,y,w,h){ track.push({x,y,w,h}); }
+
+    // Erzeuge eine einfache, präzise Strecke (Korridor) mit Hindernissen
+    // Außenbegrenzungen
+    addRect(0,0,WORLD_W,40); addRect(0,WORLD_H-40,WORLD_W,40);
+    addRect(0,0,40,WORLD_H); addRect(WORLD_W-40,0,40,WORLD_H);
+
+    // Korridorblöcke – „less is more“
+    // Gerade
+    addRect(300, 200, 600, 40);
+    addRect(900, 240, 40, 300);
+    addRect(600, 540, 500, 40);
+    addRect(600, 580, 40, 260);
+    addRect(640, 800, 700, 40);
+    addRect(1340, 600, 40, 240);
+    addRect(1000, 600, 340, 40);
+
+    // Ein paar Hindernis‑Stolpersteine
+    addRect(750, 300, 80, 80);
+    addRect(1100, 650, 90, 90);
+    addRect(1450, 760, 90, 90);
+
+    // Track‑Visual („Teppich“ innerhalb des Korridors) – optional wenige Flächen
+    addTrack(300, 240, 600, 300);
+    addTrack(640, 580, 300, 220);
+    addTrack(640, 800, 700, 200);
+
+    // Start & Ziel
+    const start1 = { x: 140, y: 120, angle: 0 };
+    const start2 = { x: 140, y: 220, angle: 0 };
+    const goal = { x: 1680, y: 860, w: 160, h: 80 };
+
+    // Car‑Physik (sehr kompakt)
+    class Car{
+      constructor(color,start){
+        this.color=color;
+        this.x=start.x; this.y=start.y; this.a=start.angle;
+        this.v=0; // speed
+        this.w=42; this.h=22; // body size
+        this.alive=true;
+        this.ticks=0; // zeit
+        this.touched=false; // darf Ziel nur erreichen, wenn nie berührt
+      }
+      reset(start){
+        this.x=start.x; this.y=start.y; this.a=start.angle; this.v=0; this.alive=true; this.ticks=0; this.touched=false;
+      }
+      update(input,dt){
+        this.ticks+=dt;
+        // Parameter
+        const ACC=300; // px/s^2
+        const BRAKE=500;
+        const MAX=420;
+        const REV_MAX=220;
+        const FRICTION=0.98;
+        const TURN=2.8; // rad/s bei normaler Fahrt
+
+        // Beschleunigen / Bremsen
+        if(input.up) this.v += ACC*dt;
+        if(input.down) this.v -= ACC*dt;
+        if(!input.up && !input.down) this.v *= FRICTION; // Rollreibung
+
+        // Begrenzen
+        if(this.v>MAX) this.v=MAX;
+        if(this.v<-REV_MAX) this.v=-REV_MAX;
+
+        // Lenken – nur wenn in Bewegung
+        const speedFactor = Math.min(1, Math.abs(this.v)/200);
+        if(input.left && Math.abs(this.v)>10) this.a -= TURN*speedFactor*dt*(this.v>0?1:-1);
+        if(input.right && Math.abs(this.v)>10) this.a += TURN*speedFactor*dt*(this.v>0?1:-1);
+
+        // Bewegung
+        this.x += Math.cos(this.a)*this.v*dt;
+        this.y += Math.sin(this.a)*this.v*dt;
+
+        // Kollisionen
+        if(collidesWithWorld(this.getPoly())){
+          this.touched = true;
+          // sanfter Rückstoß
+          this.v *= -0.3;
+          // schiebe minimal zurück
+          this.x += Math.cos(this.a)*this.v*dt;
+          this.y += Math.sin(this.a)*this.v*dt;
+        }
+      }
+      getPoly(){ // 4 Eckpunkte des rot. Rechtecks
+        const hw=this.w/2, hh=this.h/2;
+        const c=Math.cos(this.a), s=Math.sin(this.a);
+        const pts=[
+          {x:-hw,y:-hh},{x:hw,y:-hh},{x:hw,y:hh},{x:-hw,y:hh}
+        ].map(p=>({x:this.x+p.x*c-p.y*s, y:this.y+p.x*s+p.y*c}));
+        return pts;
+      }
+      draw(ctx, cam){
+        const pts=this.getPoly();
+        ctx.save();
+        ctx.translate(-cam.x,-cam.y);
+        // Karosserie
+        ctx.beginPath();
+        ctx.moveTo(pts[0].x,pts[0].y);
+        for(let i=1;i<pts.length;i++) ctx.lineTo(pts[i].x,pts[i].y);
+        ctx.closePath();
+        ctx.fillStyle=this.color;
+        ctx.fill();
+        ctx.strokeStyle='rgba(255,255,255,.18)';
+        ctx.lineWidth=1;
+        ctx.stroke();
+        // Richtungspfeil
+        ctx.beginPath();
+        ctx.moveTo(this.x - cam.x, this.y - cam.y);
+        ctx.lineTo(this.x - cam.x + Math.cos(this.a)*18, this.y - cam.y + Math.sin(this.a)*18);
+        ctx.strokeStyle='rgba(255,255,255,.35)';
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+
+    // Eingaben
+    const keys={};
+    addEventListener('keydown',e=>{ keys[e.key.toLowerCase()]=true; if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) e.preventDefault(); });
+    addEventListener('keyup',e=>{ keys[e.key.toLowerCase()]=false; });
+
+    const p1 = new Car('#4fc3f7', start1);
+    const p2 = new Car('#a78bfa', start2);
+
+    function inputP1(){
+      return { up:keys['w'], down:keys['s'], left:keys['a'], right:keys['d'] };
+    }
+    function inputP2(){
+      return { up:keys['arrowup'], down:keys['arrowdown'], left:keys['arrowleft'], right:keys['arrowright'] };
+    }
+
+    // Kamera folgt
+    function cameraFor(car, view){
+      const margin=80;
+      let cx = car.x - view.width/2;
+      let cy = car.y - view.height/2;
+      cx = Math.max(0, Math.min(WORLD_W - view.width, cx));
+      cy = Math.max(0, Math.min(WORLD_H - view.height, cy));
+      return {x:cx,y:cy};
+    }
+
+    // Kollisionen: rot. Auto (Polygon) mit axis‑aligned Rects
+    function pointInRect(px,py,r){ return px>=r.x && px<=r.x+r.w && py>=r.y && py<=r.y+r.h; }
+    function polyRectIntersect(poly, r){
+      // Schnelltest: ein Eckpunkt im Rechteck
+      for(const p of poly){ if(pointInRect(p.x,p.y,r)) return true; }
+      // Kante vs Rechteck – projiziere Punkte nahe an Rechteck
+      // (vereinfachter Test: prüfe Mittelpunkt)
+      const cx=(poly[0].x+poly[1].x+poly[2].x+poly[3].x)/4;
+      const cy=(poly[0].y+poly[1].y+poly[2].y+poly[3].y)/4;
+      const nearestX = Math.max(r.x, Math.min(cx, r.x+r.w));
+      const nearestY = Math.max(r.y, Math.min(cy, r.y+r.h));
+      // Abstand von Mittelpunkt zur Rechteckfläche vs „Halbmesser“ (Diagonale/2 ≈)
+      const dx = cx - nearestX, dy = cy - nearestY;
+      const rad = Math.hypot(poly[0].x-cx, poly[0].y-cy); // grobe Annäherung
+      return (dx*dx + dy*dy) <= (rad*rad*0.6); // Toleranz
+    }
+    function collidesWithWorld(poly){
+      for(const r of obstacles){ if(polyRectIntersect(poly,r)) return true; }
+      return false;
+    }
+
+    function rects(ctx, list, cam, fill, alpha=.06){
+      ctx.save();
+      ctx.translate(-cam.x,-cam.y);
+      ctx.globalAlpha=1;
+      ctx.fillStyle=fill;
+      for(const r of list){ ctx.fillRect(r.x, r.y, r.w, r.h); }
+      ctx.globalAlpha=1;
+      ctx.restore();
+    }
+
+    function drawWorld(ctx, cam, ghost){
+      // Boden
+      ctx.fillStyle = '#0c1117';
+      ctx.fillRect(0,0,ctx.canvas.width,ctx.canvas.height);
+      // Track Visual
+      ctx.save();
+      ctx.translate(-cam.x,-cam.y);
+      ctx.fillStyle = 'rgba(120,220,255,.05)';
+      for(const r of track){ ctx.fillRect(r.x,r.y,r.w,r.h); }
+      ctx.restore();
+      // Ziel
+      ctx.save();
+      ctx.translate(-cam.x,-cam.y);
+      ctx.fillStyle = 'rgba(166,227,161,.25)';
+      ctx.fillRect(goal.x,goal.y,goal.w,goal.h);
+      ctx.strokeStyle = 'rgba(166,227,161,.8)';
+      ctx.setLineDash([8,6]);
+      ctx.strokeRect(goal.x,goal.y,goal.w,goal.h);
+      ctx.setLineDash([]);
+      ctx.restore();
+      // Hindernisse
+      if(!ghost){
+        rects(ctx, obstacles, cam, 'rgba(255,255,255,.08)');
+      } else {
+        // Ghost‑Mode zeigt Hindernisse transparenter
+        rects(ctx, obstacles, cam, 'rgba(255,255,255,.04)');
+      }
+      // Startmarken
+      ctx.save();
+      ctx.translate(-cam.x,-cam.y);
+      ctx.strokeStyle='rgba(108,236,255,.8)';
+      ctx.strokeRect(start1.x-24,start1.y-16,48,32);
+      ctx.strokeStyle='rgba(167,139,250,.8)';
+      ctx.strokeRect(start2.x-24,start2.y-16,48,32);
+      ctx.restore();
+    }
+
+    function inGoal(car){
+      return car.x>goal.x && car.x<goal.x+goal.w && car.y>goal.y && car.y<goal.y+goal.h;
+    }
+
+    let ghost=false;
+    document.getElementById('ghostBtn').onclick=()=>{ ghost=!ghost; };
+
+    function resetAll(){ p1.reset(start1); p2.reset(start2); }
+    document.getElementById('resetBtn').onclick=resetAll;
+    addEventListener('keydown',e=>{ if(e.key.toLowerCase()==='r') resetAll(); });
+
+    let last=performance.now();
+    let win1=false, win2=false;
+
+    function loop(now){
+      const dt=Math.min(0.032,(now-last)/1000); last=now;
+
+      p1.update(inputP1(),dt);
+      p2.update(inputP2(),dt);
+
+      if(inGoal(p1) && !p1.touched) win1=true;
+      if(inGoal(p2) && !p2.touched) win2=true;
+
+      const cam1=cameraFor(p1,view1);
+      const cam2=cameraFor(p2,view2);
+
+      // Zeichne beide
+      drawWorld(ctx1, cam1, ghost);
+      p1.draw(ctx1, cam1);
+
+      drawWorld(ctx2, cam2, ghost);
+      p2.draw(ctx2, cam2);
+
+      // Statusleiste
+      hud.innerHTML = `
+        <div>🏁 Zielbereich: <b>${goal.x}|${goal.y}</b></div>
+        <div>Spieler 1: <span class="${p1.touched? 'fail':'tip'}">${p1.touched?'Fehler (Hindernis berührt)':'OK'}</span> • Zeit: <b>${p1.ticks.toFixed(1)}s</b> ${win1? '• <span class="win">GEWONNEN</span>':''}</div>
+        <div>Spieler 2: <span class="${p2.touched? 'fail':'tip'}">${p2.touched?'Fehler (Hindernis berührt)':'OK'}</span> • Zeit: <b>${p2.ticks.toFixed(1)}s</b> ${win2? '• <span class="win">GEWONNEN</span>':''}</div>
+        <div class="tip">Hinweis: Ziel zählt nur, wenn <b>kein</b> Hindernis berührt wurde. (Reset mit R)</div>
+      `;
+
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+  })();
+  </script>
+</body>
+</html>

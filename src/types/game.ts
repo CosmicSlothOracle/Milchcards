@@ -52,6 +52,7 @@ export interface BasePolitician {
   T: number;
   BP?: number;
   effect?: string;
+  effectKey?: string;
 }
 
 export interface BaseSpecial {
@@ -126,11 +127,7 @@ export interface EffectFlags {
   nextGovPlus2?: boolean;             // Next government card gets +2 influence
   diplomatInfluenceTransferUsed?: boolean; // Diplomat influence transfer used this turn
   influenceTransferBlocked?: boolean; // Influence transfer is blocked
-  govRefundAvailable?: boolean;       // Government refund available
-  freeInitiativeAvailable?: boolean;  // Free initiative available
-  ngoInitiativeDiscount?: number;     // NGO initiative discount
-  initiativeDiscount?: number;        // Initiative discount (legacy)
-  initiativeRefund?: number;          // Initiative refund (legacy)
+  // REMOVED: Alle AP-Discount/Free-Flags - alle Karten kosten immer 1 AP
 }
 
 export function createDefaultEffectFlags(): EffectFlags {

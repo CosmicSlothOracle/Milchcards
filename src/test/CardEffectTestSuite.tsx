@@ -68,8 +68,7 @@ interface TestScenario {
     shields?: string[];
     buffedCards?: string[];
     flags?: {
-      initiativeDiscount?: number;
-      initiativeRefund?: number;
+      // REMOVED: AP discount/refund flags - alle Karten kosten immer 1 AP
     };
     logsContain?: string[];
     queueEmpty?: boolean;
@@ -227,15 +226,7 @@ const CardEffectTestSuite: React.FC = () => {
     state.actionPoints[player] = Math.min(amount, AP_CAP);
   }, []);
 
-  // NEW: Helper to set discount
-  const setDiscount = useCallback((state: GameState, player: Player, amount: number) => {
-    state.effectFlags[player].initiativeDiscount = Math.min(amount, MAX_DISCOUNT);
-  }, []);
-
-  // NEW: Helper to set refund
-  const setRefund = useCallback((state: GameState, player: Player, amount: number) => {
-    state.effectFlags[player].initiativeRefund = Math.min(amount, MAX_REFUND);
-  }, []);
+  // REMOVED: setDiscount and setRefund - alle Karten kosten immer 1 AP
 
   // NEW: Seed deck with test cards for draw validation
   const seedDeck = useCallback((state: GameState, player: Player, cardNames: string[]) => {
@@ -526,10 +517,8 @@ const CardEffectTestSuite: React.FC = () => {
         functionName: 'setDiscount',
         filePath: 'src/utils/flags.ts',
         lineNumbers: '15-20',
-        codeSnippet: `export function setDiscount(state: GameState, player: Player, amount: number) {
-  state.effectFlags[player].initiativeDiscount = Math.min(amount, MAX_DISCOUNT);
-}`,
-        purpose: 'Sets initiative discount flags'
+        codeSnippet: `// REMOVED: setDiscount - alle Karten kosten immer 1 AP`,
+        purpose: 'AP discount system removed'
       });
     }
 
@@ -755,9 +744,8 @@ const CardEffectTestSuite: React.FC = () => {
      - RNG sequence [0] = first card, [1] = second card, etc.
 
   4. FLAGS/REFUNDS VALIDATION:
-     - Validate effectFlags.initiativeDiscount
-     - Validate effectFlags.initiativeRefund
-     - Check log messages for flag changes
+     - REMOVED: AP discount/refund validation - alle Karten kosten immer 1 AP
+     - Check log messages for other flag changes
 
   5. SHIELD/BUFF TARGET VALIDATION:
      - Validate specific cards get buffed/shielded
@@ -802,8 +790,8 @@ const CardEffectTestSuite: React.FC = () => {
            { player: 1, ap: 1, handSize: 1 }, // Drew 1 card, played Bill Gates (2-1=1 AP cost)
            { player: 2, ap: 2, handSize: 0 }
          ],
-        flags: { initiativeDiscount: 1 },
-        logsContain: ['Bill Gates: +1 Karte, nächste Initiative -1 AP'],
+        flags: { },
+        logsContain: ['Bill Gates: +1 Karte'],
         queueEmpty: true
       }
     },
@@ -823,8 +811,8 @@ const CardEffectTestSuite: React.FC = () => {
           { player: 1, ap: 2, handSize: 0, deckCount: 0 }, // No cards to draw
           { player: 2, ap: 2, handSize: 0 }
         ],
-        flags: { initiativeDiscount: 1 },
-        logsContain: ['Bill Gates: +1 Karte, nächste Initiative -1 AP'],
+        flags: { },
+        logsContain: ['Bill Gates: +1 Karte'],
         queueEmpty: true
       }
     },
@@ -845,8 +833,8 @@ const CardEffectTestSuite: React.FC = () => {
           { player: 1, ap: 4, handSize: 1 }, // AP stays at cap, drew 1 card
           { player: 2, ap: 2, handSize: 0 }
         ],
-        flags: { initiativeDiscount: 1 },
-        logsContain: ['Bill Gates: +1 Karte, nächste Initiative -1 AP'],
+        flags: { },
+        logsContain: ['Bill Gates: +1 Karte'],
         queueEmpty: true
       }
     },
@@ -943,7 +931,7 @@ const CardEffectTestSuite: React.FC = () => {
            { player: 1, ap: 0, handSize: 0 }, // Drew 1, played 2 cards (2-2=0 AP)
            { player: 2, ap: 2, handSize: 0 }  // Mark Zuckerberg deactivated
          ],
-        flags: { initiativeDiscount: 1 }, // Bill Gates discount should persist
+        flags: { }, // Bill Gates discount should persist
         logsContain: [
           'Bill Gates: +1 Karte, nächste Initiative -1 AP',
           'Oprah Winfrey: jeweils 1 zufällige Handkarte beider Spieler deaktiviert'
@@ -956,7 +944,7 @@ const CardEffectTestSuite: React.FC = () => {
     {
       id: 'bill_gates_discount_validation',
       name: 'Bill Gates - Discount Flag Validation',
-      description: 'Test that Bill Gates properly sets initiativeDiscount flag',
+      description: 'Test that Bill Gates provides card draw effect',
       setup: (state) => {
         addCardToHand(state, 1, 'Bill Gates');
         seedDeck(state, 1, ['Mark Zuckerberg']);
@@ -969,8 +957,8 @@ const CardEffectTestSuite: React.FC = () => {
           { player: 1, ap: 2, handSize: 1 },
           { player: 2, ap: 2, handSize: 0 }
         ],
-        flags: { initiativeDiscount: 1 },
-        logsContain: ['Bill Gates: +1 Karte, nächste Initiative -1 AP'],
+        flags: { },
+        logsContain: ['Bill Gates: +1 Karte'],
         queueEmpty: true
       }
     },
@@ -995,8 +983,8 @@ const CardEffectTestSuite: React.FC = () => {
            { player: 1, ap: 1, handSize: 1, deckCount: 9 }, // Drew 1, 9 remaining (2-1=1 AP cost)
            { player: 2, ap: 2, handSize: 0 }
          ],
-        flags: { initiativeDiscount: 1 },
-        logsContain: ['Bill Gates: +1 Karte, nächste Initiative -1 AP'],
+        flags: { },
+        logsContain: ['Bill Gates: +1 Karte'],
         queueEmpty: true
       }
     },

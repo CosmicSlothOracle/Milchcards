@@ -80,7 +80,7 @@
         "h": 256
       }
     },
-    "jump_004": {
+    "idle_000": {
       "frame": {
         "x": 1024,
         "y": 0,
@@ -100,7 +100,7 @@
         "h": 256
       }
     },
-    "jump_005": {
+    "idle_001": {
       "frame": {
         "x": 1280,
         "y": 0,
@@ -120,7 +120,7 @@
         "h": 256
       }
     },
-    "jump_006": {
+    "idle_002": {
       "frame": {
         "x": 1536,
         "y": 0,
@@ -140,7 +140,7 @@
         "h": 256
       }
     },
-    "jump_007": {
+    "idle_003": {
       "frame": {
         "x": 1792,
         "y": 0,
@@ -160,7 +160,7 @@
         "h": 256
       }
     },
-    "parry_000": {
+    "walk_000": {
       "frame": {
         "x": 0,
         "y": 256,
@@ -180,7 +180,7 @@
         "h": 256
       }
     },
-    "parry_001": {
+    "walk_001": {
       "frame": {
         "x": 256,
         "y": 256,
@@ -200,7 +200,7 @@
         "h": 256
       }
     },
-    "parry_002": {
+    "walk_002": {
       "frame": {
         "x": 512,
         "y": 256,
@@ -220,7 +220,7 @@
         "h": 256
       }
     },
-    "parry_003": {
+    "walk_003": {
       "frame": {
         "x": 768,
         "y": 256,
@@ -240,10 +240,10 @@
         "h": 256
       }
     },
-    "parry_004": {
+    "blast_000": {
       "frame": {
         "x": 1024,
-        "y": 256,
+        "y": 1536,
         "w": 256,
         "h": 256
       },
@@ -260,10 +260,10 @@
         "h": 256
       }
     },
-    "parry_005": {
+    "blast_001": {
       "frame": {
         "x": 1280,
-        "y": 256,
+        "y": 1536,
         "w": 256,
         "h": 256
       },
@@ -280,10 +280,10 @@
         "h": 256
       }
     },
-    "projectile_000": {
+    "blast_002": {
       "frame": {
         "x": 1536,
-        "y": 256,
+        "y": 1536,
         "w": 256,
         "h": 256
       },
@@ -300,170 +300,10 @@
         "h": 256
       }
     },
-    "projectile_001": {
+    "blast_003": {
       "frame": {
         "x": 1792,
-        "y": 256,
-        "w": 256,
-        "h": 256
-      },
-      "rotated": false,
-      "trimmed": false,
-      "spriteSourceSize": {
-        "x": 0,
-        "y": 0,
-        "w": 256,
-        "h": 256
-      },
-      "sourceSize": {
-        "w": 256,
-        "h": 256
-      }
-    },
-    "projectile_002": {
-      "frame": {
-        "x": 0,
-        "y": 512,
-        "w": 256,
-        "h": 256
-      },
-      "rotated": false,
-      "trimmed": false,
-      "spriteSourceSize": {
-        "x": 0,
-        "y": 0,
-        "w": 256,
-        "h": 256
-      },
-      "sourceSize": {
-        "w": 256,
-        "h": 256
-      }
-    },
-    "projectile_003": {
-      "frame": {
-        "x": 256,
-        "y": 512,
-        "w": 256,
-        "h": 256
-      },
-      "rotated": false,
-      "trimmed": false,
-      "spriteSourceSize": {
-        "x": 0,
-        "y": 0,
-        "w": 256,
-        "h": 256
-      },
-      "sourceSize": {
-        "w": 256,
-        "h": 256
-      }
-    },
-    "projectile_004": {
-      "frame": {
-        "x": 512,
-        "y": 512,
-        "w": 256,
-        "h": 256
-      },
-      "rotated": false,
-      "trimmed": false,
-      "spriteSourceSize": {
-        "x": 0,
-        "y": 0,
-        "w": 256,
-        "h": 256
-      },
-      "sourceSize": {
-        "w": 256,
-        "h": 256
-      }
-    },
-    "projectile_005": {
-      "frame": {
-        "x": 768,
-        "y": 512,
-        "w": 256,
-        "h": 256
-      },
-      "rotated": false,
-      "trimmed": false,
-      "spriteSourceSize": {
-        "x": 0,
-        "y": 0,
-        "w": 256,
-        "h": 256
-      },
-      "sourceSize": {
-        "w": 256,
-        "h": 256
-      }
-    },
-    "ranged_000": {
-      "frame": {
-        "x": 1024,
-        "y": 512,
-        "w": 256,
-        "h": 256
-      },
-      "rotated": false,
-      "trimmed": false,
-      "spriteSourceSize": {
-        "x": 0,
-        "y": 0,
-        "w": 256,
-        "h": 256
-      },
-      "sourceSize": {
-        "w": 256,
-        "h": 256
-      }
-    },
-    "ranged_001": {
-      "frame": {
-        "x": 1280,
-        "y": 512,
-        "w": 256,
-        "h": 256
-      },
-      "rotated": false,
-      "trimmed": false,
-      "spriteSourceSize": {
-        "x": 0,
-        "y": 0,
-        "w": 256,
-        "h": 256
-      },
-      "sourceSize": {
-        "w": 256,
-        "h": 256
-      }
-    },
-    "ranged_002": {
-      "frame": {
-        "x": 1536,
-        "y": 512,
-        "w": 256,
-        "h": 256
-      },
-      "rotated": false,
-      "trimmed": false,
-      "spriteSourceSize": {
-        "x": 0,
-        "y": 0,
-        "w": 256,
-        "h": 256
-      },
-      "sourceSize": {
-        "w": 256,
-        "h": 256
-      }
-    },
-    "ranged_003": {
-      "frame": {
-        "x": 1792,
-        "y": 512,
+        "y": 1536,
         "w": 256,
         "h": 256
       },
@@ -483,7 +323,7 @@
     "spawn_000": {
       "frame": {
         "x": 0,
-        "y": 768,
+        "y": 512,
         "w": 256,
         "h": 256
       },
@@ -503,7 +343,7 @@
     "spawn_001": {
       "frame": {
         "x": 256,
-        "y": 768,
+        "y": 512,
         "w": 256,
         "h": 256
       },
@@ -523,7 +363,7 @@
     "spawn_002": {
       "frame": {
         "x": 512,
-        "y": 768,
+        "y": 512,
         "w": 256,
         "h": 256
       },
@@ -543,6 +383,26 @@
     "spawn_003": {
       "frame": {
         "x": 768,
+        "y": 512,
+        "w": 256,
+        "h": 256
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 256,
+        "h": 256
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 256
+      }
+    },
+    "defeat_000": {
+      "frame": {
+        "x": 0,
         "y": 768,
         "w": 256,
         "h": 256
@@ -560,7 +420,67 @@
         "h": 256
       }
     },
-    "spawn_004": {
+    "defeat_001": {
+      "frame": {
+        "x": 256,
+        "y": 768,
+        "w": 256,
+        "h": 256
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 256,
+        "h": 256
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 256
+      }
+    },
+    "defeat_002": {
+      "frame": {
+        "x": 512,
+        "y": 768,
+        "w": 256,
+        "h": 256
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 256,
+        "h": 256
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 256
+      }
+    },
+    "defeat_003": {
+      "frame": {
+        "x": 768,
+        "y": 768,
+        "w": 256,
+        "h": 256
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 256,
+        "h": 256
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 256
+      }
+    },
+    "defeat_004": {
       "frame": {
         "x": 1024,
         "y": 768,
@@ -580,7 +500,7 @@
         "h": 256
       }
     },
-    "spawn_005": {
+    "defeat_005": {
       "frame": {
         "x": 1280,
         "y": 768,
@@ -600,47 +520,7 @@
         "h": 256
       }
     },
-    "walk_000": {
-      "frame": {
-        "x": 1536,
-        "y": 768,
-        "w": 256,
-        "h": 256
-      },
-      "rotated": false,
-      "trimmed": false,
-      "spriteSourceSize": {
-        "x": 0,
-        "y": 0,
-        "w": 256,
-        "h": 256
-      },
-      "sourceSize": {
-        "w": 256,
-        "h": 256
-      }
-    },
-    "walk_001": {
-      "frame": {
-        "x": 1792,
-        "y": 768,
-        "w": 256,
-        "h": 256
-      },
-      "rotated": false,
-      "trimmed": false,
-      "spriteSourceSize": {
-        "x": 0,
-        "y": 0,
-        "w": 256,
-        "h": 256
-      },
-      "sourceSize": {
-        "w": 256,
-        "h": 256
-      }
-    },
-    "walk_002": {
+    "parry_000": {
       "frame": {
         "x": 0,
         "y": 1024,
@@ -660,7 +540,7 @@
         "h": 256
       }
     },
-    "walk_003": {
+    "parry_001": {
       "frame": {
         "x": 256,
         "y": 1024,
@@ -680,7 +560,7 @@
         "h": 256
       }
     },
-    "walk_004": {
+    "parry_002": {
       "frame": {
         "x": 512,
         "y": 1024,
@@ -700,7 +580,7 @@
         "h": 256
       }
     },
-    "walk_005": {
+    "parry_003": {
       "frame": {
         "x": 768,
         "y": 1024,
@@ -722,8 +602,8 @@
     },
     "attack_000": {
       "frame": {
-        "x": 1024,
-        "y": 1024,
+        "x": 0,
+        "y": 1280,
         "w": 256,
         "h": 256
       },
@@ -742,8 +622,8 @@
     },
     "attack_001": {
       "frame": {
-        "x": 1280,
-        "y": 1024,
+        "x": 256,
+        "y": 1280,
         "w": 256,
         "h": 256
       },
@@ -762,8 +642,8 @@
     },
     "attack_002": {
       "frame": {
-        "x": 1536,
-        "y": 1024,
+        "x": 512,
+        "y": 1280,
         "w": 256,
         "h": 256
       },
@@ -782,8 +662,8 @@
     },
     "attack_003": {
       "frame": {
-        "x": 1792,
-        "y": 1024,
+        "x": 768,
+        "y": 1280,
         "w": 256,
         "h": 256
       },
@@ -802,86 +682,6 @@
     },
     "attack_004": {
       "frame": {
-        "x": 0,
-        "y": 1280,
-        "w": 256,
-        "h": 256
-      },
-      "rotated": false,
-      "trimmed": false,
-      "spriteSourceSize": {
-        "x": 0,
-        "y": 0,
-        "w": 256,
-        "h": 256
-      },
-      "sourceSize": {
-        "w": 256,
-        "h": 256
-      }
-    },
-    "attack_005": {
-      "frame": {
-        "x": 256,
-        "y": 1280,
-        "w": 256,
-        "h": 256
-      },
-      "rotated": false,
-      "trimmed": false,
-      "spriteSourceSize": {
-        "x": 0,
-        "y": 0,
-        "w": 256,
-        "h": 256
-      },
-      "sourceSize": {
-        "w": 256,
-        "h": 256
-      }
-    },
-    "attack_006": {
-      "frame": {
-        "x": 512,
-        "y": 1280,
-        "w": 256,
-        "h": 256
-      },
-      "rotated": false,
-      "trimmed": false,
-      "spriteSourceSize": {
-        "x": 0,
-        "y": 0,
-        "w": 256,
-        "h": 256
-      },
-      "sourceSize": {
-        "w": 256,
-        "h": 256
-      }
-    },
-    "blast_000": {
-      "frame": {
-        "x": 768,
-        "y": 1280,
-        "w": 256,
-        "h": 256
-      },
-      "rotated": false,
-      "trimmed": false,
-      "spriteSourceSize": {
-        "x": 0,
-        "y": 0,
-        "w": 256,
-        "h": 256
-      },
-      "sourceSize": {
-        "w": 256,
-        "h": 256
-      }
-    },
-    "blast_001": {
-      "frame": {
         "x": 1024,
         "y": 1280,
         "w": 256,
@@ -900,67 +700,7 @@
         "h": 256
       }
     },
-    "blast_002": {
-      "frame": {
-        "x": 1280,
-        "y": 1280,
-        "w": 256,
-        "h": 256
-      },
-      "rotated": false,
-      "trimmed": false,
-      "spriteSourceSize": {
-        "x": 0,
-        "y": 0,
-        "w": 256,
-        "h": 256
-      },
-      "sourceSize": {
-        "w": 256,
-        "h": 256
-      }
-    },
-    "blast_003": {
-      "frame": {
-        "x": 1536,
-        "y": 1280,
-        "w": 256,
-        "h": 256
-      },
-      "rotated": false,
-      "trimmed": false,
-      "spriteSourceSize": {
-        "x": 0,
-        "y": 0,
-        "w": 256,
-        "h": 256
-      },
-      "sourceSize": {
-        "w": 256,
-        "h": 256
-      }
-    },
-    "defeat_000": {
-      "frame": {
-        "x": 1792,
-        "y": 1280,
-        "w": 256,
-        "h": 256
-      },
-      "rotated": false,
-      "trimmed": false,
-      "spriteSourceSize": {
-        "x": 0,
-        "y": 0,
-        "w": 256,
-        "h": 256
-      },
-      "sourceSize": {
-        "w": 256,
-        "h": 256
-      }
-    },
-    "defeat_001": {
+    "ranged_000": {
       "frame": {
         "x": 0,
         "y": 1536,
@@ -980,7 +720,7 @@
         "h": 256
       }
     },
-    "defeat_002": {
+    "ranged_001": {
       "frame": {
         "x": 256,
         "y": 1536,
@@ -1000,7 +740,7 @@
         "h": 256
       }
     },
-    "defeat_003": {
+    "ranged_002": {
       "frame": {
         "x": 512,
         "y": 1536,
@@ -1020,7 +760,7 @@
         "h": 256
       }
     },
-    "idle_000": {
+    "ranged_003": {
       "frame": {
         "x": 768,
         "y": 1536,
@@ -1040,10 +780,90 @@
         "h": 256
       }
     },
-    "idle_001": {
+    "projectile_000": {
+      "frame": {
+        "x": 0,
+        "y": 1792,
+        "w": 256,
+        "h": 256
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 256,
+        "h": 256
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 256
+      }
+    },
+    "projectile_001": {
+      "frame": {
+        "x": 256,
+        "y": 1792,
+        "w": 256,
+        "h": 256
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 256,
+        "h": 256
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 256
+      }
+    },
+    "projectile_002": {
+      "frame": {
+        "x": 512,
+        "y": 1792,
+        "w": 256,
+        "h": 256
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 256,
+        "h": 256
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 256
+      }
+    },
+    "projectile_003": {
+      "frame": {
+        "x": 768,
+        "y": 1792,
+        "w": 256,
+        "h": 256
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 256,
+        "h": 256
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 256
+      }
+    },
+    "projectile_004": {
       "frame": {
         "x": 1024,
-        "y": 1536,
+        "y": 1792,
         "w": 256,
         "h": 256
       },
@@ -1060,69 +880,9 @@
         "h": 256
       }
     },
-    "idle_002": {
+    "projectile_005": {
       "frame": {
         "x": 1280,
-        "y": 1536,
-        "w": 256,
-        "h": 256
-      },
-      "rotated": false,
-      "trimmed": false,
-      "spriteSourceSize": {
-        "x": 0,
-        "y": 0,
-        "w": 256,
-        "h": 256
-      },
-      "sourceSize": {
-        "w": 256,
-        "h": 256
-      }
-    },
-    "idle_003": {
-      "frame": {
-        "x": 1536,
-        "y": 1536,
-        "w": 256,
-        "h": 256
-      },
-      "rotated": false,
-      "trimmed": false,
-      "spriteSourceSize": {
-        "x": 0,
-        "y": 0,
-        "w": 256,
-        "h": 256
-      },
-      "sourceSize": {
-        "w": 256,
-        "h": 256
-      }
-    },
-    "idle_004": {
-      "frame": {
-        "x": 1792,
-        "y": 1536,
-        "w": 256,
-        "h": 256
-      },
-      "rotated": false,
-      "trimmed": false,
-      "spriteSourceSize": {
-        "x": 0,
-        "y": 0,
-        "w": 256,
-        "h": 256
-      },
-      "sourceSize": {
-        "w": 256,
-        "h": 256
-      }
-    },
-    "idle_005": {
-      "frame": {
-        "x": 0,
         "y": 1792,
         "w": 256,
         "h": 256
@@ -1146,19 +906,58 @@
       "jump_000",
       "jump_001",
       "jump_002",
-      "jump_003",
-      "jump_004",
-      "jump_005",
-      "jump_006",
-      "jump_007"
+      "jump_003"
+    ],
+    "idle": [
+      "idle_000",
+      "idle_001",
+      "idle_002",
+      "idle_003"
+    ],
+    "walk": [
+      "walk_000",
+      "walk_001",
+      "walk_002",
+      "walk_003"
+    ],
+    "blast": [
+      "blast_000",
+      "blast_001",
+      "blast_002",
+      "blast_003"
+    ],
+    "spawn": [
+      "spawn_000",
+      "spawn_001",
+      "spawn_002",
+      "spawn_003"
+    ],
+    "defeat": [
+      "defeat_000",
+      "defeat_001",
+      "defeat_002",
+      "defeat_003",
+      "defeat_004",
+      "defeat_005"
     ],
     "parry": [
       "parry_000",
       "parry_001",
       "parry_002",
-      "parry_003",
-      "parry_004",
-      "parry_005"
+      "parry_003"
+    ],
+    "attack": [
+      "attack_000",
+      "attack_001",
+      "attack_002",
+      "attack_003",
+      "attack_004"
+    ],
+    "ranged": [
+      "ranged_000",
+      "ranged_001",
+      "ranged_002",
+      "ranged_003"
     ],
     "projectile": [
       "projectile_000",
@@ -1167,57 +966,6 @@
       "projectile_003",
       "projectile_004",
       "projectile_005"
-    ],
-    "ranged": [
-      "ranged_000",
-      "ranged_001",
-      "ranged_002",
-      "ranged_003"
-    ],
-    "spawn": [
-      "spawn_000",
-      "spawn_001",
-      "spawn_002",
-      "spawn_003",
-      "spawn_004",
-      "spawn_005"
-    ],
-    "walk": [
-      "walk_000",
-      "walk_001",
-      "walk_002",
-      "walk_003",
-      "walk_004",
-      "walk_005"
-    ],
-    "attack": [
-      "attack_000",
-      "attack_001",
-      "attack_002",
-      "attack_003",
-      "attack_004",
-      "attack_005",
-      "attack_006"
-    ],
-    "blast": [
-      "blast_000",
-      "blast_001",
-      "blast_002",
-      "blast_003"
-    ],
-    "defeat": [
-      "defeat_000",
-      "defeat_001",
-      "defeat_002",
-      "defeat_003"
-    ],
-    "idle": [
-      "idle_000",
-      "idle_001",
-      "idle_002",
-      "idle_003",
-      "idle_004",
-      "idle_005"
     ]
   },
   "meta": {

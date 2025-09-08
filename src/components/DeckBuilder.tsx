@@ -1,16 +1,18 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { BuilderEntry, BasePolitician, BaseSpecial } from '../types/game';
-import { Pols, Specials, PRESET_DECKS } from '../data/gameData';
+import { Pols, Specials } from '../data/gameData';
 import { currentBuilderBudget, currentBuilderCount, drawCardImage } from '../utils/gameUtils';
-import { getCardDetails, formatWealth, formatSources, convertHPToUSD } from '../data/cardDetails';
+import { getCardDetails, formatWealth, formatSources } from '../data/cardDetails';
 import { Icon } from '../ui/Icon';
 import { withIcons } from '../ui/withIcons';
+import { useAudio } from '../context/AudioContext';
 
 interface DeckBuilderProps {
   isOpen: boolean;
   onClose: () => void;
   onApplyDeck: (deck: BuilderEntry[]) => void;
   onStartMatch: (p1Deck: BuilderEntry[], p2Deck: BuilderEntry[]) => void;
+  onStartVsAI?: (p1Deck: BuilderEntry[]) => void;
   images?: never;
 }
 
@@ -18,18 +20,161 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
   isOpen,
   onClose,
   onApplyDeck,
-  onStartMatch
+  onStartMatch,
+  onStartVsAI
 }) => {
   const [deck, setDeck] = useState<BuilderEntry[]>([]);
-  const [selectedDeckName, setSelectedDeckName] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
+  const { playMusic, currentTrack } = useAudio();
 
 
   const [selectedCard, setSelectedCard] = useState<{ kind: 'pol' | 'spec'; base: BasePolitician | BaseSpecial } | null>(null);
   const [showSources, setShowSources] = useState(false);
 
+  // List of disabled cards that are grayed out and not selectable
+  const disabledCards = new Set([
+    'Malala Yousafzai',
+    'Jack Ma',
+    'Roman Abramovich',
+    'Tim Cook',
+    'Mukesh Ambani',
+    'Alisher Usmanov',
+    'Yuval Noah Harari',
+    'Digitaler Wahlkampf',
+    'Partei-Offensive',
+    'Whataboutism',
+    'Influencer-Kampagne',
+    'Systemrelevant',
+    'Algorithmischer Diskurs',
+    'Zivilgesellschaft',
+    'Milchglas Transparenz',
+    'Alternative Fakten',
+    'Konzernfreundlicher Algorithmus',
+    'Fake News-Kampagne',
+    'Boykott-Kampagne',
+    'Deepfake-Skandal',
+    'Cyber-Attacke',
+    'Grassroots-Widerstand',
+    '"Unabhängige" Untersuchung',
+    'Soft Power-Kollaps',
+    'Cancel Culture'
+  ]);
+
+  // Preset decks (6 balanced combinations, 40-50 BP each)
+  const PRESETS: { name: string; cards: string[] }[] = [
+    {
+      name: 'Tech Oligarchs',
+      cards: [
+        'Vladimir Putin', 'Xi Jinping', 'Donald Trump', 'Mohammed bin Salman', 'Recep Tayyip Erdoğan',
+        'Elon Musk', 'Bill Gates', 'Mark Zuckerberg', 'Tim Cook', 'Sam Altman'
+      ]
+    },
+    {
+      name: 'Diplomatic Power',
+      cards: [
+        'Jens Stoltenberg', 'Olaf Scholz', 'Rishi Sunak', 'Kamala Harris', 'Helmut Schmidt',
+        'Greta Thunberg', 'Warren Buffett', 'George Soros', 'Spin Doctor', 'Think-tank'
+      ]
+    },
+    {
+      name: 'Activist Movement',
+      cards: [
+        'Benjamin Netanyahu', 'Volodymyr Zelenskyy', 'Ursula von der Leyen', 'Narendra Modi', 'Luiz Inácio Lula da Silva',
+        'Greta Thunberg', 'Malala Yousafzai', 'Ai Weiwei', 'Alexei Navalny', 'Jennifer Doudna'
+      ]
+    },
+    {
+      name: 'Initiative Rush',
+      cards: [
+        'Benjamin Netanyahu', 'Volodymyr Zelenskyy', 'Ursula von der Leyen', 'Olaf Scholz', 'Kamala Harris',
+        'Greta Thunberg', 'Verzoegerungsverfahren', 'Symbolpolitik', 'Shadow Lobbying', 'Opportunist'
+      ]
+    },
+    {
+      name: 'Media Control',
+      cards: [
+        'Vladimir Putin', 'Xi Jinping', 'Donald Trump', 'Mohammed bin Salman', 'Recep Tayyip Erdoğan',
+        'Oprah Winfrey', 'Mark Zuckerberg', 'Tim Cook', 'Influencer-Kampagne', 'Whataboutism'
+      ]
+    },
+    {
+      name: 'Economic Influence',
+      cards: [
+        'Jens Stoltenberg', 'Olaf Scholz', 'Rishi Sunak', 'Kamala Harris', 'Helmut Schmidt',
+        'Warren Buffett', 'George Soros', 'Jeff Bezos', 'Mukesh Ambani', 'Roman Abramovich'
+      ]
+    }
+  ];
+
+  const [presetIndex, setPresetIndex] = useState(0);
+
+  // Ensure music continues playing when deckbuilder opens
+  useEffect(() => {
+    if (isOpen && !currentTrack) {
+      // If no music is playing, start the theme music
+      playMusic('/assets/music/theme.mp3', true);
+    }
+  }, [isOpen, currentTrack, playMusic]);
+
+  const applyPreset = useCallback((idx: number) => {
+    const preset = PRESETS[idx];
+    if (!preset) return;
+    const newDeck: BuilderEntry[] = [];
+    preset.cards.forEach(name => {
+      const pol = Pols.find((p: BasePolitician) => p.name === name);
+      if (pol) {
+        newDeck.push({ kind: 'pol', baseId: pol.id, count: 1 });
+        return;
+      }
+      const spec = Specials.find((s: BaseSpecial) => s.name === name);
+      if (spec) {
+        newDeck.push({ kind: 'spec', baseId: spec.id, count: 1 });
+        return;
+      }
+      // name not found -> ignore
+    });
+    setDeck(newDeck);
+  }, [setDeck]);
+
   const budget = currentBuilderBudget(deck);
   const count = currentBuilderCount(deck);
+
+  // Count government cards in deck
+  const governmentCount = deck.reduce((sum, entry) => {
+    if (entry.kind === 'pol') {
+      return sum + entry.count;
+    }
+    return sum;
+  }, 0);
+
+  // Deck validation: minimum 5 government cards, maximum 10 total cards, budget <= 69 BP
+  const isDeckValid = count >= 5 && governmentCount >= 5 && count <= 10 && budget <= 69;
+
+  // Helper function to get category color for a card
+  const getCategoryColor = (kind: 'pol' | 'spec', base: BasePolitician | BaseSpecial) => {
+    if (kind === 'pol') {
+      return { main: '#add8e6', complementary: '#e6f3ff' }; // Government: Light Blue
+    }
+
+    const spec = base as BaseSpecial;
+    if (spec.type === 'Öffentlichkeitskarte') {
+      return { main: '#f5f5dc', complementary: '#fefcf0' }; // Public: Beige
+    }
+    if (spec.type === 'Sofort-Initiative') {
+      return { main: '#40e0d0', complementary: '#e6fffe' }; // Initiatives (Instant): Turquoise
+    }
+    if (spec.type === 'Dauerhaft-Initiative') {
+      return { main: '#40e0d0', complementary: '#e6fffe' }; // Initiatives (Permanent): Turquoise
+    }
+    if (spec.type === 'Intervention') {
+      return { main: '#c8a0ff', complementary: '#f3e6ff' }; // Interventions: Light Purple
+    }
+    if ((spec as any).tag === 'Corruption') {
+      return { main: '#ffb86b', complementary: '#fff4e6' }; // Corruption: Orange
+    }
+
+    return { main: '#26394c', complementary: '#1a2a3a' }; // Default
+  };
 
   // Helper: classify a card into an effect category for sorting / grouping.
   // Priority: 0 = Influence (buffs), 1 = AP gain, 2 = Card draw, 3 = Other
@@ -57,6 +202,43 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
       case 2: return '+ Cards';
       default: return 'Other';
     }
+  };
+
+  // Helper function to separate active and disabled cards
+  const separateActiveAndDisabled = (cards: Array<{ kind: 'pol' | 'spec'; base: BasePolitician | BaseSpecial }>) => {
+    const active = cards.filter(({ base }) => !disabledCards.has(base.name));
+    const disabled = cards.filter(({ base }) => disabledCards.has(base.name));
+    return { active, disabled };
+  };
+
+  // Component to render cards with visual separation
+  const CardList = ({ cards }: { cards: Array<{ kind: 'pol' | 'spec'; base: BasePolitician | BaseSpecial }> }) => {
+    const { active, disabled } = separateActiveAndDisabled(cards);
+
+    return (
+      <>
+        {/* Active cards */}
+        {active.map(({ kind, base }) => (
+          <CardTile key={`active-${kind}-${base.id}`} kind={kind} base={base} onClick={() => handleCardClick(kind, base)} />
+        ))}
+
+        {/* Visual separator if there are both active and disabled cards */}
+        {active.length > 0 && disabled.length > 0 && (
+          <div style={{
+            gridColumn: '1 / -1',
+            height: '2px',
+            background: 'linear-gradient(90deg, transparent, #374151, transparent)',
+            margin: '8px 0',
+            borderRadius: '1px',
+          }} />
+        )}
+
+        {/* Disabled cards */}
+        {disabled.map(({ kind, base }) => (
+          <CardTile key={`disabled-${kind}-${base.id}`} kind={kind} base={base} onClick={() => handleCardClick(kind, base)} />
+        ))}
+      </>
+    );
   };
 
   const categorizedCards = useMemo(() => {
@@ -90,10 +272,11 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
     Specials.filter((s: BaseSpecial) => (s as any).tag === 'Corruption')
       .forEach((s: BaseSpecial) => categories.corruptions.push({ kind: 'spec', base: s }));
 
-    // Sort public, initiatives and interventions by effect rank (Influence, AP, Draw, Other)
+    // Sort by effect rank (Influence, AP, Draw, Other)
     const sortByEffect = (arr: Array<{ kind: 'pol' | 'spec'; base: BasePolitician | BaseSpecial }>) =>
       arr.sort((a, b) => getEffectRank(a.base) - getEffectRank(b.base));
 
+    sortByEffect(categories.government);
     sortByEffect(categories.public);
     sortByEffect(categories.initiatives_sofort);
     sortByEffect(categories.initiatives_dauerhaft);
@@ -128,19 +311,25 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
       },
       allFilteredCards
     };
-  }, [searchQuery]);
+  }, [searchQuery, disabledCards]);
 
 
 
   const builderCanAdd = useCallback((base: BasePolitician | BaseSpecial, kind: 'pol' | 'spec'): boolean => {
+    // Check if card is disabled
+    if (disabledCards.has(base.name)) return false;
+
+    // Check deck size limit (10 cards maximum)
+    if (count >= 10) return false;
+
     const tier = kind === 'spec' ? (base as BaseSpecial).tier : (base as BasePolitician).T;
     const limit = tier >= 3 ? 1 : 2;
     const entry = deck.find(e => e.kind === kind && e.baseId === base.id);
     const already = entry ? entry.count : 0;
     const cost = kind === 'pol' ? ((base as BasePolitician).BP ?? 0) : (base as BaseSpecial).bp;
 
-    return already < limit && count < 25 && (budget + cost) <= 300;
-  }, [deck, budget, count]);
+    return already < limit && (budget + cost) <= 69;
+  }, [deck, budget, count, disabledCards]);
 
   const builderAdd = useCallback((base: BasePolitician | BaseSpecial, kind: 'pol' | 'spec') => {
     if (!builderCanAdd(base, kind)) return;
@@ -155,8 +344,6 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
       entry.count += 1;
       return newDeck;
     });
-    // Clear preset name when manually modifying deck
-    setSelectedDeckName('');
   }, [builderCanAdd]);
 
   const builderRemove = useCallback((base: BasePolitician | BaseSpecial, kind: 'pol' | 'spec') => {
@@ -171,37 +358,18 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
       }
       return newDeck;
     });
-    // Clear preset name when manually modifying deck
-    setSelectedDeckName('');
   }, []);
 
-  const loadPresetDeck = useCallback((which: keyof typeof PRESET_DECKS) => {
-    const preset = PRESET_DECKS[which] as BuilderEntry[];
-    if (preset && preset.length > 0) {
-      setDeck([...preset]);
-      // Set deck name for display
-      const deckNames = {
-        'INITIATIVE_TEST_DECK': '⚡ Initiative Test Deck (10 Karten)',
-        'TEST_DECK_WITH_DRAW_EFFECTS': '🧪 Test Deck - Draw Effects (11 Karten)',
-        'TEST_DECK_5_CARDS': '🧪 Test Deck (5 Karten)',
-        'NEOLIBERAL_TECHNOKRAT': '🏛️ Neoliberaler Technokrat',
-        'AUTORITAERER_REALIST': '🦅 Autoritärer Realist',
-        'PROGRESSIVER_AKTIVISMUS': '🌱 Progressiver Aktivismus',
-        'POPULISTISCHER_OPPORTUNIST': '🎭 Populistischer Opportunist',
-        'BALANCED_AI_DECK': '🤖 Balanced AI Deck'
-      };
-      setSelectedDeckName(deckNames[which] || '');
-    }
-  }, []);
 
 
 
   const handleApplyDeck = useCallback(() => {
-    if (count === 25 && budget <= 300) {
+    const isDeckValid = count >= 5 && governmentCount >= 5 && count <= 10 && budget <= 69;
+    if (isDeckValid) {
       onApplyDeck(deck);
       onClose();
     }
-  }, [deck, count, budget, onApplyDeck, onClose]);
+  }, [deck, count, governmentCount, budget, onApplyDeck, onClose]);
 
   const handleCardClick = useCallback((kind: 'pol' | 'spec', base: BasePolitician | BaseSpecial) => {
     setSelectedCard({ kind, base });
@@ -273,34 +441,93 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
     onClose();
   }, [deck, onStartMatch, onClose]);
 
+  const handleStartVsAI = useCallback(() => {
+    const isDeckValid = count >= 5 && governmentCount >= 5 && count <= 10 && budget <= 69;
+    if (!isDeckValid || !onStartVsAI) return;
+
+    const p1Deck: BuilderEntry[] = deck.length ? deck : [];
+    console.log('🔧 DEBUG: Starting vs AI with deck:', { p1Cards: p1Deck.length });
+    onStartVsAI(p1Deck);
+    onClose();
+  }, [deck, count, governmentCount, budget, onStartVsAI, onClose]);
+
   // Card Tile Component
   const CardTile = React.memo(({ kind, base, onClick }: {
     kind: 'pol' | 'spec';
     base: BasePolitician | BaseSpecial;
     onClick: () => void;
-  }) => (
+  }) => {
+    const isDisabled = disabledCards.has(base.name);
+    const canAdd = builderCanAdd(base, kind);
+    const categoryColors = getCategoryColor(kind, base);
+
+    // Double-click detection with timer
+    const [clickCount, setClickCount] = useState(0);
+    const [clickTimer, setClickTimer] = useState<NodeJS.Timeout | null>(null);
+
+    const handleClick = useCallback((e: React.MouseEvent) => {
+      if (isDisabled) return;
+
+      e.stopPropagation();
+
+      if (clickCount === 0) {
+        // First click - start timer
+        setClickCount(1);
+        const timer = setTimeout(() => {
+          // Single click after timeout
+          onClick();
+          setClickCount(0);
+        }, 300); // 300ms timeout for double-click detection
+        setClickTimer(timer);
+      } else {
+        // Second click within timeout - double click detected
+        if (clickTimer) {
+          clearTimeout(clickTimer);
+          setClickTimer(null);
+        }
+        setClickCount(0);
+
+        // Add to deck immediately
+        if (canAdd) {
+          builderAdd(base, kind);
+        }
+      }
+    }, [isDisabled, onClick, canAdd, base, kind, clickCount, clickTimer]);
+
+    // Cleanup timer on unmount
+    useEffect(() => {
+      return () => {
+        if (clickTimer) {
+          clearTimeout(clickTimer);
+        }
+      };
+    }, [clickTimer]);
+
+    return (
     <div
-      onClick={onClick}
+      onClick={handleClick}
       style={{
-        background: '#0f1822',
-        border: '1px solid #26394c',
+        background: isDisabled ? '#0a0f15' : categoryColors.complementary + '4D', // 30% opacity
+        border: `2px solid ${isDisabled ? '#1a1f2a' : categoryColors.main}`, // 100% opacity outline
+        outline: '1px solid #000000', // Thin black outline
         borderRadius: '8px',
-        padding: '4px',
+        padding: '6px',
         display: 'flex',
         flexDirection: 'column',
         gap: '4px',
-        cursor: 'pointer',
+        cursor: isDisabled ? 'not-allowed' : 'pointer',
         transition: 'all 0.2s ease',
-        width: '132px',
-        height: '180px',
+        width: '124px',
+        height: '190px',
+        opacity: isDisabled ? 0.4 : 1,
       }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.background = '#1a2a3a';
-        e.currentTarget.style.borderColor = '#3a4c5d';
+      onMouseEnter={isDisabled ? undefined : (e) => {
+        e.currentTarget.style.background = categoryColors.complementary + '66'; // 40% opacity on hover
+        e.currentTarget.style.borderColor = categoryColors.main;
       }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.background = '#0f1822';
-        e.currentTarget.style.borderColor = '#26394c';
+      onMouseLeave={isDisabled ? undefined : (e) => {
+        e.currentTarget.style.background = categoryColors.complementary + '4D'; // Back to 30% opacity
+        e.currentTarget.style.borderColor = categoryColors.main;
       }}
     >
       <canvas
@@ -311,8 +538,9 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
           width: '120px',
           height: '120px',
           borderRadius: '6px',
-          background: '#0b1118',
-          border: '1px solid #1e2c3b',
+          background: isDisabled ? '#080b0f' : '#0b1118',
+          border: `1px solid ${isDisabled ? '#151a20' : '#1e2c3b'}`,
+          opacity: isDisabled ? 0.6 : 1,
         }}
         ref={(canvas) => {
           if (canvas) {
@@ -335,7 +563,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
         margin: 0,
         fontSize: '10px',
         fontWeight: 600,
-        color: '#dbe9f8',
+        color: isDisabled ? '#6b7280' : '#000000',
         textAlign: 'center',
         lineHeight: '1.2',
         overflow: 'hidden',
@@ -351,54 +579,33 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: '6px',
         marginTop: 'auto',
+        padding: '4px 0',
       }}>
         <span style={{
           fontSize: '9px',
-          color: '#a9c1da',
+          color: isDisabled ? '#6b7280' : '#000000',
           fontWeight: 500,
+          textAlign: 'center',
         }}>
           {kind === 'pol'
-            ? `${convertHPToUSD((base as BasePolitician).BP || 0)}`
-            : `${convertHPToUSD((base as BaseSpecial).bp)}`
+            ? `${(base as BasePolitician).BP || 0} BP`
+            : `${(base as BaseSpecial).bp} BP`
           }
         </span>
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            builderAdd(base, kind);
-          }}
-          disabled={!builderCanAdd(base, kind)}
-          style={{
-            background: '#90EE90',
-            color: '#2d572d',
-            border: 'none',
-            borderRadius: '4px',
-            padding: '2px 6px',
-            fontSize: '10px',
-            fontWeight: 'bold',
-            cursor: 'pointer',
-            opacity: builderCanAdd(base, kind) ? 1 : 0.5,
-            minWidth: '24px',
-            height: '20px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          +
-        </button>
       </div>
     </div>
-  ));
+    );
+  });
 
   if (!isOpen) return null;
 
-  const HP_LIMIT = 108; // Regelwerk: 108 HP Budget für 25 Karten
-  const overBudget = budget > HP_LIMIT;
-  const overCount = count > 25;
-  const isValid = !overBudget && !overCount;
+  const BP_LIMIT = 69; // Budget limit
+  const overBudget = budget > BP_LIMIT;
+  const overCount = count > 10;
+  const underMinGovernment = governmentCount < 5;
+  const underMinCards = count < 5;
+  const isValid = !overBudget && !overCount && !underMinGovernment && !underMinCards;
 
   return (
     <div style={{
@@ -425,28 +632,56 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
           display: 'flex',
           gap: '10px',
           alignItems: 'center',
+          justifyContent: 'space-between',
         }}>
-          <div style={{ fontWeight: 600, fontSize: '14px', letterSpacing: '.4px' }}>
-            Deckbuilder{selectedDeckName ? ` - ${selectedDeckName}` : ''}
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+            <div style={{ fontWeight: 600, fontSize: '14px', letterSpacing: '.4px' }}>
+              Deckbuilder
+            </div>
+            <span style={{
+              padding: '4px 8px',
+              borderRadius: '8px',
+              background: '#0f1a26',
+              border: '1px solid #203043',
+              fontSize: '12px',
+            }}>
+              Budget (BP): {budget} / 69
+            </span>
+            <span style={{
+              padding: '4px 8px',
+              borderRadius: '8px',
+              background: '#0f1a26',
+              border: '1px solid #203043',
+              fontSize: '12px',
+            }}>
+              Deck: {count}/10
+            </span>
           </div>
-          <span style={{
-            padding: '4px 8px',
-            borderRadius: '8px',
-            background: '#0f1a26',
-            border: '1px solid #203043',
-            fontSize: '12px',
-          }}>
-            Budget: {convertHPToUSD(budget)} / {convertHPToUSD(HP_LIMIT)}
-          </span>
-          <span style={{
-            padding: '4px 8px',
-            borderRadius: '8px',
-            background: '#0f1a26',
-            border: '1px solid #203043',
-            fontSize: '12px',
-          }}>
-            Karten: {count} / 25
-          </span>
+
+          {/* Start vs AI Button */}
+          {onStartVsAI && (
+            <button
+              onClick={handleStartVsAI}
+              style={{
+                background: isValid ? '#10b981' : '#6b7280',
+                color: 'white',
+                border: 'none',
+                padding: '8px 16px',
+                borderRadius: '6px',
+                fontSize: '12px',
+                fontWeight: 600,
+                cursor: isValid ? 'pointer' : 'not-allowed',
+                opacity: isValid ? 1 : 0.5,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+              disabled={!isValid}
+              title={!isValid ? `Deck muss gültig sein: 5-10 Karten, ≥5 Government, ≤69 BP (aktuell: ${budget} BP)` : 'Starte Spiel gegen KI'}
+            >
+              🤖 Start vs KI
+            </button>
+          )}
           <div style={{
             display: 'flex',
             alignItems: 'center',
@@ -472,114 +707,13 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
             />
           </div>
           <div style={{ flex: 1 }}></div>
-          <button
-            onClick={() => loadPresetDeck('INITIATIVE_TEST_DECK')}
-            style={{
-              background: '#4338ca',
-              color: '#ffffff',
-              border: '1px solid #6366f1',
-              borderRadius: '8px',
-              padding: '6px 10px',
-              fontSize: '11px',
-              cursor: 'pointer',
-              whiteSpace: 'nowrap',
-              fontWeight: 'bold',
-            }}
-          >
-            ⚡ Initiative Test (10 Karten)
-          </button>
-          <button
-            onClick={() => loadPresetDeck('TEST_DECK_WITH_DRAW_EFFECTS')}
-            style={{
-              background: '#ff6b35',
-              color: '#ffffff',
-              border: '1px solid #ff8c61',
-              borderRadius: '8px',
-              padding: '6px 10px',
-              fontSize: '11px',
-              cursor: 'pointer',
-              whiteSpace: 'nowrap',
-              fontWeight: 'bold',
-            }}
-          >
-            🧪 Draw Effects (11 Karten)
-          </button>
-          <button
-            onClick={() => loadPresetDeck('TEST_DECK_5_CARDS')}
-            style={{
-              background: '#df6530',
-              color: '#ffffff',
-              border: '1px solid #e5844c',
-              borderRadius: '8px',
-              padding: '6px 10px',
-              fontSize: '11px',
-              cursor: 'pointer',
-              whiteSpace: 'nowrap',
-              fontWeight: 'bold',
-            }}
-          >
-            🧪 Test (5 Karten)
-          </button>
-          <button
-            onClick={() => loadPresetDeck('NEOLIBERAL_TECHNOKRAT')}
-            style={{
-              background: '#162436',
-              color: '#eaf3ff',
-              border: '1px solid #27425b',
-              borderRadius: '8px',
-              padding: '6px 10px',
-              fontSize: '11px',
-              cursor: 'pointer',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            🏛️ Neoliberaler Technokrat
-          </button>
-          <button
-            onClick={() => loadPresetDeck('AUTORITAERER_REALIST')}
-            style={{
-              background: '#162436',
-              color: '#eaf3ff',
-              border: '1px solid #27425b',
-              borderRadius: '8px',
-              padding: '6px 10px',
-              fontSize: '11px',
-              cursor: 'pointer',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            🦅 Autoritärer Realist
-          </button>
-          <button
-            onClick={() => loadPresetDeck('PROGRESSIVER_AKTIVISMUS')}
-            style={{
-              background: '#162436',
-              color: '#eaf3ff',
-              border: '1px solid #27425b',
-              borderRadius: '8px',
-              padding: '6px 10px',
-              fontSize: '11px',
-              cursor: 'pointer',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            🌱 Progressiver Aktivismus
-          </button>
-          <button
-            onClick={() => loadPresetDeck('POPULISTISCHER_OPPORTUNIST')}
-            style={{
-              background: '#162436',
-              color: '#eaf3ff',
-              border: '1px solid #27425b',
-              borderRadius: '8px',
-              padding: '6px 10px',
-              fontSize: '11px',
-              cursor: 'pointer',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            🎭 Populistischer Opportunist
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <select value={presetIndex} onChange={(e) => setPresetIndex(Number(e.target.value))} style={{ background: '#0f1a26', color: '#eaf3ff', borderRadius: 8, padding: '6px 8px', border: '1px solid #203043' }}>
+              {PRESETS.map((p, i) => <option key={p.name} value={i}>{p.name}</option>)}
+            </select>
+            <button onClick={() => applyPreset(presetIndex)} style={{ background: '#0f2a1f', color: '#eaf3ff', borderRadius: 8, padding: '6px 8px', border: '1px solid #27425b' }}>Apply Preset</button>
+          </div>
+
           <button
             onClick={onClose}
             style={{
@@ -612,7 +746,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
             padding: '8px',
             background: '#0a121b',
             display: 'grid',
-            gridTemplateColumns: 'repeat(4, 1fr)',
+            gridTemplateColumns: 'repeat(6, 1fr)',
             gap: '12px',
           }}>
             {/* Government Column */}
@@ -647,20 +781,23 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                   color: '#8bb5d9',
                   lineHeight: '1.3',
                 }}>
-                  {withIcons('Politicians and state leaders who influence the government. Max 5 in the government hierarchy.')}
+                  {withIcons('Provide Influence points. At the end of each round, the player with the highest total Influence wins the round. Win two rounds to win the game.')}
                 </p>
               </div>
               <div style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(132px, 1fr))',
+                gridTemplateColumns: 'repeat(2, 1fr)',
                 gap: '8px',
                 flex: 1,
                 justifyContent: 'start',
                 alignContent: 'start',
+                background: 'rgba(173, 216, 230, 0.8)', // Government color with 80% opacity
+                borderRadius: '8px',
+                padding: '8px',
+                gridAutoRows: 'minmax(190px, auto)', // Adjust for new height
+                outline: '1px solid #000000', // Thin black outline
               }}>
-                {categorizedCards.categories.government.map(({ kind, base }) => (
-                  <CardTile key={`${kind}-${base.id}`} kind={kind} base={base} onClick={() => handleCardClick(kind, base)} />
-                ))}
+                <CardList cards={categorizedCards.categories.government} />
               </div>
             </div>
 
@@ -696,30 +833,23 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                   color: '#d2b48c',
                   lineHeight: '1.3',
                 }}>
-                  {withIcons('People from media, business, and academia who support your actions.')}
+                  {withIcons('Permanent support cards that modify values, action points, or Influence over time.')}
                 </p>
               </div>
               <div style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(132px, 1fr))',
+                gridTemplateColumns: 'repeat(2, 1fr)',
                 gap: '8px',
                 flex: 1,
                 justifyContent: 'start',
                 alignContent: 'start',
+                background: 'rgba(245, 245, 220, 0.8)', // Public color with 80% opacity
+                borderRadius: '8px',
+                padding: '8px',
+                gridAutoRows: 'minmax(190px, auto)', // Adjust for new height
+                outline: '1px solid #000000', // Thin black outline
               }}>
-                {[0,1,2,3].map(rank => (
-                  <React.Fragment key={rank}>
-                    {categorizedCards.categories.public.some(({ base }) => getEffectRank(base) === rank) && (
-                      <div style={{ gridColumn: '1 / -1', fontSize: '11px', fontWeight: 600, color: '#d2b48c', margin: '4px 0' }}>
-                        {getEffectLabel(rank)}
-                      </div>
-                    )}
-                    {categorizedCards.categories.public.filter(({ base }) => getEffectRank(base) === rank)
-                      .map(({ kind, base }) => (
-                        <CardTile key={`${rank}-${kind}-${base.id}`} kind={kind} base={base} onClick={() => handleCardClick(kind, base)} />
-                    ))}
-                  </React.Fragment>
-                ))}
+                <CardList cards={categorizedCards.categories.public} />
               </div>
             </div>
 
@@ -747,7 +877,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                   gap: '8px',
                 }}>
                   <Icon name="initiative" size={16} />
-                  Initiatives
+                  Initiatives (Instant)
                 </h3>
                 <p style={{
                   margin: 0,
@@ -755,36 +885,75 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                   color: '#40e0d0',
                   lineHeight: '1.3',
                 }}>
-                  {withIcons('One-time (Instant) and ongoing political actions for special effects.')}
+                  {withIcons('One-time effects for immediate advantages (e.g., Influence, points, actions).')}
                 </p>
               </div>
               <div style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(132px, 1fr))',
+                gridTemplateColumns: 'repeat(2, 1fr)',
                 gap: '8px',
                 flex: 1,
                 justifyContent: 'start',
                 alignContent: 'start',
+                background: 'rgba(64, 224, 208, 0.8)', // Initiatives (Instant) color with 80% opacity
+                borderRadius: '8px',
+                padding: '8px',
+                gridAutoRows: 'minmax(190px, auto)', // Adjust for new height
+                outline: '1px solid #000000', // Thin black outline
               }}>
-                {/* Sofort (Instant) initiatives */}
-                {categorizedCards.categories.initiatives_sofort.length > 0 && (
-                  <div style={{ gridColumn: '1 / -1', fontSize: '11px', fontWeight: 700, color: '#40e0d0', margin: '4px 0' }}>
-                    Sofort (Instant)
-                  </div>
-                )}
-                {categorizedCards.categories.initiatives_sofort.map(({ kind, base }) => (
-                  <CardTile key={`sofort-${kind}-${base.id}`} kind={kind} base={base} onClick={() => handleCardClick(kind, base)} />
-                ))}
+                <CardList cards={categorizedCards.categories.initiatives_sofort} />
+              </div>
+            </div>
 
-                {/* Dauerhaft (Ongoing) initiatives */}
-                {categorizedCards.categories.initiatives_dauerhaft.length > 0 && (
-                  <div style={{ gridColumn: '1 / -1', fontSize: '11px', fontWeight: 700, color: '#40e0d0', margin: '12px 0 4px' }}>
-                    Dauerhaft (Ongoing)
-                  </div>
-                )}
-                {categorizedCards.categories.initiatives_dauerhaft.map(({ kind, base }) => (
-                  <CardTile key={`dauerhaft-${kind}-${base.id}`} kind={kind} base={base} onClick={() => handleCardClick(kind, base)} />
-                ))}
+            {/* Initiatives (Permanent) Column */}
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '8px',
+            }}>
+              <div style={{
+                background: 'rgba(64, 224, 208, 0.2)',
+                border: '1px solid #40e0d0',
+                borderRadius: '8px',
+                padding: '8px',
+                textAlign: 'center',
+              }}>
+                <h3 style={{
+                  margin: 0,
+                  fontSize: '14px',
+                  fontWeight: 700,
+                  color: '#40e0d0',
+                  marginBottom: '4px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                }}>
+                  <Icon name="initiative" size={16} />
+                  Initiatives (Permanent)
+                </h3>
+                <p style={{
+                  margin: 0,
+                  fontSize: '11px',
+                  color: '#40e0d0',
+                  lineHeight: '1.3',
+                }}>
+                  {withIcons('Stay on the field and apply continuous effects.')}
+                </p>
+              </div>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(2, 1fr)',
+                gap: '8px',
+                flex: 1,
+                justifyContent: 'start',
+                alignContent: 'start',
+                background: 'rgba(64, 224, 208, 0.8)', // Initiatives (Permanent) color with 80% opacity
+                borderRadius: '8px',
+                padding: '8px',
+                gridAutoRows: 'minmax(190px, auto)', // Adjust for new height
+                outline: '1px solid #000000', // Thin black outline
+              }}>
+                <CardList cards={categorizedCards.categories.initiatives_dauerhaft} />
               </div>
             </div>
 
@@ -820,30 +989,23 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                   color: '#c8a0ff',
                   lineHeight: '1.3',
                 }}>
-                  {withIcons('Concealed trap cards that trigger automatically and disrupt enemy strategies.')}
+                  {withIcons('Trap cards that trigger automatically under certain conditions.')}
                 </p>
               </div>
               <div style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(132px, 1fr))',
+                gridTemplateColumns: 'repeat(2, 1fr)',
                 gap: '8px',
                 flex: 1,
                 justifyContent: 'start',
                 alignContent: 'start',
+                background: 'rgba(200, 160, 255, 0.8)', // Interventions color with 80% opacity
+                borderRadius: '8px',
+                padding: '8px',
+                gridAutoRows: 'minmax(190px, auto)', // Adjust for new height
+                outline: '1px solid #000000', // Thin black outline
               }}>
-                {[0,1,2,3].map(rank => (
-                  <React.Fragment key={rank}>
-                    {categorizedCards.categories.interventions.some(({ base }) => getEffectRank(base) === rank) && (
-                      <div style={{ gridColumn: '1 / -1', fontSize: '11px', fontWeight: 600, color: '#c8a0ff', margin: '4px 0' }}>
-                        {getEffectLabel(rank)}
-                      </div>
-                    )}
-                    {categorizedCards.categories.interventions.filter(({ base }) => getEffectRank(base) === rank)
-                      .map(({ kind, base }) => (
-                        <CardTile key={`${rank}-${kind}-${base.id}`} kind={kind} base={base} onClick={() => handleCardClick(kind, base)} />
-                    ))}
-                  </React.Fragment>
-                ))}
+                <CardList cards={categorizedCards.categories.interventions} />
               </div>
             </div>
 
@@ -879,30 +1041,23 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                   color: '#ffb86b',
                   lineHeight: '1.3',
                 }}>
-                  {withIcons('Korruptionskarten: Risikoreiche W6-Proben zur Übernahme gegnerischer Regierungen. Wähle ein Ziel, würfle, Boni durch Oligarchen.')}
+                  {withIcons('Special cards with a D6 roll; can seize, corrupt, or remove Government cards.')}
                 </p>
               </div>
               <div style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(132px, 1fr))',
+                gridTemplateColumns: 'repeat(2, 1fr)',
                 gap: '8px',
                 flex: 1,
                 justifyContent: 'start',
                 alignContent: 'start',
+                background: 'rgba(255, 184, 107, 0.8)', // Corruption color with 80% opacity
+                borderRadius: '8px',
+                padding: '8px',
+                gridAutoRows: 'minmax(190px, auto)', // Adjust for new height
+                outline: '1px solid #000000', // Thin black outline
               }}>
-                {[0,1,2,3].map(rank => (
-                  <React.Fragment key={rank}>
-                    {categorizedCards.categories.corruptions.some(({ base }) => getEffectRank(base) === rank) && (
-                      <div style={{ gridColumn: '1 / -1', fontSize: '11px', fontWeight: 600, color: '#ffb86b', margin: '4px 0' }}>
-                        {getEffectLabel(rank)}
-                      </div>
-                    )}
-                    {categorizedCards.categories.corruptions.filter(({ base }) => getEffectRank(base) === rank)
-                      .map(({ kind, base }) => (
-                        <CardTile key={`${rank}-${kind}-${base.id}`} kind={kind} base={base} onClick={() => handleCardClick(kind, base)} />
-                  ))}
-                </React.Fragment>
-              ))}
+                <CardList cards={categorizedCards.categories.corruptions} />
               </div>
             </div>
           </div>
@@ -921,9 +1076,8 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
             {/* Stats */}
             <div style={{
               display: 'flex',
-              flexWrap: 'wrap',
+              flexDirection: 'column',
               gap: '6px',
-              alignItems: 'center',
               fontSize: '12px',
               color: '#cfe0f2',
             }}>
@@ -935,7 +1089,43 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                 fontSize: '12px',
                 color: isValid ? '#4ade80' : '#ef4444',
               }}>
-                {isValid ? 'Deck OK' : `Deck invalid${overBudget ? ' · Budget' : ''}${overCount ? ' · Cards' : ''}`}
+                {isValid ? 'Deck OK' : `Deck invalid${overBudget ? ' · Budget' : ''}${overCount ? ' · Too many cards' : ''}${underMinGovernment ? ' · Need 5+ Government' : ''}${underMinCards ? ' · Need 5+ cards' : ''}`}
+              </div>
+
+              {/* Deck Statistics */}
+              <div style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: '4px',
+                fontSize: '11px',
+              }}>
+                <div style={{
+                  padding: '2px 6px',
+                  borderRadius: '4px',
+                  background: governmentCount >= 5 ? '#1f2937' : '#7f1d1d',
+                  color: governmentCount >= 5 ? '#d1d5db' : '#fca5a5',
+                  border: `1px solid ${governmentCount >= 5 ? '#374151' : '#dc2626'}`,
+                }}>
+                  Gov: {governmentCount}/5+
+                </div>
+                <div style={{
+                  padding: '2px 6px',
+                  borderRadius: '4px',
+                  background: count <= 10 ? '#1f2937' : '#7f1d1d',
+                  color: count <= 10 ? '#d1d5db' : '#fca5a5',
+                  border: `1px solid ${count <= 10 ? '#374151' : '#dc2626'}`,
+                }}>
+                  Cards: {count}/10
+                </div>
+                <div style={{
+                  padding: '2px 6px',
+                  borderRadius: '4px',
+                  background: budget <= 69 ? '#1f2937' : '#7f1d1d',
+                  color: budget <= 69 ? '#d1d5db' : '#fca5a5',
+                  border: `1px solid ${budget <= 69 ? '#374151' : '#dc2626'}`,
+                }}>
+                  Budget: {budget}/69
+                </div>
               </div>
             </div>
 
@@ -958,7 +1148,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                   }}>
                     <div style={{ flex: 1 }}>{entry.count}× {base.name}</div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <div>{convertHPToUSD(entry.kind === 'pol' ? (base as BasePolitician).BP || 0 : (base as BaseSpecial).bp)}</div>
+                      <div>{entry.kind === 'pol' ? ((base as BasePolitician).BP || 0) + ' BP' : ((base as BaseSpecial).bp) + ' BP'}</div>
                       <div style={{ display: 'flex', gap: '4px' }}>
                         <button
                           onClick={(e) => {
@@ -1036,6 +1226,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
               </button>
               <button
                 onClick={handleStartMatch}
+                disabled={!isValid}
                 style={{
                   background: '#162436',
                   color: '#eaf3ff',
@@ -1043,7 +1234,8 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                   borderRadius: '8px',
                   padding: '6px 10px',
                   fontSize: '12px',
-                  cursor: 'pointer',
+                  cursor: isValid ? 'pointer' : 'not-allowed',
+                  opacity: isValid ? 1 : 0.6,
                 }}
               >
                 Start Match
@@ -1304,7 +1496,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                       fontSize: '14px',
                       color: '#e5e7eb',
                     }}>
-                      Cost: {convertHPToUSD(cardDetails?.deckCost || (selectedCard.kind === 'pol' ? (selectedCard.base as BasePolitician).BP || 0 : (selectedCard.base as BaseSpecial).bp))}
+                      Cost: { (cardDetails?.deckCost ?? (selectedCard.kind === 'pol' ? (selectedCard.base as BasePolitician).BP || 0 : (selectedCard.base as BaseSpecial).bp)) + ' BP' }
                     </div>
 
                 <button

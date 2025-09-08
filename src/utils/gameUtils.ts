@@ -1,5 +1,6 @@
 import { Card, PoliticianCard, SpecialCard, GameState, Player } from '../types/game';
 import { getCardImagePath, Pols, Specials } from '../data/gameData';
+import { getCardDetails } from '../data/cardDetails';
 import { makePolInstance, makeSpecInstance } from './cardUtils';
 import { makeUid } from './id';
 import { getLaneCapacity } from '../ui/layout';
@@ -44,7 +45,10 @@ export function shuffle<T>(a: T[]): T[] {
 export function sumRow(arr: Card[]): number {
   return arr.reduce((a, c) => {
     if (c.kind === 'pol') {
-      return a + (c as PoliticianCard).influence; // 🔥 VEREINFACHT: Nur noch influence
+      const card = c as PoliticianCard;
+      const tempBuffs = (card as any).tempBuffs || 0;
+      const tempDebuffs = (card as any).tempDebuffs || 0;
+      return a + card.influence + tempBuffs - tempDebuffs; // 🔥 FIXED: Include temp buffs/debuffs
     }
     return a; // Special cards don't contribute to influence
   }, 0);
@@ -62,6 +66,11 @@ export function sumGovernmentInfluenceWithAuras(state: GameState, player: Player
 
   govCards.forEach(card => {
     let influence = card.influence;
+
+    // 🔥 CRITICAL FIX: Add temporary buffs and debuffs from effects
+    const tempBuffs = (card as any).tempBuffs || 0;
+    const tempDebuffs = (card as any).tempDebuffs || 0;
+    influence += tempBuffs - tempDebuffs;
 
     // Koalitionszwang: Old Tier 2 bonus removed - now uses complex coalition bonus calculation
 
@@ -117,7 +126,9 @@ export function drawCards(
   hand.push(...drawn);
 
   if (drawn.length > 0) {
-    log(`P${player} zieht ${drawn.length} Karte(n)`);
+    log(`P${player} zieht ${drawn.length} Karte(n) (${deck.length} Karten verbleiben im Deck)`);
+  } else if (count > 0) {
+    log(`⚠️ P${player} kann keine Karten ziehen - Deck ist leer (${deck.length} Karten verbleiben)`);
   }
 
   return {
@@ -126,17 +137,56 @@ export function drawCards(
   };
 }
 
+export function removeCardFromDeck(
+  player: Player,
+  card: Card,
+  state: GameState,
+  log: (msg: string) => void
+): { newDecks: GameState['decks'] } {
+  const deck = [...state.decks[player]];
+
+  // Finde die Karte im Deck (basierend auf UID oder Name)
+  const cardIndex = deck.findIndex(c =>
+    (c.uid && card.uid && c.uid === card.uid) ||
+    (!c.uid && !card.uid && c.name === card.name && c.kind === card.kind)
+  );
+
+  if (cardIndex !== -1) {
+    deck.splice(cardIndex, 1);
+    log(`🗑️ ${card.name} wurde dauerhaft aus P${player}s Deck entfernt (${deck.length} Karten verbleiben)`);
+  } else {
+    log(`⚠️ Karte ${card.name} nicht im Deck von P${player} gefunden`);
+  }
+
+  return {
+    newDecks: { ...state.decks, [player]: deck }
+  };
+}
+
 export function drawCardsAtRoundEnd(
   state: GameState,
   log: (msg: string) => void
-): { newHands: GameState['hands']; newDecks: GameState['decks'] } {
+): { newHands: GameState['hands']; newDecks: GameState['decks']; gameEnded?: boolean; winner?: Player } {
   let newHands = { ...state.hands };
   let newDecks = { ...state.decks };
+  let gameEnded = false;
+  let winner: Player | undefined;
 
   [1, 2].forEach(player => {
     const targetHandSize = 5;
     const currentHandSize = newHands[player as Player].length;
+    const deckSize = newDecks[player as Player].length;
     let drawCount = Math.max(0, targetHandSize - currentHandSize);
+
+    // 🔥 PERSISTENT DECK LOGIC: Prüfe ob Spieler keine Karten mehr hat
+    // Diese Prüfung ist jetzt redundant, da sie bereits beim Karten spielen stattfindet
+    // Aber als Fallback-Sicherheit beibehalten
+    if (deckSize === 0 && currentHandSize === 0) {
+      log(`🏁 FALLBACK: P${player} hat keine Karten mehr - Spieler ${player === 1 ? 2 : 1} gewinnt automatisch!`);
+      gameEnded = true;
+      winner = (player === 1 ? 2 : 1) as Player;
+      return;
+    }
 
     // 🔥 MUKESH AMBANI EFFEKT: Gegner darf 1 Karte weniger nachziehen
     const opponent = player === 1 ? 2 : 1;
@@ -158,18 +208,24 @@ export function drawCardsAtRoundEnd(
     }
   });
 
-  return { newHands, newDecks };
+  return { newHands, newDecks, gameEnded, winner };
 }
 
 // Deck building utilities
 export function currentBuilderBudget(deck: any[]): number {
   return deck.reduce((sum, entry) => {
     if (entry.kind === 'pol') {
-      const pol = entry.base;
-      return sum + (pol?.BP || 0) * entry.count;
-  } else {
-      const spec = entry.base;
-      return sum + (spec?.bp || 0) * entry.count;
+      const pol = entry.base || (entry.baseId ? Pols.find(p => p.id === entry.baseId) : null);
+      if (!pol) return sum;
+      const details = getCardDetails(pol.name);
+      const cost = details?.deckCost ?? pol.BP ?? 0;
+      return sum + cost * entry.count;
+    } else {
+      const spec = entry.base || (entry.baseId ? Specials.find(s => s.id === entry.baseId) : null);
+      if (!spec) return sum;
+      const details = getCardDetails(spec.name);
+      const cost = details?.deckCost ?? spec.bp ?? 0;
+      return sum + cost * entry.count;
     }
   }, 0);
 }
