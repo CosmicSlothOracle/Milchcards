@@ -167,6 +167,19 @@ export class Blast {
       boom: animationDef,
     });
     this.anim.setState("boom");
+    
+    // Debug the final animation state
+    const boomAnim = this.anim.animations["boom"];
+    console.log(`[qte] BLAST FINAL STATE:`, {
+      hasImage: !!boomAnim?.image,
+      imageSrc: boomAnim?.image?.src,
+      animationSrc: boomAnim?.src,
+      hasRects: !!boomAnim?.rects,
+      imageLoaded: boomAnim?.imageLoaded,
+      imageBroken: boomAnim?.imageBroken,
+      imageComplete: boomAnim?.image?.complete,
+      naturalWidth: boomAnim?.image?.naturalWidth
+    });
   }
   update(dt: number) {
     this.timer -= dt;

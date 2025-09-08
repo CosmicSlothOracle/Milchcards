@@ -46,6 +46,7 @@ export function createGame(canvas: HTMLCanvasElement) {
     ranged: { src: "cyboard/ranged_256x256_4.png", frames: 4, fps: 12 },
     parry: { src: "cyboard/parry_256x256_4.png", frames: 4, fps: 10 },
     blast: { src: "cyboard/blast_256x256_4.png", frames: 4, fps: 12 },
+    projectile: { src: "cyboard/projectile_256x256_6.png", frames: 6, fps: 15, loop: true },
   });
 
   const projectiles: Projectile[] = [];
