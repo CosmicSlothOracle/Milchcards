@@ -73,7 +73,7 @@ const Dice3D = forwardRef<Dice3DHandle, Dice3DProps>(
     useEffect(() => {
       const canvas = canvasRef.current;
       if (!canvas) return;
-      
+
       // Check if WebGL is available
       const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
       if (!gl) {
@@ -82,12 +82,12 @@ const Dice3D = forwardRef<Dice3DHandle, Dice3DProps>(
         return;
       }
       setWebglSupported(true);
-      
+
       const scene = new THREE.Scene();
       scene.background = new THREE.Color(0x000000);
       const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 1000);
       camera.position.z = 4;
-      
+
       let renderer: THREE.WebGLRenderer;
       try {
         renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
@@ -479,12 +479,12 @@ const Dice3D = forwardRef<Dice3DHandle, Dice3DProps>(
 
     // Fallback component for when WebGL is not supported
     const FallbackDice = () => (
-      <div 
-        style={{ 
-          width: size, 
-          height: size, 
-          backgroundColor: '#333', 
-          border: '2px solid #666', 
+      <div
+        style={{
+          width: size,
+          height: size,
+          backgroundColor: '#333',
+          border: '2px solid #666',
           borderRadius: '8px',
           display: 'flex',
           alignItems: 'center',
@@ -512,11 +512,11 @@ const Dice3D = forwardRef<Dice3DHandle, Dice3DProps>(
     // Show loading state while checking WebGL support
     if (webglSupported === null) {
       return (
-        <div 
-          style={{ 
-            width: size, 
-            height: size, 
-            backgroundColor: '#222', 
+        <div
+          style={{
+            width: size,
+            height: size,
+            backgroundColor: '#222',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',

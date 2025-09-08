@@ -167,7 +167,7 @@ export class Blast {
       boom: animationDef,
     });
     this.anim.setState("boom");
-    
+
     // Debug the final animation state
     const boomAnim = this.anim.animations["boom"];
     console.log(`[qte] BLAST FINAL STATE:`, {

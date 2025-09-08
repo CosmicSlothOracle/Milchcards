@@ -562,7 +562,7 @@
     },
     "idle_0": {
       "frame": {
-        "x": 1024,
+        "x": 1792,
         "y": 1024,
         "w": 256,
         "h": 256
@@ -582,8 +582,8 @@
     },
     "idle_1": {
       "frame": {
-        "x": 1280,
-        "y": 1024,
+        "x": 1792,
+        "y": 1280,
         "w": 256,
         "h": 256
       },
@@ -602,8 +602,8 @@
     },
     "idle_2": {
       "frame": {
-        "x": 1536,
-        "y": 1024,
+        "x": 1792,
+        "y": 1536,
         "w": 256,
         "h": 256
       },
@@ -623,7 +623,7 @@
     "idle_3": {
       "frame": {
         "x": 1792,
-        "y": 1024,
+        "y": 1792,
         "w": 256,
         "h": 256
       },
@@ -959,7 +959,142 @@
         "w": 256,
         "h": 256
       }
+    },
+    "hurt_0": {
+      "frame": {
+        "x": 1280,
+        "y": 0,
+        "w": 256,
+        "h": 256
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 256,
+        "h": 256
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 256
+      }
+    },
+    "hurt_1": {
+      "frame": {
+        "x": 1536,
+        "y": 0,
+        "w": 256,
+        "h": 256
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 256,
+        "h": 256
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 256
+      }
+    },
+    "hurt_2": {
+      "frame": {
+        "x": 1792,
+        "y": 0,
+        "w": 256,
+        "h": 256
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 256,
+        "h": 256
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 256
+      }
     }
+  },
+  "animations": {
+    "attack": [
+      "attack_0",
+      "attack_1",
+      "attack_2",
+      "attack_3",
+      "attack_4"
+    ],
+    "walk": [
+      "walk_0",
+      "walk_1",
+      "walk_2",
+      "walk_3",
+      "walk_4"
+    ],
+    "parry": [
+      "parry_0",
+      "parry_1",
+      "parry_2",
+      "parry_3",
+      "parry_4",
+      "parry_5"
+    ],
+    "spawn": [
+      "spawn_0",
+      "spawn_1",
+      "spawn_2",
+      "spawn_3"
+    ],
+    "ranged": [
+      "ranged_0",
+      "ranged_1",
+      "ranged_2",
+      "ranged_3"
+    ],
+    "defeat": [
+      "defeat_0",
+      "defeat_1",
+      "defeat_2",
+      "defeat_3"
+    ],
+    "idle": [
+      "idle_0",
+      "idle_1",
+      "idle_2",
+      "idle_3"
+    ],
+    "jump": [
+      "jump_0",
+      "jump_1",
+      "jump_2",
+      "jump_3",
+      "jump_4",
+      "jump_5"
+    ],
+    "projectile": [
+      "projectile_0",
+      "projectile_1",
+      "projectile_2",
+      "projectile_3",
+      "projectile_4",
+      "projectile_5"
+    ],
+    "blast": [
+      "blast_0",
+      "blast_1",
+      "blast_2",
+      "blast_3"
+    ],
+    "hurt": [
+      "hurt_0",
+      "hurt_1",
+      "hurt_2"
+    ]
   },
   "meta": {
     "app": "custom-atlas-builder",
