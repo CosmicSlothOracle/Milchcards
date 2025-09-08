@@ -90,7 +90,7 @@ export function buildSpriteConfig(
     projectile: {
       src: `${base}/projectile_256x256_6.png`,
       frames: framesFromFilename(`${base}/projectile_256x256_6.png`, 6),
-      fps: 12,
+      fps: 15, // Match the improved projectile animation FPS
       loop: true,
       frameW: 256,
       frameH: 256,

@@ -58,7 +58,7 @@ export class Projectile {
     const animationDef: any = {
       src: imgSrc,
       frames: framesHint,
-      fps: 12,
+      fps: 15, // Slightly faster FPS for more dynamic projectile animation
       loop: true,
       frameW: 256,
       frameH: 256,
@@ -76,10 +76,18 @@ export class Projectile {
       fly: animationDef,
     });
     this.anim.setState("fly");
+    // Ensure the projectile animation starts from frame 0 and plays all 6 frames
+    this.anim.frame = 0;
     // Simplified debug for fly animation
     const a = this.anim.animations["fly"];
     // eslint-disable-next-line no-console
-    console.debug("[qte] projectile fly", { frames: a?.rects?.length ?? a?.frames, hasRects: !!a?.rects });
+    console.debug("[qte] projectile fly", { 
+      frames: a?.rects?.length ?? a?.frames, 
+      hasRects: !!a?.rects,
+      fps: a?.fps,
+      loop: a?.loop,
+      totalFrames: framesHint
+    });
   }
 
   update(dt: number) {
@@ -269,7 +277,12 @@ export class Fighter {
     }
     if (this.ranging) {
       this.rangedTimer -= dt;
-      if (!this.rangedLaunched && this.anim.state === "ranged" && this.anim.frame === this.anim.animations["ranged"].frames - 1) {
+      // Spawn projectile at frame 2 of ranged animation (0-indexed, so frame 2 = 3rd frame)
+      // This allows the projectile to follow the end of the ranged animation more naturally
+      const rangedFrames = this.anim.animations["ranged"]?.frames || 4;
+      const projectileSpawnFrame = Math.min(2, rangedFrames - 1); // Spawn at frame 2, or last frame if less than 3 frames
+      
+      if (!this.rangedLaunched && this.anim.state === "ranged" && this.anim.frame === projectileSpawnFrame) {
         this.rangedLaunched = true;
         // spawn point (muzzle) – use configured muzzleOffset (mirrored by facing)
         const projW = 256, projH = 256;
@@ -291,7 +304,7 @@ export class Fighter {
           projectileImage = this.anim.animations.projectile.image;
           projectileRects = this.anim.animations.projectile.rects;
           projectileFrames = this.anim.animations.projectile.rects.length;
-          console.log(`[qte] Projectile using atlas frames from ${this.name}`);
+          console.log(`[qte] Projectile using atlas frames from ${this.name} (${projectileFrames} frames)`);
         } else {
           console.log(`[qte] Projectile: No atlas frames for 'projectile' in ${this.name}, falling back to individual image.`);
           // If atlas isn't available yet, at least pass the already-preloaded per-animation image
@@ -302,9 +315,18 @@ export class Fighter {
         }
 
         const proj = new Projectile(startX, startY, vx, 0, this, imgSrc, projectileFrames, projectileImage, projectileRects);
-        // Debug log projectile spawn
+        // Debug log projectile spawn with timing info
         // eslint-disable-next-line no-console
-        console.debug("[qte] spawnProjectile", { owner: this.name, startX, startY, imgSrc, facing: this.facing });
+        console.debug("[qte] spawnProjectile", { 
+          owner: this.name, 
+          startX, 
+          startY, 
+          imgSrc, 
+          facing: this.facing,
+          rangedFrame: this.anim.frame,
+          projectileFrames,
+          spawnFrame: projectileSpawnFrame
+        });
         const distanceToEdge = this.facing > 0 ? this.canvasW - startX : startX;
         proj.lifespan = Math.min(1.2, Math.abs(distanceToEdge / speed));
         projectiles.push(proj);
