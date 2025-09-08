@@ -62,9 +62,14 @@ export class SpriteAnimator {
         loop: a.loop ?? true,
         frameW: a.frameW ?? frameW,
         frameH: a.frameH ?? frameH,
+        // Preserve atlas data if provided
+        image: a.image,
+        rects: a.rects,
+        imageLoaded: a.imageLoaded,
+        imageBroken: a.imageBroken,
       } as AnimationDef;
-      // Preload image (optional)
-      if (full.src) {
+      // Preload image (optional) - only if no atlas image is provided
+      if (full.src && !full.image) {
         const img = new Image();
         full.image = img;
         full.imageLoaded = false;
@@ -123,6 +128,15 @@ export class SpriteAnimator {
     const img = (a && a.image) || this.defaultImage;
     if (!a || !img || a.imageBroken || !img.complete || img.naturalWidth === 0) {
       // Fallback: graue Box
+      console.warn(`[SpriteAnimator] FALLBACK GREY BOX for state "${this.state}":`, {
+        hasAnimation: !!a,
+        hasImage: !!img,
+        imageBroken: a?.imageBroken,
+        imageComplete: img?.complete,
+        naturalWidth: img?.naturalWidth,
+        imageSrc: img?.src,
+        animationSrc: a?.src
+      });
       ctx.fillStyle = "#666";
       ctx.fillRect(x, y, w, h);
       return;

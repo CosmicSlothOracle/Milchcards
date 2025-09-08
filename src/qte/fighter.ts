@@ -70,6 +70,11 @@ export class Projectile {
       animationDef.frames = atlasRects.length;
       animationDef.imageLoaded = true;
       animationDef.imageBroken = false;
+      // Clear the src to prevent SpriteAnimator from trying to load it separately
+      animationDef.src = "";
+      console.log(`[qte] PROJECTILE ATLAS SETUP: Using atlas with ${atlasRects.length} frames, image: ${atlasImage.src}`);
+    } else {
+      console.warn(`[qte] PROJECTILE ATLAS MISSING: atlasImage=${!!atlasImage}, atlasRects=${!!atlasRects}`);
     }
 
     this.anim = new SpriteAnimator(atlasImage, 256, 256, {
@@ -78,15 +83,24 @@ export class Projectile {
     this.anim.setState("fly");
     // Ensure the projectile animation starts from frame 0 and plays all 6 frames
     this.anim.frame = 0;
-    // Simplified debug for fly animation
+    // Detailed debug for projectile initialization
     const a = this.anim.animations["fly"];
     // eslint-disable-next-line no-console
-    console.debug("[qte] projectile fly", { 
-      frames: a?.rects?.length ?? a?.frames, 
+    console.debug("[qte] PROJECTILE INIT DEBUG", {
+      frames: a?.rects?.length ?? a?.frames,
       hasRects: !!a?.rects,
       fps: a?.fps,
       loop: a?.loop,
-      totalFrames: framesHint
+      totalFrames: framesHint,
+      hasImage: !!a?.image,
+      imageComplete: a?.image?.complete,
+      imageBroken: a?.imageBroken,
+      imageLoaded: a?.imageLoaded,
+      imageSrc: a?.image?.src,
+      animationSrc: a?.src,
+      atlasImage: !!atlasImage,
+      atlasRects: !!atlasRects,
+      atlasImageSrc: atlasImage?.src
     });
   }
 
@@ -142,6 +156,11 @@ export class Blast {
       animationDef.frames = atlasRects.length;
       animationDef.imageLoaded = true;
       animationDef.imageBroken = false;
+      // Clear the src to prevent SpriteAnimator from trying to load it separately
+      animationDef.src = "";
+      console.log(`[qte] BLAST ATLAS SETUP: Using atlas with ${atlasRects.length} frames, image: ${atlasImage.src}`);
+    } else {
+      console.warn(`[qte] BLAST ATLAS MISSING: atlasImage=${!!atlasImage}, atlasRects=${!!atlasRects}`);
     }
 
     this.anim = new SpriteAnimator(atlasImage, 256, 256, {
@@ -281,7 +300,7 @@ export class Fighter {
       // This allows the projectile to follow the end of the ranged animation more naturally
       const rangedFrames = this.anim.animations["ranged"]?.frames || 4;
       const projectileSpawnFrame = Math.min(2, rangedFrames - 1); // Spawn at frame 2, or last frame if less than 3 frames
-      
+
       if (!this.rangedLaunched && this.anim.state === "ranged" && this.anim.frame === projectileSpawnFrame) {
         this.rangedLaunched = true;
         // spawn point (muzzle) – use configured muzzleOffset (mirrored by facing)
@@ -317,11 +336,11 @@ export class Fighter {
         const proj = new Projectile(startX, startY, vx, 0, this, imgSrc, projectileFrames, projectileImage, projectileRects);
         // Debug log projectile spawn with timing info
         // eslint-disable-next-line no-console
-        console.debug("[qte] spawnProjectile", { 
-          owner: this.name, 
-          startX, 
-          startY, 
-          imgSrc, 
+        console.debug("[qte] spawnProjectile", {
+          owner: this.name,
+          startX,
+          startY,
+          imgSrc,
           facing: this.facing,
           rangedFrame: this.anim.frame,
           projectileFrames,
