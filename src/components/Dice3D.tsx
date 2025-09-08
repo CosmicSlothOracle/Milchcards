@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useImperativeHandle, forwardRef, useCallback } from 'react';
+import React, { useEffect, useRef, useImperativeHandle, forwardRef, useCallback, useState } from 'react';
 import * as THREE from 'three';
 import gsap from 'gsap';
 
@@ -37,6 +37,7 @@ const Dice3D = forwardRef<Dice3DHandle, Dice3DProps>(
     const lastRequestRef = useRef<any>(null);
     const isSettledRef = useRef<boolean>(true); // when true, dice remain static until next roll
     const spinningTweenRef = useRef<any>(null);
+    const [webglSupported, setWebglSupported] = useState<boolean | null>(null);
 
     /** helper to create a texture with pips */
     const createFaceTexture = (face: number): THREE.Texture => {
@@ -72,14 +73,31 @@ const Dice3D = forwardRef<Dice3DHandle, Dice3DProps>(
     useEffect(() => {
       const canvas = canvasRef.current;
       if (!canvas) return;
+      
+      // Check if WebGL is available
+      const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+      if (!gl) {
+        console.warn('WebGL not supported, Dice3D component will not render');
+        setWebglSupported(false);
+        return;
+      }
+      setWebglSupported(true);
+      
       const scene = new THREE.Scene();
       scene.background = new THREE.Color(0x000000);
       const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 1000);
       camera.position.z = 4;
-      const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
-      renderer.setSize(size, size);
-      renderer.shadowMap.enabled = true;
-      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      
+      let renderer: THREE.WebGLRenderer;
+      try {
+        renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+        renderer.setSize(size, size);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      } catch (error) {
+        console.error('Failed to create WebGL renderer:', error);
+        return;
+      }
 
       // lights
       const ambient = new THREE.AmbientLight(0xffffff, 0.6);
@@ -458,6 +476,59 @@ const Dice3D = forwardRef<Dice3DHandle, Dice3DProps>(
         window.dispatchEvent(new CustomEvent('pc:dice_result', { detail: { roll: face, player: det.player, targetUid: det.targetUid } }));
       } catch(e){ console.error('dice_result dispatch error',e); }
     },[onRoll]);
+
+    // Fallback component for when WebGL is not supported
+    const FallbackDice = () => (
+      <div 
+        style={{ 
+          width: size, 
+          height: size, 
+          backgroundColor: '#333', 
+          border: '2px solid #666', 
+          borderRadius: '8px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: '#fff',
+          fontSize: '14px',
+          cursor: 'pointer',
+          position: 'relative'
+        }}
+        onClick={() => onRoll?.(1 + Math.floor(Math.random() * 6))}
+        className={className}
+      >
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: '24px', marginBottom: '4px' }}>🎲</div>
+          <div>Click to roll</div>
+        </div>
+      </div>
+    );
+
+    // Show fallback if WebGL is not supported
+    if (webglSupported === false) {
+      return <FallbackDice />;
+    }
+
+    // Show loading state while checking WebGL support
+    if (webglSupported === null) {
+      return (
+        <div 
+          style={{ 
+            width: size, 
+            height: size, 
+            backgroundColor: '#222', 
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#fff',
+            fontSize: '12px'
+          }}
+          className={className}
+        >
+          Loading...
+        </div>
+      );
+    }
 
     return <canvas ref={canvasRef} width={size} height={size} className={className} style={{ cursor: 'pointer' }} />;
   });
