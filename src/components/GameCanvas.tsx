@@ -78,7 +78,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
   const imageCacheRef = useRef<Map<string, HTMLImageElement>>(new Map());
   const influenceImgRef = useRef<HTMLImageElement | null>(null);
   // Animation state for visual influence changes: Map<uid, Array<Anim>>
-  const influenceAnimRef = useRef<Map<string, Array<{ start: number; duration: number; amount: number }>>>(new Map());
+  const influenceAnimRef = useRef<Map<string, Array<{ start: number; duration: number; amount: number; type: 'increase' | 'decrease' }>>>(new Map());
   // Previous per-card influence snapshot to detect increases
   const prevInfluencesRef = useRef<Record<string, number>>({});
   // Slot symbol images
@@ -99,6 +99,18 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
   const instantSpriteStateRef = useRef<Record<string, { started: number; frameCount: number; frameDuration: number }>>({});
 
   const hitSpriteStateRef = useRef<Record<string, { started: number; frameCount: number; frameDuration: number }>>({});
+
+  // Flash animation state for influence changes: Map<uid, FlashAnim>
+  const cardFlashRef = useRef<Map<string, { start: number; duration: number; type: 'buff' | 'debuff' }>>(new Map());
+
+  // Helper function to calculate current influence including buffs/debuffs
+  const getCurrentInfluence = (card: any): number => {
+    if (card.kind !== 'pol') return 0;
+    const baseInfluence = card.influence ?? 0;
+    const tempBuffs = card.tempBuffs ?? 0;
+    const tempDebuffs = card.tempDebuffs ?? 0;
+    return baseInfluence + tempBuffs - tempDebuffs;
+  };
 
   // Corruption (Bestechungsskandal) target selection mode
   const corruptionSelectActorRef = useRef<Player | null>(null);
@@ -383,12 +395,47 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       ctx.fillStyle = 'rgba(0,0,0,0.6)';
       ctx.fillRect(dx, dy + s - barH, s, barH);
 
-      ctx.fillStyle = '#ffffff';
-      const fontSize = Math.floor(s * 0.12);
+      // Einfluss-Aufschlüsselung für kleinere Anzeige
+      const currentInfluence = getCurrentInfluence(card);
+      const baseInfluence = (card as any).baseInfluence ?? (card as any).influence ?? 0;
+      const tempBuffs = (card as any).tempBuffs ?? 0;
+      const tempDebuffs = (card as any).tempDebuffs ?? 0;
+      const isModified = currentInfluence !== baseInfluence;
+
+      const fontSize = Math.floor(s * 0.1); // Etwas kleiner für mehr Platz
       ctx.font = `bold ${fontSize}px sans-serif`;
       ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';
-      ctx.fillText(`${(card as any).influence ?? 0}`, dx + 8, dy + s - barH / 2);
+
+      if (isModified) {
+        // Zeige Aufschlüsselung: "10 +1" oder "10 -2"
+        const textX = dx + 8;
+        const textY = dy + s - barH / 2;
+
+        // Basis-Einfluss (weiß)
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText(`${baseInfluence}`, textX, textY);
+
+        // Modifikationen (grün/rot)
+        if (tempBuffs > 0) {
+          ctx.fillStyle = '#2ecc71'; // Grün
+          const buffText = ` +${tempBuffs}`;
+          const baseWidth = ctx.measureText(`${baseInfluence}`).width;
+          ctx.fillText(buffText, textX + baseWidth, textY);
+        }
+
+        if (tempDebuffs > 0) {
+          ctx.fillStyle = '#e74c3c'; // Rot
+          const debuffText = ` -${tempDebuffs}`;
+          const baseWidth = ctx.measureText(`${baseInfluence}`).width;
+          const buffWidth = tempBuffs > 0 ? ctx.measureText(` +${tempBuffs}`).width : 0;
+          ctx.fillText(debuffText, textX + baseWidth + buffWidth, textY);
+        }
+      } else {
+        // Keine Modifikationen - zeige nur Basis-Einfluss
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText(`${baseInfluence}`, dx + 8, dy + s - barH / 2);
+      }
     }
     // Schutz-Status (blauer Punkt)
     if ((card as any).protected || ((card as any).shield ?? 0) > 0) {
@@ -421,12 +468,46 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         ctx.globalAlpha = 1;
       }
 
-      // Influence number rechts im Badge
-      ctx.fillStyle = '#ffffff';
-      ctx.font = `bold ${Math.floor(badgeHeight * 0.5)}px sans-serif`;
+      // Einfluss-Aufschlüsselung: Basis + Modifikationen
+      const currentInfluence = getCurrentInfluence(card);
+      const baseInfluence = (card as any).baseInfluence ?? (card as any).influence ?? 0;
+      const tempBuffs = (card as any).tempBuffs ?? 0;
+      const tempDebuffs = (card as any).tempDebuffs ?? 0;
+      const isModified = currentInfluence !== baseInfluence;
+
+      ctx.font = `bold ${Math.floor(badgeHeight * 0.4)}px sans-serif`;
       ctx.textAlign = 'right';
       ctx.textBaseline = 'middle';
-      ctx.fillText(`${(card as any).influence ?? 0}`, badgeX + badgeWidth - 4, badgeY + badgeHeight / 2);
+
+      if (isModified) {
+        // Zeige Aufschlüsselung: "10 +1" oder "10 -2"
+        const textX = badgeX + badgeWidth - 4;
+        const textY = badgeY + badgeHeight / 2;
+
+        // Basis-Einfluss (weiß)
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText(`${baseInfluence}`, textX, textY);
+
+        // Modifikationen (grün/rot)
+        if (tempBuffs > 0) {
+          ctx.fillStyle = '#2ecc71'; // Grün
+          const buffText = ` +${tempBuffs}`;
+          const buffWidth = ctx.measureText(buffText).width;
+          ctx.fillText(buffText, textX - ctx.measureText(`${baseInfluence}`).width, textY);
+        }
+
+        if (tempDebuffs > 0) {
+          ctx.fillStyle = '#e74c3c'; // Rot
+          const debuffText = ` -${tempDebuffs}`;
+          const baseWidth = ctx.measureText(`${baseInfluence}`).width;
+          const buffWidth = tempBuffs > 0 ? ctx.measureText(` +${tempBuffs}`).width : 0;
+          ctx.fillText(debuffText, textX - baseWidth - buffWidth, textY);
+        }
+      } else {
+        // Keine Modifikationen - zeige nur Basis-Einfluss
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText(`${baseInfluence}`, badgeX + badgeWidth - 4, badgeY + badgeHeight / 2);
+      }
 
       // Reset align
       ctx.textAlign = 'start';
@@ -1027,7 +1108,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         if ((c as any).kind !== 'pol') return;
         const uid = c.uid ?? (c.id != null ? String(c.id) : null);
         if (!uid) return;
-        currSnapshot[uid] = (c.influence ?? 0) as number;
+        currSnapshot[uid] = getCurrentInfluence(c);
       };
       // board rows
       (gameState.board[1].aussen || []).forEach(collect);
@@ -1045,10 +1126,23 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         const curr = currSnapshot[uid] ?? 0;
         const prev = prevInfluencesRef.current[uid] ?? curr;
         if (curr > prev) {
+          // Einfluss erhöht - grüne Animation
           const delta = curr - prev;
           const list = influenceAnimRef.current.get(uid) || [];
-          list.push({ start: now, duration: 900, amount: delta });
+          list.push({ start: now, duration: 900, amount: delta, type: 'increase' });
           influenceAnimRef.current.set(uid, list);
+
+          // Flash-Animation für Buff
+          cardFlashRef.current.set(uid, { start: now, duration: 600, type: 'buff' });
+        } else if (curr < prev) {
+          // Einfluss reduziert - rote Animation
+          const delta = prev - curr;
+          const list = influenceAnimRef.current.get(uid) || [];
+          list.push({ start: now, duration: 900, amount: delta, type: 'decrease' });
+          influenceAnimRef.current.set(uid, list);
+
+          // Flash-Animation für Debuff
+          cardFlashRef.current.set(uid, { start: now, duration: 600, type: 'debuff' });
         }
         prevInfluencesRef.current[uid] = curr;
       });
@@ -1396,6 +1490,40 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       } catch (e) {}
     } catch (e) {}
 
+    // --- FLASH ANIMATIONS FOR INFLUENCE CHANGES ---
+    try {
+      const nowFlash = performance.now();
+      cardFlashRef.current.forEach((flash, uid) => {
+        const elapsed = nowFlash - flash.start;
+        const progress = Math.min(1, elapsed / flash.duration);
+
+        if (progress >= 1) {
+          // Animation finished; remove
+          cardFlashRef.current.delete(uid);
+          return;
+        }
+
+        // Find card position by scanning clickZones
+        const zone = clickZonesRef.current.find(z => z.data && ((z.data.card && ((z.data.card.uid ?? String(z.data.card.id)) === uid)) || (z.data.card && z.data.card.uid === uid)));
+        if (!zone) return;
+
+        // Calculate flash alpha using sine wave for smooth fade in/out
+        const flashAlpha = Math.sin(progress * Math.PI) * 0.3; // Max 30% opacity
+
+        // Determine color based on flash type
+        const color = flash.type === 'buff' ? '#2ecc71' : '#e74c3c'; // Grün oder Rot
+
+        // Draw flash overlay
+        ctx.save();
+        ctx.globalAlpha = flashAlpha;
+        ctx.fillStyle = color;
+        ctx.fillRect(zone.x, zone.y, zone.w, zone.h);
+        ctx.restore();
+      });
+    } catch (e) {
+      // ignore flash animation errors
+    }
+
     // Draw player permanent slots (draw symbols if empty)
     // permanent government
     const permGovZone = getZone('slot.permanent.government.player');
@@ -1684,15 +1812,20 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         const cy = zone.y + zone.h / 2;
         // calculate aggregate pulse for this uid
         let maxPulse = 0;
-        let totalAmount = 0;
-        const remaining: Array<{ start: number; duration: number; amount: number }> = [];
+        let totalIncrease = 0;
+        let totalDecrease = 0;
+        const remaining: Array<{ start: number; duration: number; amount: number; type: 'increase' | 'decrease' }> = [];
         anims.forEach(a => {
           const p = Math.min(1, Math.max(0, (now - a.start) / a.duration));
           const pulse = Math.pow(Math.max(0, 1 - p), 2);
           if (pulse > maxPulse) maxPulse = pulse;
           if (p < 1) {
             remaining.push(a);
-            totalAmount += a.amount;
+            if (a.type === 'increase') {
+              totalIncrease += a.amount;
+            } else {
+              totalDecrease += a.amount;
+            }
           }
         });
 
@@ -1706,25 +1839,42 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
           const ringX = zone.x + zone.w - 28; // near bottom-right where influence text lives
           const ringY = zone.y + zone.h - 20;
 
+          // Determine color based on animation type
+          const isIncrease = totalIncrease > 0;
+          const color = isIncrease ? 'rgba(46, 204, 113, 0.9)' : 'rgba(231, 76, 60, 0.9)'; // Grün oder Rot
+
           ctx.save();
           ctx.beginPath();
-          ctx.strokeStyle = `rgba(46, 204, 113, ${0.9 * maxPulse})`;
+          ctx.strokeStyle = `${color}${maxPulse}`;
           ctx.lineWidth = Math.max(2, Math.ceil(6 * maxPulse));
           ctx.arc(ringX, ringY, ringRadius, 0, Math.PI * 2);
           ctx.stroke();
           ctx.restore();
         }
 
-        if (totalAmount > 0) {
+        // Floating labels for both directions
+        if (totalIncrease > 0) {
           // floating +N to the right of influence number
           const labelX = zone.x + zone.w - 12;
           const labelY = zone.y + zone.h - 32 - (Math.random() * 6); // slight jitter
           ctx.save();
-          ctx.fillStyle = '#2ecc71';
+          ctx.fillStyle = '#2ecc71'; // Grün
           ctx.font = 'bold 16px sans-serif';
           ctx.textAlign = 'left';
           ctx.textBaseline = 'middle';
-          ctx.fillText(`+${totalAmount}`, labelX, labelY);
+          ctx.fillText(`+${totalIncrease}`, labelX, labelY);
+          ctx.restore();
+        }
+        if (totalDecrease > 0) {
+          // floating -N below the increase label
+          const labelX = zone.x + zone.w - 12;
+          const labelY = zone.y + zone.h - 16 - (Math.random() * 6); // slight jitter
+          ctx.save();
+          ctx.fillStyle = '#e74c3c'; // Rot
+          ctx.font = 'bold 16px sans-serif';
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(`-${totalDecrease}`, labelX, labelY);
           ctx.restore();
         }
       });
@@ -2149,6 +2299,22 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     // alias
     try { (window as any).pc_triggerInstantAnim = (window as any).__pc_triggerInstantAnim; } catch (e) {}
     return () => { delete (window as any).__pc_triggerGovAnim; delete (window as any).__pc_triggerInstantAnim; };
+  }, []);
+
+  // Expose debug trigger to manually start flash animation by uid
+  useEffect(() => {
+    (window as any).__pc_triggerFlashAnim = (uid: any, type: 'buff' | 'debuff' = 'buff') => {
+      try {
+        const now = performance.now();
+        cardFlashRef.current.set(String(uid), { start: now, duration: 600, type });
+        console.log(`🎨 Flash animation triggered for uid ${uid}, type: ${type}`);
+      } catch (e) {
+        console.warn('pc_triggerFlashAnim error', e);
+      }
+    };
+    // alias
+    try { (window as any).pc_triggerFlashAnim = (window as any).__pc_triggerFlashAnim; } catch (e) {}
+    return () => { delete (window as any).__pc_triggerFlashAnim; };
   }, []);
 
   // Click handler wrapper for corruption selection

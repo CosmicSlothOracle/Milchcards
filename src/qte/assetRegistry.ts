@@ -64,9 +64,9 @@ export function buildSpriteConfig(
       frameH: 256,
     },
     parry: {
-      src: `${base}/parry_256x256_6.png`,
-      frames: framesFromFilename(`${base}/parry_256x256_6.png`, 6),
-      fps: 10,
+      src: "", // Will be patched by atlas system
+      frames: 6,
+      fps: 12,
       loop: false,
       frameW: 256,
       frameH: 256,
@@ -107,6 +107,14 @@ export function buildSpriteConfig(
       src: `${base}/blast_256x256_4.png`,
       frames: framesFromFilename(`${base}/blast_256x256_4.png`, 4),
       fps: 12,
+      loop: false,
+      frameW: 256,
+      frameH: 256,
+    },
+    hurt: {
+      src: `${base}/hurt_256x256_4.png`,
+      frames: framesFromFilename(`${base}/hurt_256x256_4.png`, 4),
+      fps: 15,
       loop: false,
       frameW: 256,
       frameH: 256,

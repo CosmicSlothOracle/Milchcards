@@ -227,19 +227,19 @@ export class ProperAIVsAiTester {
           gameState.passed = { 1: false, 2: false };
           gameState.actionPoints = { 1: 2, 2: 2 };
           gameState.actionsUsed = { 1: 0, 2: 0 };
-          
+
           // Draw 5 new cards for each player
           const newP1Hand = gameState.decks[1].splice(0, Math.min(5, gameState.decks[1].length));
           const newP2Hand = gameState.decks[2].splice(0, Math.min(5, gameState.decks[2].length));
           gameState.hands[1] = newP1Hand;
           gameState.hands[2] = newP2Hand;
-          
+
           // Reset effect flags
           gameState.effectFlags = {
             1: createDefaultEffectFlags(),
             2: createDefaultEffectFlags()
           };
-          
+
           // Clear board for new round
           gameState.board = { 1: { innen: [], aussen: [], sofort: [] }, 2: { innen: [], aussen: [], sofort: [] } };
           gameState.traps = { 1: [], 2: [] };
@@ -247,11 +247,11 @@ export class ProperAIVsAiTester {
             1: { government: null, public: null, initiativePermanent: null },
             2: { government: null, public: null, initiativePermanent: null },
           };
-          
+
           log(`🔄 Starting round ${gameState.round} - Player ${gameState.current} goes first (tie round)`);
           continue;
         }
-        
+
         log(`🏆 Round ${gameState.round} winner: Player ${roundWinner} (${p1Influence} vs ${p2Influence} influence)`);
 
         // Update rounds won (roundWinner is guaranteed to be non-null here)

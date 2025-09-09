@@ -71,18 +71,35 @@ const Dice3D = forwardRef<Dice3DHandle, Dice3DProps>(
 
     // initialize three scene
     useEffect(() => {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
+      // Add a small delay to ensure canvas is mounted
+      const initTimer = setTimeout(() => {
+        const canvas = canvasRef.current;
+        if (!canvas) {
+          console.warn('🎲 Dice3D: Canvas ref not available after timeout');
+          setWebglSupported(false);
+          return;
+        }
 
-      // Check if WebGL is available
-      const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
-      if (!gl) {
-        console.warn('WebGL not supported, Dice3D component will not render');
+      // Check if WebGL is available with better error handling
+      let gl: WebGLRenderingContext | null = null;
+      try {
+        console.log('🎲 Dice3D: Attempting to create WebGL context...');
+        gl = canvas.getContext('webgl') as WebGLRenderingContext ||
+             canvas.getContext('experimental-webgl') as WebGLRenderingContext;
+        if (!gl) {
+          console.warn('🎲 Dice3D: WebGL not supported, falling back to 2D canvas');
+          setWebglSupported(false);
+          return;
+        }
+        console.log('🎲 Dice3D: WebGL context created successfully');
+        setWebglSupported(true);
+      } catch (error) {
+        console.error('🎲 Dice3D: WebGL context creation failed:', error);
         setWebglSupported(false);
         return;
       }
-      setWebglSupported(true);
 
+      console.log('🎲 Dice3D: Creating Three.js scene...');
       const scene = new THREE.Scene();
       scene.background = new THREE.Color(0x000000);
       const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 1000);
@@ -90,12 +107,15 @@ const Dice3D = forwardRef<Dice3DHandle, Dice3DProps>(
 
       let renderer: THREE.WebGLRenderer;
       try {
+        console.log('🎲 Dice3D: Creating WebGL renderer...');
         renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
         renderer.setSize(size, size);
         renderer.shadowMap.enabled = true;
         renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        console.log('🎲 Dice3D: WebGL renderer created successfully');
       } catch (error) {
-        console.error('Failed to create WebGL renderer:', error);
+        console.error('🎲 Dice3D: Failed to create WebGL renderer:', error);
+        setWebglSupported(false);
         return;
       }
 
@@ -170,7 +190,7 @@ const Dice3D = forwardRef<Dice3DHandle, Dice3DProps>(
       rendererRef.current = renderer;
       cameraRef.current = camera;
 
-      // Ensure canvas is anchored bottom-right and has no initial transform
+      // Ensure canvas is properly positioned and styled
       try {
         const el = canvas as HTMLCanvasElement;
         el.style.position = 'fixed';
@@ -180,7 +200,14 @@ const Dice3D = forwardRef<Dice3DHandle, Dice3DProps>(
         el.style.top = '';
         el.style.transform = '';
         el.style.transition = '';
-      } catch (e) {}
+        el.style.zIndex = '1200';
+        el.style.pointerEvents = 'auto';
+        el.style.cursor = 'pointer';
+        el.style.border = 'none';
+        el.style.outline = 'none';
+      } catch (e) {
+        console.warn('Dice3D: Failed to set canvas styles:', e);
+      }
 
       // animation loop
       // previous rotation for motion-blur estimation
@@ -224,9 +251,14 @@ const Dice3D = forwardRef<Dice3DHandle, Dice3DProps>(
       };
       animate();
 
+      }, 100); // 100ms delay to ensure canvas is mounted
+
       return () => {
+        clearTimeout(initTimer);
         cancelAnimationFrame(animIdRef.current);
-        renderer.dispose();
+        if (rendererRef.current) {
+          rendererRef.current.dispose();
+        }
       };
     }, [size]);
 
@@ -478,31 +510,110 @@ const Dice3D = forwardRef<Dice3DHandle, Dice3DProps>(
     },[onRoll]);
 
     // Fallback component for when WebGL is not supported
-    const FallbackDice = () => (
-      <div
-        style={{
-          width: size,
-          height: size,
-          backgroundColor: '#333',
-          border: '2px solid #666',
-          borderRadius: '8px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: '#fff',
-          fontSize: '14px',
-          cursor: 'pointer',
-          position: 'relative'
-        }}
-        onClick={() => onRoll?.(1 + Math.floor(Math.random() * 6))}
-        className={className}
-      >
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '24px', marginBottom: '4px' }}>🎲</div>
-          <div>Click to roll</div>
+    const FallbackDice = () => {
+      const [currentFace, setCurrentFace] = useState(1);
+      const [isRolling, setIsRolling] = useState(false);
+
+      const roll = () => {
+        if (isRolling) return;
+        setIsRolling(true);
+
+        // Animate through random faces
+        let rollCount = 0;
+        const maxRolls = 6;
+        const rollInterval = setInterval(() => {
+          setCurrentFace(1 + Math.floor(Math.random() * 6));
+          rollCount++;
+
+          if (rollCount >= maxRolls) {
+            clearInterval(rollInterval);
+            const finalFace = 1 + Math.floor(Math.random() * 6);
+            setCurrentFace(finalFace);
+            setIsRolling(false);
+            console.log('🎲 Fallback dice rolled:', finalFace);
+            onRoll?.(finalFace);
+          }
+        }, 100);
+      };
+
+      const getDiceDots = (face: number) => {
+        const positions = {
+          1: [[0, 0]],
+          2: [[-1, -1], [1, 1]],
+          3: [[-1, -1], [0, 0], [1, 1]],
+          4: [[-1, -1], [1, -1], [-1, 1], [1, 1]],
+          5: [[-1, -1], [1, -1], [0, 0], [-1, 1], [1, 1]],
+          6: [[-1, -1], [1, -1], [-1, 0], [1, 0], [-1, 1], [1, 1]]
+        };
+
+        const facePositions = positions[face as keyof typeof positions] || positions[1];
+
+        return facePositions.map(([x, y], index) => (
+          <div
+            key={index}
+            style={{
+              position: 'absolute',
+              width: '12px',
+              height: '12px',
+              backgroundColor: '#333',
+              borderRadius: '50%',
+              left: '50%',
+              top: '50%',
+              transform: `translate(calc(-50% + ${x * 20}px), calc(-50% + ${y * 20}px))`,
+              transition: 'all 0.1s ease'
+            }}
+          />
+        ));
+      };
+
+      return (
+        <div
+          style={{
+            width: size,
+            height: size,
+            backgroundColor: '#fff',
+            border: '3px solid #333',
+            borderRadius: '12px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: isRolling ? 'wait' : 'pointer',
+            position: 'fixed',
+            right: '20px',
+            bottom: '20px',
+            zIndex: 1200,
+            boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+            transform: isRolling ? 'scale(1.1)' : 'scale(1)',
+            transition: 'transform 0.2s ease',
+            userSelect: 'none'
+          }}
+          onClick={roll}
+          className={className}
+        >
+          <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+            {getDiceDots(currentFace)}
+          </div>
+
+          {/* Rolling indicator */}
+          {isRolling && (
+            <div
+              style={{
+                position: 'absolute',
+                top: '-30px',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                fontSize: '12px',
+                color: '#666',
+                fontWeight: 'bold',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              Rolling...
+            </div>
+          )}
         </div>
-      </div>
-    );
+      );
+    };
 
     // Show fallback if WebGL is not supported
     if (webglSupported === false) {
@@ -517,15 +628,25 @@ const Dice3D = forwardRef<Dice3DHandle, Dice3DProps>(
             width: size,
             height: size,
             backgroundColor: '#222',
+            border: '2px solid #444',
+            borderRadius: '8px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             color: '#fff',
-            fontSize: '12px'
+            fontSize: '12px',
+            position: 'fixed',
+            right: '20px',
+            bottom: '20px',
+            zIndex: 1200,
+            boxShadow: '0 4px 8px rgba(0,0,0,0.3)'
           }}
           className={className}
         >
-          Loading...
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '16px', marginBottom: '4px' }}>🎲</div>
+            <div>Loading dice...</div>
+          </div>
         </div>
       );
     }

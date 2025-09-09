@@ -1281,7 +1281,11 @@ export function useGameActions(
 
       const newState = { ...prev };
 
-      // 1) Normale Karten-Effekte der Sofort-Karte feuern
+      // 1) Karte SOFORT aus dem Slot entfernen (BEVOR Effekte ausgeführt werden)
+      const [played] = newState.board[player].sofort.splice(0, 1);
+      newState.discard.push(played);
+
+      // 2) Normale Karten-Effekte der Sofort-Karte feuern
       triggerCardEffects(newState, player, instantCard);
 
       // UI visual: initiative ripple + AP pop (prototype hook)
@@ -1311,17 +1315,13 @@ export function useGameActions(
         (m) => (newState._effectQueue ??= []).push({ type: 'LOG', msg: m })
       );
 
-      // 2) Queue auflösen (BEVOR die Karte entfernt wird)
+      // 3) Queue auflösen
       if (newState._effectQueue && newState._effectQueue.length > 0) {
         resolveQueue(newState, [...newState._effectQueue]);
         newState._effectQueue = [];
         // Nach Queue-Auflösung: Hand-Arrays immutabel neu zuweisen
         afterQueueResolved?.();
       }
-
-      // 3) Karte NACH Queue-Auflösung in den Ablagestapel
-      const [played] = newState.board[player].sofort.splice(0, 1);
-      newState.discard.push(played);
 
       // Visual: listen for dice roll event to animate & bind to SKANDALSPIRALE_TRIGGER if present
       try {
@@ -1362,8 +1362,14 @@ export function useGameActions(
       // 2) Hängen noch Effekte in der Queue? -> Auflösen lassen
       if (newState._effectQueue && newState._effectQueue.length > 0) {
         log('⏳ Effekte werden noch aufgelöst – Zugwechsel folgt automatisch.');
-        resolveQueue(newState, [...newState._effectQueue]);
+
+        // WORKAROUND: Filter out INITIATIVE_ACTIVATED events to prevent double execution
+        const filteredQueue = newState._effectQueue.filter(event => event.type !== 'INITIATIVE_ACTIVATED');
+        if (filteredQueue.length > 0) {
+          resolveQueue(newState, [...filteredQueue]);
+        }
         newState._effectQueue = [];
+
         // Nach Queue-Auflösung: Wenn Flag noch gesetzt, Zug beenden
         if (newState.isEndingTurn) {
           return reallyEndTurn(newState, log);

@@ -25,6 +25,7 @@ import { SequentialVideoPlayer } from './components/SequentialVideoPlayer';
 import { MusicToggle } from './components/MusicToggle';
 import { AIBalanceTester } from './components/AIBalanceTester';
 import Dice3D, { Dice3DHandle } from './components/Dice3D';
+import SimpleDice from './components/SimpleDice';
 // Temporarily disabled for build
 // import { hasAnyZeroApPlay } from './utils/ap';
 
@@ -42,6 +43,9 @@ function AppContent() {
 
   // 🔧 DEV MODE: Toggle für lokales Testing ohne KI
   const [devMode, setDevMode] = useState(false);
+
+  // 🎲 DICE: Toggle zwischen 3D und einfachem Würfel (Standard: einfacher Würfel für bessere Kompatibilität)
+  const [useSimpleDice, setUseSimpleDice] = useState(true);
 
   // UI Layout Editor Route
   const [currentRoute, setCurrentRoute] = useState<'game' | 'ui-editor' | 'test-suite' | 'qte' | 'sprite-demo'>('game');
@@ -588,18 +592,36 @@ function AppContent() {
 
               <CardHoverInfoPanel hovered={hoveredCard} />
 
-              {/* Dice 3D - Dev utility */}
+              {/* Dice - Dev utility with fallback */}
               <div style={{ position: 'fixed', left: 16, bottom: 16, zIndex: 1200 }}>
-                {/* use a stable ref declared at top-level of AppContent if you need to control it */}
-                <Dice3D size={120} duration={900} onRoll={(f) => {
-                  console.log('Dice rolled', f);
-                  // Dispatch dice result for corruption system
-                  try {
-                    window.dispatchEvent(new CustomEvent('pc:dice_result', { detail: { roll: f } }));
-                  } catch(e) {
-                    console.error('Error dispatching dice result:', e);
-                  }
-                }} />
+                {useSimpleDice ? (
+                  <SimpleDice
+                    size={120}
+                    onRoll={(f) => {
+                      console.log('Simple dice rolled', f);
+                      // Dispatch dice result for corruption system
+                      try {
+                        window.dispatchEvent(new CustomEvent('pc:dice_result', { detail: { roll: f } }));
+                      } catch(e) {
+                        console.error('Error dispatching dice result:', e);
+                      }
+                    }}
+                  />
+                ) : (
+                  <Dice3D
+                    size={120}
+                    duration={900}
+                    onRoll={(f) => {
+                      console.log('3D dice rolled', f);
+                      // Dispatch dice result for corruption system
+                      try {
+                        window.dispatchEvent(new CustomEvent('pc:dice_result', { detail: { roll: f } }));
+                      } catch(e) {
+                        console.error('Error dispatching dice result:', e);
+                      }
+                    }}
+                  />
+                )}
               </div>
 
               {/* 🔧 DEV MODE Indikator */}
@@ -620,6 +642,28 @@ function AppContent() {
                   🔧 DEV MODE - KI AUS
                 </div>
               )}
+
+              {/* 🎲 DICE Toggle Button */}
+              <button
+                onClick={() => setUseSimpleDice(!useSimpleDice)}
+                style={{
+                  position: 'fixed',
+                  top: '10px',
+                  left: '10px',
+                  background: useSimpleDice ? '#10b981' : '#2563eb',
+                  color: 'white',
+                  border: 'none',
+                  padding: '8px 12px',
+                  borderRadius: '4px',
+                  fontSize: '12px',
+                  cursor: 'pointer',
+                  zIndex: 1300,
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                }}
+                title={useSimpleDice ? 'Switch to 3D dice (WebGL required)' : 'Switch to simple dice (recommended)'}
+              >
+                🎲 {useSimpleDice ? '3D' : 'Simple'} {useSimpleDice ? '✓' : ''}
+              </button>
 
               {/* Music Toggle for In-Game */}
               {!deckBuilderOpen && (

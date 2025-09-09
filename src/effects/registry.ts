@@ -92,18 +92,9 @@ export const EFFECTS: Record<string, EffectHandler> = {
 
   // Oprah Winfrey — Media buff: +1 influence to strongest gov per Media card on board (max +3)
   'public.oprah_winfrey.media_buff': ({ enqueue, player, log }) => {
-    const ownBoard = [
-      ...(require('../types/game') as any).GameState ? [] : [] // placeholder to keep types stable
-    ];
-    // Count media cards on own board (public + government)
-    // Prefer tag 'Media' if present, fallback to name match
-    const mediaNames = ['Oprah Winfrey'];
-    // We cannot access state here (handlers are stateless), so handler will enqueue a LOG and a special intent
-    // We'll enqueue a LOG and an intent event that will be resolved by the queue resolver via a consumer that has access to board state.
-    // For simplicity, compute buff amount based on board check performed by resolver using an intent event.
-    enqueue({ type: 'LOG', msg: 'Oprah Winfrey: applying media buff (will compute +1 per media, max 3).' });
-    enqueue({ type: 'LOG', msg: 'Oprah Winfrey: (handler enqueued BUFF intent - resolved in resolver).' });
-    // Enqueue a generic intent represented as BUFF_STRONGEST_GOV with amount=0 and a marker; resolver will recompute actual amount
+    // Stateless intent: resolver computes actual buff based on media on board
+    enqueue({ type: 'LOG', msg: 'Oprah Winfrey: applying media buff (resolver will compute +1 per media, max 3).' });
+    // Intent marker — resolver must detect reason 'OPRAH_MEDIA_BUFF_INTENT' and compute amount
     enqueue({ type: 'BUFF_STRONGEST_GOV', player, amount: 0, reason: 'OPRAH_MEDIA_BUFF_INTENT' } as any);
     log('🟢 public.oprah_winfrey.media_buff');
   },
@@ -331,26 +322,22 @@ export const EFFECTS: Record<string, EffectHandler> = {
   // =============================
 
   'corruption.bribery_v2.steal_gov_w6': ({ enqueue, player, log }) => {
-    console.log('🔥 CORRUPTION HANDLER TRIGGERED - Player:', player);
     // Begin corruption flow: open UI modal + mark pending selection
     enqueue({ type: 'CORRUPTION_STEAL_GOV_START', player } as any);
     enqueue({ type: 'INITIATIVE_ACTIVATED', player });
     enqueue({ type: 'LOG', msg: 'Bribery Scandal 2.0: Wähle eine gegnerische Regierungskarte und würfle einen W6.' });
     // Provide UI hint message for modal (handled by frontend)
     enqueue({ type: 'LOG', msg: '🔔 Corruption Modal: select target then press Würfeln.' });
-    console.log('🔥 CORRUPTION EVENTS ENQUEUED');
     log('🟢 corruption.bribery_v2.steal_gov_w6');
   },
 
   'corruption.mole.steal_weakest_gov': ({ enqueue, player, log }) => {
-    console.log('🔥 MAULWURF CORRUPTION HANDLER TRIGGERED - Player:', player);
     // Begin corruption flow: automatically select weakest opponent government card
     enqueue({ type: 'CORRUPTION_MOLE_STEAL_START', player } as any);
     enqueue({ type: 'INITIATIVE_ACTIVATED', player });
     enqueue({ type: 'LOG', msg: 'Maulwurf: Automatische Auswahl der schwächsten gegnerischen Regierungskarte.' });
     // Provide UI hint message for modal (handled by frontend)
     enqueue({ type: 'LOG', msg: '🔔 Maulwurf: Automatische Zielauswahl, dann Würfeln.' });
-    console.log('🔥 MAULWURF CORRUPTION EVENTS ENQUEUED');
     log('🟢 corruption.mole.steal_weakest_gov');
   },
 
@@ -410,10 +397,8 @@ export const EFFECTS: Record<string, EffectHandler> = {
   },
 
   'init.tunnel_vision.gov_probe_system': ({ enqueue, player, log }) => {
-    console.log('🔥 TUNNELVISION INITIATIVE HANDLER TRIGGERED - Player:', player);
     enqueue({ type: 'LOG', msg: 'Tunnelvision: Dauerhafte Initiative aktiviert - Regierungskarten benötigen Probe.' });
     enqueue({ type: 'LOG', msg: '🔔 Tunnelvision: W6 ≥4 (≥5 bei Einfluss 9+) - bei Misserfolg Karte bleibt in Hand.' });
-    console.log('🔥 TUNNELVISION INITIATIVE EVENTS ENQUEUED');
     log('🟢 init.tunnel_vision.gov_probe_system');
   },
 
@@ -730,13 +715,13 @@ export function triggerCardEffect(state: GameState, player: Player, card: Card):
 
   // Diagnostic logging for effect resolution
   logger.dbg(`triggerCardEffect: card=${card.name} effectKey=${String(effectKey)}`);
-  console.log('🔥 TRIGGER CARD EFFECT:', card.name, 'effectKey:', effectKey);
+  logger.info(`🔥 TRIGGER CARD EFFECT: ${card.name} effectKey: ${String(effectKey)}`);
   if (effectKey) {
     const effectFn = EFFECTS[effectKey];
     logger.dbg(`triggerCardEffect: lookup effectKey=${effectKey} found=${Boolean(effectFn)}`);
-    console.log('🔥 EFFECT FUNCTION FOUND:', Boolean(effectFn));
+    logger.dbg(`🔥 EFFECT FUNCTION FOUND: ${Boolean(effectFn)}`);
     if (effectFn) {
-      console.log('🔥 CALLING EFFECT FUNCTION FOR:', card.name);
+      logger.dbg(`🔥 CALLING EFFECT FUNCTION FOR: ${card.name}`);
       effectFn({ enqueue, player, log });
       return;
     }

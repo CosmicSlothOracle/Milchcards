@@ -620,6 +620,46 @@
         "h": 256
       }
     },
+    "parry_004": {
+      "frame": {
+        "x": 1024,
+        "y": 1024,
+        "w": 256,
+        "h": 256
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 256,
+        "h": 256
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 256
+      }
+    },
+    "parry_005": {
+      "frame": {
+        "x": 1280,
+        "y": 1024,
+        "w": 256,
+        "h": 256
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 256,
+        "h": 256
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 256
+      }
+    },
     "attack_000": {
       "frame": {
         "x": 0,
@@ -965,7 +1005,9 @@
       "parry_000",
       "parry_001",
       "parry_002",
-      "parry_003"
+      "parry_003",
+      "parry_004",
+      "parry_005"
     ],
     "attack": [
       "attack_000",

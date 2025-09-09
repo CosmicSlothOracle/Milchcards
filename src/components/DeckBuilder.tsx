@@ -60,7 +60,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
     'Cancel Culture'
   ]);
 
-  // Preset decks (6 balanced combinations, 40-50 BP each)
+  // Optimized preset decks (8 balanced combinations, 50+ BP each)
   const PRESETS: { name: string; cards: string[] }[] = [
     {
       name: 'Tech Oligarchs',
@@ -84,10 +84,11 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
       ]
     },
     {
-      name: 'Initiative Rush',
+      name: 'Initiative Rush (Optimized)',
       cards: [
-        'Benjamin Netanyahu', 'Volodymyr Zelenskyy', 'Ursula von der Leyen', 'Olaf Scholz', 'Kamala Harris',
-        'Greta Thunberg', 'Verzoegerungsverfahren', 'Symbolpolitik', 'Shadow Lobbying', 'Opportunist'
+        'Benjamin Netanyahu', 'Volodymyr Zelenskyy', 'Ursula von der Leyen', 'Hans Eichel', 'Rainer Offergeld',
+        'Verzoegerungsverfahren', 'Symbolpolitik', 'Shadow Lobbying', 'Opportunist', 'Think-tank',
+        'Greta Thunberg', 'George Soros', 'Malala Yousafzai', 'Ai Weiwei'
       ]
     },
     {
@@ -102,6 +103,21 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
       cards: [
         'Jens Stoltenberg', 'Olaf Scholz', 'Rishi Sunak', 'Kamala Harris', 'Helmut Schmidt',
         'Warren Buffett', 'George Soros', 'Jeff Bezos', 'Mukesh Ambani', 'Roman Abramovich'
+      ]
+    },
+    {
+      name: 'Balanced Power',
+      cards: [
+        'Vladimir Putin', 'Xi Jinping', 'Donald Trump', 'Benjamin Netanyahu', 'Volodymyr Zelenskyy',
+        'Elon Musk', 'Bill Gates', 'Mark Zuckerberg', 'Spin Doctor', 'Think-tank'
+      ]
+    },
+    {
+      name: 'Initiative Focus',
+      cards: [
+        'Jens Stoltenberg', 'Olaf Scholz', 'Rishi Sunak', 'Kamala Harris', 'Helmut Schmidt',
+        'Spin Doctor', 'Think-tank', 'Symbolpolitik', 'Shadow Lobbying', 'Opportunist',
+        'Influencer-Kampagne', 'Whataboutism', 'Greta Thunberg', 'George Soros'
       ]
     }
   ];
@@ -147,8 +163,8 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
     return sum;
   }, 0);
 
-  // Deck validation: minimum 5 government cards, maximum 10 total cards, budget <= 69 BP
-  const isDeckValid = count >= 5 && governmentCount >= 5 && count <= 10 && budget <= 69;
+  // Deck validation: minimum 5 government cards, maximum 10 total cards, budget 50-69 BP
+  const isDeckValid = count >= 5 && governmentCount >= 5 && count <= 10 && budget >= 50 && budget <= 69;
 
   // Helper function to get category color for a card
   const getCategoryColor = (kind: 'pol' | 'spec', base: BasePolitician | BaseSpecial) => {
@@ -364,7 +380,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
 
 
   const handleApplyDeck = useCallback(() => {
-    const isDeckValid = count >= 5 && governmentCount >= 5 && count <= 10 && budget <= 69;
+    const isDeckValid = count >= 5 && governmentCount >= 5 && count <= 10 && budget >= 50 && budget <= 69;
     if (isDeckValid) {
       onApplyDeck(deck);
       onClose();
@@ -442,7 +458,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
   }, [deck, onStartMatch, onClose]);
 
   const handleStartVsAI = useCallback(() => {
-    const isDeckValid = count >= 5 && governmentCount >= 5 && count <= 10 && budget <= 69;
+    const isDeckValid = count >= 5 && governmentCount >= 5 && count <= 10 && budget >= 50 && budget <= 69;
     if (!isDeckValid || !onStartVsAI) return;
 
     const p1Deck: BuilderEntry[] = deck.length ? deck : [];
@@ -601,11 +617,13 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
   if (!isOpen) return null;
 
   const BP_LIMIT = 69; // Budget limit
+  const BP_MIN = 50; // Minimum budget
   const overBudget = budget > BP_LIMIT;
+  const underBudget = budget < BP_MIN;
   const overCount = count > 10;
   const underMinGovernment = governmentCount < 5;
   const underMinCards = count < 5;
-  const isValid = !overBudget && !overCount && !underMinGovernment && !underMinCards;
+  const isValid = !overBudget && !underBudget && !overCount && !underMinGovernment && !underMinCards;
 
   return (
     <div style={{
@@ -645,7 +663,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
               border: '1px solid #203043',
               fontSize: '12px',
             }}>
-              Budget (BP): {budget} / 69
+              Budget (BP): {budget} / 69 (Min: 50)
             </span>
             <span style={{
               padding: '4px 8px',
@@ -677,7 +695,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                 gap: '6px',
               }}
               disabled={!isValid}
-              title={!isValid ? `Deck muss gültig sein: 5-10 Karten, ≥5 Government, ≤69 BP (aktuell: ${budget} BP)` : 'Starte Spiel gegen KI'}
+              title={!isValid ? `Deck muss gültig sein: 5-10 Karten, ≥5 Government, 50-69 BP (aktuell: ${budget} BP)` : 'Starte Spiel gegen KI'}
             >
               🤖 Start vs KI
             </button>
@@ -1089,7 +1107,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                 fontSize: '12px',
                 color: isValid ? '#4ade80' : '#ef4444',
               }}>
-                {isValid ? 'Deck OK' : `Deck invalid${overBudget ? ' · Budget' : ''}${overCount ? ' · Too many cards' : ''}${underMinGovernment ? ' · Need 5+ Government' : ''}${underMinCards ? ' · Need 5+ cards' : ''}`}
+                {isValid ? 'Deck OK' : `Deck invalid${overBudget ? ' · Budget too high' : ''}${underBudget ? ' · Budget too low' : ''}${overCount ? ' · Too many cards' : ''}${underMinGovernment ? ' · Need 5+ Government' : ''}${underMinCards ? ' · Need 5+ cards' : ''}`}
               </div>
 
               {/* Deck Statistics */}
@@ -1120,9 +1138,9 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                 <div style={{
                   padding: '2px 6px',
                   borderRadius: '4px',
-                  background: budget <= 69 ? '#1f2937' : '#7f1d1d',
-                  color: budget <= 69 ? '#d1d5db' : '#fca5a5',
-                  border: `1px solid ${budget <= 69 ? '#374151' : '#dc2626'}`,
+                  background: (budget >= 50 && budget <= 69) ? '#1f2937' : '#7f1d1d',
+                  color: (budget >= 50 && budget <= 69) ? '#d1d5db' : '#fca5a5',
+                  border: `1px solid ${(budget >= 50 && budget <= 69) ? '#374151' : '#dc2626'}`,
                 }}>
                   Budget: {budget}/69
                 </div>

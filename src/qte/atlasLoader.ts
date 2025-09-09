@@ -137,6 +137,18 @@ export async function loadAtlas(basePath: string): Promise<LoadedAtlas> {
     const fps = provided && provided.fps ? provided.fps : (meta.fps || 12);
     const loop = provided && typeof provided.loop === 'boolean' ? provided.loop : true;
     animations[s] = { frames: stateMap[s], fps, loop };
+
+    // Debug parry animation specifically
+    if (s === "parry") {
+      console.log(`[atlas] PARRY ANIMATION LOADED:`, {
+        state: s,
+        frames: stateMap[s].length,
+        rects: stateMap[s],
+        fps,
+        loop,
+        providedAnims: providedAnims[s]
+      });
+    }
   }
 
   return { image, animations, frameW, frameH, frames: framesData };

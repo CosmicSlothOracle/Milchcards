@@ -203,7 +203,7 @@ export class Fighter {
   vx = 0;
   vy = 0;
   facing = 1;
-  hp = 100;
+  hp = 3; // 3 hits to defeat
   onGround = false;
 
   state: string = "idle";
@@ -218,6 +218,7 @@ export class Fighter {
   ranging = false;
   attackLaunched = false;
   rangedLaunched = false;
+  hurt = false; // hurt animation state
   muzzleOffset: { x: number; y: number };
 
   // timers
@@ -226,9 +227,10 @@ export class Fighter {
   parryTimer = 0;
   parryFreezeTimer = 0;
   stunTimer = 0;
+  hurtTimer = 0; // hurt animation duration
   parryConsumed = false;
-  parryDurationDefault = 0.4;
-  parryWindowLength = this.parryDurationDefault * 0.25;
+  parryDurationDefault = 0.5; // 6 frames at 12 fps = 0.5 seconds
+  parryWindowLength = this.parryDurationDefault * 0.15; // 15% of parry duration for active window (halved)
   stunned = false;
 
   constructor(opts: FighterOptions) {
@@ -287,8 +289,40 @@ export class Fighter {
       this.onGround = true;
     }
 
+    // Parry input (L1)
+    if (input[this.keys.parry] && !this.parrying && !this.attacking && !this.ranging && !this.hurt) {
+      this.parrying = true;
+      this.state = "parry";
+      this.anim.setState("parry");
+      this.parryTimer = this.parryDurationDefault;
+      this.parryConsumed = false;
+      console.log(`[qte] ${this.name} started parry (L1 pressed)`, {
+        parryKey: this.keys.parry,
+        animState: this.anim.state,
+        hasParryAnimation: !!this.anim.animations["parry"],
+        parryFrames: this.anim.animations["parry"]?.frames
+      });
+    } else if (input[this.keys.parry] && this.parrying) {
+      // Already parrying, don't log
+    } else if (input[this.keys.parry]) {
+      console.log(`[qte] ${this.name} parry blocked:`, {
+        parrying: this.parrying,
+        attacking: this.attacking,
+        ranging: this.ranging,
+        hurt: this.hurt,
+        state: this.state
+      });
+    }
+    if (this.parrying) {
+      this.parryTimer -= dt;
+      if (this.parryTimer <= 0) {
+        this.parrying = false;
+        // console.log(`[qte] ${this.name} parry ended`); // Reduced logging
+      }
+    }
+
     // Attack input
-    if (input[this.keys.attack] && !this.attacking) {
+    if (input[this.keys.attack] && !this.attacking && !this.parrying) {
       this.attacking = true;
       this.state = "attack";
       this.anim.setState("attack");
@@ -300,7 +334,7 @@ export class Fighter {
     }
 
     // Ranged input
-    if (input[this.keys.ranged] && !this.ranging) {
+    if (input[this.keys.ranged] && !this.ranging && !this.parrying) {
       this.ranging = true;
       this.state = "ranged";
       this.anim.setState("ranged");
@@ -366,8 +400,16 @@ export class Fighter {
       if (this.rangedTimer <= 0) this.ranging = false;
     }
 
-    // State machine fallbacks
-    if (!this.attacking && !this.ranging) {
+    // Hurt animation handling
+    if (this.hurt) {
+      this.hurtTimer -= dt;
+      if (this.hurtTimer <= 0) {
+        this.hurt = false;
+      }
+    }
+
+    // State machine fallbacks (only if not hurt, parrying, or defeated)
+    if (!this.attacking && !this.ranging && !this.hurt && !this.parrying && this.state !== "defeat") {
       if (!this.onGround) this.setState("jump");
       else if (Math.abs(this.vx) > 1) this.setState("walk");
       else this.setState("idle");
@@ -385,5 +427,26 @@ export class Fighter {
     if (this.state === s) return;
     this.state = s;
     this.anim.setState(s);
+  }
+
+  // Method to handle taking damage
+  takeDamage(amount: number = 1) {
+    if (this.hp <= 0 || this.state === "defeat") return; // Already defeated
+
+    this.hp = Math.max(0, this.hp - amount);
+    this.hurt = true;
+    this.hurtTimer = 0.3; // hurt animation duration
+
+    // Trigger hurt animation if available
+    if (this.anim.animations["hurt"]) {
+      this.anim.setState("hurt");
+    }
+
+    console.log(`[qte] ${this.name} took damage! HP: ${this.hp}/3`);
+  }
+
+  // Check if fighter is defeated
+  isDefeated(): boolean {
+    return this.hp <= 0;
   }
 }

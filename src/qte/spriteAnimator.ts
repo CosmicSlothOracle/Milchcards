@@ -91,6 +91,22 @@ export class SpriteAnimator {
     if (a) {
       this.fps = a.fps;
       this.loop = a.loop;
+      // Only log state changes for important animations
+      if (state === "parry" || state === "attack" || state === "defeat") {
+        console.log(`[SpriteAnimator] State changed to "${state}"`, {
+          frames: a.frames,
+          fps: a.fps,
+          loop: a.loop,
+          hasImage: !!a.image,
+          hasRects: !!a.rects,
+          imageLoaded: a.imageLoaded,
+          imageBroken: a.imageBroken
+        });
+      }
+    } else {
+      console.warn(`[SpriteAnimator] Animation "${state}" not found!`, {
+        availableStates: Object.keys(this.animations)
+      });
     }
   }
 
@@ -111,6 +127,19 @@ export class SpriteAnimator {
         else this.frame = a.frames - 1;
       }
     }
+
+    // Debug parry animation specifically
+    if (this.state === "parry" && this.frame % 2 === 0) { // Log every 2nd frame to reduce spam
+      console.log(`[SpriteAnimator] PARRY UPDATE:`, {
+        state: this.state,
+        frame: this.frame,
+        frames: a.frames,
+        fps: a.fps,
+        loop: a.loop,
+        acc: this.acc,
+        frameTime
+      });
+    }
   }
 
   /**
@@ -126,6 +155,23 @@ export class SpriteAnimator {
   ) {
     const a = this.animations[this.state];
     const img = (a && a.image) || this.defaultImage;
+
+    // Debug parry animation specifically
+    if (this.state === "parry") {
+      console.log(`[SpriteAnimator] DRAWING PARRY:`, {
+        state: this.state,
+        frame: this.frame,
+        hasAnimation: !!a,
+        hasImage: !!img,
+        hasRects: !!a?.rects,
+        rectsLength: a?.rects?.length,
+        frames: a?.frames,
+        imageComplete: img?.complete,
+        imageBroken: a?.imageBroken,
+        imageSrc: img?.src
+      });
+    }
+
     if (!a || !img || a.imageBroken || !img.complete || img.naturalWidth === 0) {
       // Fallback: graue Box
       console.warn(`[SpriteAnimator] FALLBACK GREY BOX for state "${this.state}":`, {
