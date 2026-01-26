@@ -1,4 +1,5 @@
 import { Card, PoliticianCard, SpecialCard, BasePolitician, BaseSpecial, GameState, Lane, Player } from '../types/game';
+import { getCardDetails } from '../data/cardDetails';
 
 // Card instance creation
 let NEXT_UID = 1;
@@ -107,8 +108,20 @@ export function findCardLocation(card: Card, state: GameState): { player: Player
 }
 
 // Action point calculation
-export function getCardActionPointCost(card: Card, state: GameState, player: Player): number {
-  // ALLE KARTEN KOSTEN IMMER 1 AP - KEINE AUSNAHMEN!
+export function getCardActionPointCost(card: Card, _state: GameState, _player: Player): number {
+  const details = getCardDetails(card.name);
+  if (details?.actionPointCost != null) {
+    return details.actionPointCost;
+  }
+
+  if (details?.tier === 'T3') {
+    return 2;
+  }
+
+  if (card.kind === 'pol' && (card as PoliticianCard).T >= 3) {
+    return 2;
+  }
+
   return 1;
 }
 

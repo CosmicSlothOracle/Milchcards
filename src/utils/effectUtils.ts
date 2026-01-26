@@ -1,5 +1,5 @@
 import { Card, PoliticianCard, SpecialCard, GameState, Player, Lane, EffectQueue, EffectQueueItem, ActiveAbility, AbilitySelect } from '../types/game';
-import { adjustInfluence } from './cardUtils';
+import { adjustInfluence, findCardLocation } from './cardUtils';
 
 export function getStrongestGovCardUid(state: GameState, player: Player): number | null {
   const row = state.board[player].aussen as PoliticianCard[];
@@ -205,32 +205,60 @@ export class ActiveAbilitiesManager {
 
   static executeAbility(ability: ActiveAbility, select: AbilitySelect, state: GameState): GameState {
     const newState = { ...state };
+    let applied = false;
 
     switch (ability.type) {
       case 'hardliner':
         if (select.targetCard) {
-          tryApplyNegativeEffect(
-            select.targetCard,
-            () => adjustInfluence(select.targetCard!, -2, 'Hardliner'),
-            state.round,
-            'Hardliner'
-          );
+          const loc = findCardLocation(select.targetCard, state);
+          if (loc && loc.player !== select.actorPlayer && loc.lane === 'innen') {
+            const targetCard = select.targetCard;
+            const removed = tryApplyNegativeEffect(
+              targetCard,
+              () => {
+                const updatedLane = state.board[loc.player][loc.lane].filter(card => card.uid !== targetCard.uid);
+                newState.board = {
+                  ...state.board,
+                  [loc.player]: {
+                    ...state.board[loc.player],
+                    [loc.lane]: updatedLane
+                  }
+                };
+                newState.discard = [...state.discard, targetCard];
+              },
+              state.round,
+              'Hardliner'
+            );
+            if (!removed) {
+              return state;
+            }
+            applied = true;
+          }
         }
         break;
 
       case 'oligarch_influence':
         if (select.targetCard) {
-          adjustInfluence(select.targetCard, 2, 'Oligarchen-Einfluss');
+          const loc = findCardLocation(select.targetCard, state);
+          if (loc && loc.player === select.actorPlayer && loc.lane === 'aussen') {
+            adjustInfluence(select.targetCard, 2, 'Oligarchen-Einfluss');
+            applied = true;
+          }
         }
         break;
 
       case 'diplomat_transfer':
         // Handled separately in useGameEffects
+        applied = true;
         break;
 
       case 'putin_double_intervention':
         // Handled by executePutinDoubleIntervention
         break;
+    }
+
+    if (!applied) {
+      return state;
     }
 
     // Mark ability as used
@@ -256,6 +284,10 @@ export class ActiveAbilitiesManager {
     const putin = allCards.find(c => c.name === 'Vladimir Putin');
 
     if (!putin || putin.deactivated || putin._activeUsed) {
+      return state;
+    }
+
+    if (newState.actionPoints[player] < 2) {
       return state;
     }
 
