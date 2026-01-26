@@ -209,18 +209,37 @@ export class ActiveAbilitiesManager {
     switch (ability.type) {
       case 'hardliner':
         if (select.targetCard) {
-          tryApplyNegativeEffect(
-            select.targetCard,
-            () => adjustInfluence(select.targetCard!, -2, 'Hardliner'),
-            state.round,
-            'Hardliner'
-          );
+          const opponent: Player = select.actorPlayer === 1 ? 2 : 1;
+          const oppPublic = newState.board[opponent].innen;
+          const isPublicTarget = oppPublic.some(card => card.uid === select.targetCard?.uid);
+
+          if (isPublicTarget) {
+            newState.board = {
+              ...newState.board,
+              [opponent]: {
+                ...newState.board[opponent],
+                innen: oppPublic.filter(card => card.uid !== select.targetCard?.uid)
+              }
+            };
+            newState.discard = [...newState.discard, select.targetCard];
+          } else {
+            tryApplyNegativeEffect(
+              select.targetCard,
+              () => adjustInfluence(select.targetCard!, -2, 'Hardliner'),
+              state.round,
+              'Hardliner'
+            );
+          }
         }
         break;
 
       case 'oligarch_influence':
         if (select.targetCard) {
-          adjustInfluence(select.targetCard, 2, 'Oligarchen-Einfluss');
+          const ownGov = newState.board[select.actorPlayer].aussen;
+          const isGovTarget = ownGov.some(card => card.uid === select.targetCard?.uid);
+          if (isGovTarget) {
+            adjustInfluence(select.targetCard, 2, 'Oligarchen-Einfluss');
+          }
         }
         break;
 
