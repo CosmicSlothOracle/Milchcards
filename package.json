@@ -25,11 +25,11 @@
     "web-vitals": "^2.1.4"
   },
   "scripts": {
-    "start": "react-scripts start",
-    "dev": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject",
+    "start": "node node_modules/react-scripts/bin/react-scripts.js start",
+    "dev": "node node_modules/react-scripts/bin/react-scripts.js start",
+    "build": "node node_modules/react-scripts/bin/react-scripts.js build",
+    "test": "node node_modules/react-scripts/bin/react-scripts.js test",
+    "eject": "node node_modules/react-scripts/bin/react-scripts.js eject",
     "test:ui": "node tools/ui_automator.js",
     "validate:effects": "ts-node src/utils/effectKeyValidator.ts",
     "sim": "node tools/run_ai_simulations_wrapper.js",
