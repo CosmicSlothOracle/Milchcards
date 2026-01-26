@@ -41,6 +41,7 @@ export interface SpecialCard extends Card {
   impl: string;
   bp: number;
   tag?: string;
+  tier?: number;
 }
 
 export interface BasePolitician {

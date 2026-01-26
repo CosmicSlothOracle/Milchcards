@@ -8,6 +8,7 @@ export interface DetailedCardInfo {
   // Game mechanics (most important)
   gameEffect?: string;
   deckCost: number;
+  apCost?: number;
   subcategories?: string[];
   synergy?: string;
 
@@ -1509,7 +1510,7 @@ export const SPECIAL_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Koalitionszwang': {
     name: 'Koalitionszwang',
     category: 'Dauerhaft-Initiative',
-    gameEffect: 'Für jede deiner Regierungskarten welche einen gleichhohen Einflusswert hat wie eine gegnerische Regierungskarte bekommst du +1 Einfluss +1 für jede Aktivisten und denker Karte welche in deinen Öffentlichkeitsslots liegt',
+    gameEffect: 'Für jede deiner Regierungskarten welche einen gleichhohen Einflusswert hat wie eine gegnerische Regierungskarte bekommst du +1 Einfluss +1 für jede Aktivisten und denker Karte welche in deinen Öffentlichkeitsslots liegt. Zusätzlich: Hast du mindestens zwei Tier-2-Regierungskarten, erhalten alle deine Tier-2-Regierungskarten +1 Einfluss.',
     deckCost: 2,
     subcategories: ['Regierung'],
     cardType: 'Dauerhaft-Initiative',
