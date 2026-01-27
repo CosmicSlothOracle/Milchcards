@@ -44,6 +44,7 @@ export function makeSpecInstance(base: BaseSpecial): SpecialCard {
     })(),
     impl: base.impl,
     bp: base.bp,
+    tier: base.tier,
     ...(base.effectKey && { effectKey: base.effectKey }),
     ...(base.tag && { tag: base.tag }), // 🔥 TAG ÜBERTRAGUNG FÜR NGO/PLATTFORM DETECTION!
     uid: NEXT_UID++,
@@ -108,18 +109,21 @@ export function findCardLocation(card: Card, state: GameState): { player: Player
 }
 
 // Action point calculation
-export function getCardActionPointCost(card: Card, _state: GameState, _player: Player): number {
+export function getCardActionPointCost(card: Card, state: GameState, player: Player): number {
   const details = getCardDetails(card.name);
-  if (details?.actionPointCost != null) {
-    return details.actionPointCost;
+  if (details?.apCost) return details.apCost;
+
+  if (card.kind === 'pol') {
+    const tier = (card as PoliticianCard).T;
+    return tier >= 3 ? 2 : 1;
   }
 
-  if (details?.tier === 'T3') {
-    return 2;
-  }
-
-  if (card.kind === 'pol' && (card as PoliticianCard).T >= 3) {
-    return 2;
+  if (card.kind === 'spec') {
+    const spec = card as SpecialCard;
+    const tier = spec.tier ?? (details?.tier ? parseInt(details.tier.replace(/\D/g, ''), 10) : 0);
+    if (tier >= 3 && (spec.type.includes('Initiative') || spec.type.includes('Intervention'))) {
+      return 2;
+    }
   }
 
   return 1;

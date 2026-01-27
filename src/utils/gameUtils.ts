@@ -6,7 +6,7 @@ import { makeUid } from './id';
 import { getLaneCapacity } from '../ui/layout';
 
 // Re-export helpers from effectUtils
-export { EffectQueueManager, ActiveAbilitiesManager, tryApplyNegativeEffect } from './effectUtils';
+export { EffectQueueManager, ActiveAbilitiesManager, tryApplyNegativeEffect, hasDiplomatCard } from './effectUtils';
 
 // Re-export helpers from cardUtils
 export {
@@ -74,9 +74,12 @@ export function sumGovernmentInfluenceWithAuras(state: GameState, player: Player
     const tempDebuffs = (card as any).tempDebuffs || 0;
     influence += tempBuffs - tempDebuffs;
 
-    // Koalitionszwang: Coalition bonus for Tier 2 government cards
-    if (hasCoalitionBonus && tier2GovCount >= 2 && card.T === 2) {
-      influence += 1;
+    // Koalitionszwang: Coalition bonus if at least two Tier-2 government cards are present
+    if (govSlot?.kind === 'spec' && (govSlot as SpecialCard).name === 'Koalitionszwang') {
+      const tier2GovCount = govCards.filter(c => c.T === 2 && !c.deactivated).length;
+      if (tier2GovCount >= 2 && card.T === 2) {
+        influence += 1;
+      }
     }
 
     // Napoleon Komplex: Tier 1 Regierungskarten +1 Einfluss

@@ -7,13 +7,14 @@ import {
   makePolInstance,
   makeSpecInstance,
   buildDeckFromEntries,
-  drawCards,
   drawCardsAtRoundEnd,
   tryApplyNegativeEffect,
   adjustInfluence,
   findCardLocation,
   sumGovernmentInfluenceWithAuras,
-  EffectQueueManager
+  EffectQueueManager,
+  currentBuilderBudget,
+  currentBuilderCount
 } from '../utils/gameUtils';
 import { getCardDetails } from '../data/cardDetails';
 import { useGameActions } from './useGameActions';
@@ -135,7 +136,12 @@ export function useGameState() {
   // Import functionality from separated hooks
   const gameActions = useGameActions(gameState, setGameState, log, afterQueueResolved);
   const gameAI = useGameAI(gameState, setGameState, log);
-  const gameEffects = useGameEffects(gameState, setGameState, log);
+  const gameEffects = useGameEffects(gameState, setGameState, log, {
+    logFunctionCall,
+    logCardEffect,
+    logDataFlow,
+    logWarning,
+  });
 
   const dealStartingHands = useCallback(() => {
     console.log('[DIAG] dealStartingHands called');
@@ -204,6 +210,17 @@ export function useGameState() {
     console.log('[DIAG] startMatchWithDecks - p1DeckEntries', p1DeckEntries.length, 'p2DeckEntries', p2DeckEntries.length);
     console.log('[DIAG] startMatchWithDecks - sample entries:', p1DeckEntries.slice(0, 2), p2DeckEntries.slice(0, 2));
 
+    const budgetLimit = 69;
+    const p1Count = currentBuilderCount(p1DeckEntries);
+    const p2Count = currentBuilderCount(p2DeckEntries);
+    const p1Budget = currentBuilderBudget(p1DeckEntries);
+    const p2Budget = currentBuilderBudget(p2DeckEntries);
+
+    if (p1Count !== 25 || p2Count !== 25 || p1Budget > budgetLimit || p2Budget > budgetLimit) {
+      log(`Deck-Validierung fehlgeschlagen. Deckgröße muss 25 sein, Budget ≤ ${budgetLimit}. P1: ${p1Count} Karten / ${p1Budget} BP, P2: ${p2Count} Karten / ${p2Budget} BP.`);
+      return;
+    }
+
     const p1Cards = buildDeckFromEntries(p1DeckEntries);
     const p2Cards = buildDeckFromEntries(p2DeckEntries);
 
@@ -235,7 +252,7 @@ export function useGameState() {
       activeRefresh: { 1: 0, 2: 0 },
     });
     console.log('[DIAG] setGameState called in startMatchWithDecks');
-  }, [gameAI]);
+  }, [gameAI, log]);
 
   const startMatchVsAI = useCallback((p1DeckEntries: BuilderEntry[], presetKey: string = '') => {
     const p2DeckEntries: BuilderEntry[] = [];
@@ -274,23 +291,10 @@ export function useGameState() {
       const newCurrent: Player = prev.current === 1 ? 2 : 1;
       logDataFlow('turn change', 'newCurrent', { old: prev.current, new: newCurrent }, 'Player switch');
 
-      // Reset AP for the new current player
-      const newActionPoints = { ...prev.actionPoints };
-      newActionPoints[newCurrent] = 2;
-
-      logDataFlow('AP reset', 'newCurrent', {
-        player: newCurrent,
-        oldAP: prev.actionPoints[newCurrent],
-        newAP: newActionPoints[newCurrent],
-        oldActions: 0,
-        newActions: 0
-      }, 'Resource reset for new player');
-
       // Apply start-of-turn hooks for the new current player
       const newState: GameState = {
         ...prev,
-        current: newCurrent,
-        actionPoints: newActionPoints
+        current: newCurrent
       };
 
       // Log turn change
@@ -582,18 +586,14 @@ export function useGameState() {
         if ((details?.name === 'Cyber-Attacke' || key === 'Cyber_Attacke') && isPlatform) {
           const loc = findCardLocation(played as any, { ...prev, board } as GameState);
           if (loc) {
-            const arr = [...board[loc.player][loc.lane]];
-            const idx = arr.findIndex(c => c.uid === played.uid);
-            if (idx >= 0) {
-              arr.splice(idx, 1);
-              board = {
-                ...board,
-                [loc.player]: {
-                  ...board[loc.player],
-                  [loc.lane]: arr
-                }
-              } as GameState['board'];
-            }
+            const updatedLane = board[loc.player][loc.lane].filter(c => c.uid !== played.uid);
+            board = {
+              ...board,
+              [loc.player]: {
+                ...board[loc.player],
+                [loc.lane]: updatedLane
+              }
+            } as GameState['board'];
           }
           oppTraps.splice(i, 1); i--; trapsChanged = true;
           log(`Intervention ausgelöst: Cyber-Attacke → ${played.name} zerstört.`);
@@ -700,15 +700,11 @@ export function useGameState() {
             const pubCards = board[actingPlayer].innen.filter(c => c.kind === 'spec' && (c as SpecialCard).type === 'Öffentlichkeitskarte');
             if (pubCards.length > 0) {
               const lastPubCard = pubCards[pubCards.length - 1];
-              const arr = [...board[actingPlayer].innen];
-              const idx = arr.findIndex(c => c.uid === lastPubCard.uid);
-              if (idx >= 0) {
-                arr.splice(idx, 1);
-                board = {
-                  ...board,
-                  [actingPlayer]: { ...board[actingPlayer], innen: arr }
-                } as GameState['board'];
-              }
+              const updatedLane = board[actingPlayer].innen.filter(c => c.uid !== lastPubCard.uid);
+              board = {
+                ...board,
+                [actingPlayer]: { ...board[actingPlayer], innen: updatedLane }
+              } as GameState['board'];
             }
             oppTraps.splice(i, 1); i--; trapsChanged = true;
             log(`Intervention ausgelöst: Skandalspirale → Öffentlichkeitskarte annulliert.`);
