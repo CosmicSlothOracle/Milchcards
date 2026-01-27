@@ -285,9 +285,9 @@ import { GameState, Card, Player, PoliticianCard, SpecialCard } from '../types/g
 
       if (!hasDiplomatCard(player, prev)) return prev;
 
-      const govCards = prev.board[player].aussen;
-      const fromCard = govCards.find(c => c.uid === fromCardUid && c.kind === 'pol') as PoliticianCard;
-      const toCard = govCards.find(c => c.uid === toCardUid && c.kind === 'pol') as PoliticianCard;
+      const governmentCards = prev.board[player].aussen;
+      const fromCard = governmentCards.find(c => c.uid === fromCardUid && c.kind === 'pol') as PoliticianCard;
+      const toCard = governmentCards.find(c => c.uid === toCardUid && c.kind === 'pol') as PoliticianCard;
 
       if (!fromCard || !toCard || fromCard.influence < amount) return prev;
 
@@ -297,7 +297,7 @@ import { GameState, Card, Player, PoliticianCard, SpecialCard } from '../types/g
       const newFlags = { ...flags, diplomatInfluenceTransferUsed: true };
       const newEffectFlags = { ...prev.effectFlags, [player]: newFlags } as GameState['effectFlags'];
 
-      const diplomat = govCards.find(c => c.kind === 'pol' && (c as PoliticianCard).tag === 'Diplomat') as PoliticianCard | undefined;
+      const diplomat = governmentCards.find(c => c.kind === 'pol' && (c as PoliticianCard).tag === 'Diplomat') as PoliticianCard | undefined;
       if (diplomat) diplomat._activeUsed = true;
 
       log(`P${player} transferiert ${amount} Einfluss von ${fromCard.name} zu ${toCard.name} (Diplomat).`);

@@ -36,3 +36,86 @@
     transform: rotate(360deg);
   }
 }
+
+.game-board {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: #0e141b;
+}
+
+.game-board__surface {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: top left;
+}
+
+.game-board__background {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  filter: saturate(1.05) contrast(1.05);
+}
+
+.game-board__slot,
+.game-board__card {
+  position: absolute;
+  border-radius: 14px;
+}
+
+.game-board__slot {
+  border: 2px dashed rgba(148, 163, 184, 0.4);
+  background: rgba(15, 23, 42, 0.4);
+  color: rgba(226, 232, 240, 0.8);
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 10px;
+  cursor: pointer;
+}
+
+.game-board__slot span {
+  background: rgba(15, 23, 42, 0.7);
+  border-radius: 999px;
+  padding: 4px 12px;
+}
+
+.game-board__card {
+  display: flex;
+  align-items: stretch;
+  justify-content: stretch;
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.game-board__card img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.game-board__card--selected {
+  outline: 3px solid #38bdf8;
+  box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.3), 0 12px 24px rgba(0, 0, 0, 0.4);
+}
+
+.game-board__activate {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  background: rgba(15, 23, 42, 0.85);
+  color: #f8fafc;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}

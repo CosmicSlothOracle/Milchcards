@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import './App.css';
 import { logger } from './debug/logger';
-import { GameCanvas } from './components/GameCanvas';
+import GameBoard from './components/GameBoard';
 import { DeckBuilder } from './components/DeckBuilder';
 import { GameInfoModal } from './components/GameInfoModal';
 import { EventLogModal } from './components/EventLogModal';
@@ -516,7 +517,7 @@ function AppContent() {
               overflow: 'hidden',
               background: '#0e141b',
             }}>
-              <GameCanvas
+              <GameBoard
                 gameState={gameState}
                 selectedHandIndex={selectedHandIndex}
                 onCardClick={handleCardClick}
