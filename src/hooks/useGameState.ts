@@ -7,7 +7,6 @@ import {
   makePolInstance,
   makeSpecInstance,
   buildDeckFromEntries,
-  drawCards,
   drawCardsAtRoundEnd,
   tryApplyNegativeEffect,
   adjustInfluence,

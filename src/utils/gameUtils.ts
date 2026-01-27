@@ -6,7 +6,7 @@ import { makeUid } from './id';
 import { getLaneCapacity } from '../ui/layout';
 
 // Re-export helpers from effectUtils
-export { EffectQueueManager, ActiveAbilitiesManager, tryApplyNegativeEffect } from './effectUtils';
+export { EffectQueueManager, ActiveAbilitiesManager, tryApplyNegativeEffect, hasDiplomatCard } from './effectUtils';
 
 // Re-export helpers from cardUtils
 export {

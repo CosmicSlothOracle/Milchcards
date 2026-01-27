@@ -236,7 +236,11 @@ export class ActiveAbilitiesManager {
 
       case 'oligarch_influence':
         if (select.targetCard) {
-          adjustInfluence(select.targetCard, 2, 'Oligarchen-Einfluss');
+          const ownGov = newState.board[select.actorPlayer].aussen;
+          const isGovTarget = ownGov.some(card => card.uid === select.targetCard?.uid);
+          if (isGovTarget) {
+            adjustInfluence(select.targetCard, 2, 'Oligarchen-Einfluss');
+          }
         }
         break;
 
