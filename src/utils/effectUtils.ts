@@ -1,5 +1,5 @@
 import { Card, PoliticianCard, SpecialCard, GameState, Player, Lane, EffectQueue, EffectQueueItem, ActiveAbility, AbilitySelect } from '../types/game';
-import { adjustInfluence } from './cardUtils';
+import { adjustInfluence, findCardLocation } from './cardUtils';
 
 export function getStrongestGovCardUid(state: GameState, player: Player): number | null {
   const row = state.board[player].aussen as PoliticianCard[];
@@ -130,7 +130,7 @@ export class ActiveAbilitiesManager {
         abilities.push({
           id: `hardliner_${card.uid}`,
           name: 'Hardliner',
-          description: 'Reduziere Einfluss einer gegnerischen Karte um 2',
+          description: 'Entferne eine gegnerische Öffentlichkeitskarte oder reduziere Einfluss um 2',
           cardName: card.name,
           cooldown: 1,
           usedThisRound: card._activeUsed,
@@ -204,24 +204,25 @@ export class ActiveAbilitiesManager {
   }
 
   static executeAbility(ability: ActiveAbility, select: AbilitySelect, state: GameState): GameState {
-    const newState = { ...state };
+    const newState = {
+      ...state,
+      actionPoints: { ...state.actionPoints }
+    };
 
     switch (ability.type) {
       case 'hardliner':
         if (select.targetCard) {
-          const opponent: Player = select.actorPlayer === 1 ? 2 : 1;
-          const oppPublic = newState.board[opponent].innen;
-          const isPublicTarget = oppPublic.some(card => card.uid === select.targetCard?.uid);
-
-          if (isPublicTarget) {
+          const loc = findCardLocation(select.targetCard, state);
+          if (loc && loc.lane === 'innen' && loc.player !== select.actorPlayer) {
+            const updatedLane = state.board[loc.player][loc.lane].filter(c => c.uid !== select.targetCard!.uid);
             newState.board = {
-              ...newState.board,
-              [opponent]: {
-                ...newState.board[opponent],
-                innen: oppPublic.filter(card => card.uid !== select.targetCard?.uid)
+              ...state.board,
+              [loc.player]: {
+                ...state.board[loc.player],
+                [loc.lane]: updatedLane
               }
-            };
-            newState.discard = [...newState.discard, select.targetCard];
+            } as GameState['board'];
+            newState.discard = [...state.discard, select.targetCard];
           } else {
             tryApplyNegativeEffect(
               select.targetCard,
@@ -256,7 +257,7 @@ export class ActiveAbilitiesManager {
     select.actorCard._activeUsed = true;
 
     // Deduct AP cost
-    newState.actionPoints[select.actorPlayer] -= (ability.cost || 0);
+    newState.actionPoints[select.actorPlayer] = Math.max(0, newState.actionPoints[select.actorPlayer] - (ability.cost || 0));
 
     return newState;
   }
@@ -267,14 +268,14 @@ export class ActiveAbilitiesManager {
     interventionCardIds: number[],
     log: (msg: string) => void
   ): GameState {
-    const newState = { ...state };
+    const newState = { ...state, actionPoints: { ...state.actionPoints } };
 
     // Find Putin card
     const board = newState.board[player];
     const allCards = [...board.innen, ...board.aussen].filter(c => c.kind === 'pol') as PoliticianCard[];
     const putin = allCards.find(c => c.name === 'Vladimir Putin');
 
-    if (!putin || putin.deactivated || putin._activeUsed) {
+    if (!putin || putin.deactivated || putin._activeUsed || newState.actionPoints[player] < 2) {
       return state;
     }
 
@@ -297,7 +298,7 @@ export class ActiveAbilitiesManager {
 
     // Mark Putin as used and deduct AP
     putin._activeUsed = true;
-    newState.actionPoints[player] -= 2;
+    newState.actionPoints[player] = Math.max(0, newState.actionPoints[player] - 2);
 
     log(`Putin setzt doppelte Intervention: ${interventions.map(i => i.name).join(' & ')}`);
 
