@@ -246,11 +246,16 @@ export class ActiveAbilitiesManager {
 
       case 'diplomat_transfer':
         // Handled separately in useGameEffects
+        applied = true;
         break;
 
       case 'putin_double_intervention':
         // Handled by executePutinDoubleIntervention
         break;
+    }
+
+    if (!applied) {
+      return state;
     }
 
     // Mark ability as used
@@ -276,6 +281,10 @@ export class ActiveAbilitiesManager {
     const putin = allCards.find(c => c.name === 'Vladimir Putin');
 
     if (!putin || putin.deactivated || putin._activeUsed || newState.actionPoints[player] < 2) {
+      return state;
+    }
+
+    if (newState.actionPoints[player] < 2) {
       return state;
     }
 

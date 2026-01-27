@@ -477,6 +477,13 @@ export function useGameState() {
       const spec = trap as SpecialCard;
       const details = getCardDetails(spec.name);
       const key = spec.key;
+      const interventionReduction = ((): number => {
+        const altFakten = prev.permanentSlots[actingPlayer].public;
+        if (altFakten?.kind === 'spec' && (altFakten as SpecialCard).name === 'Alternative Fakten') {
+          return 1;
+        }
+        return 0;
+      })();
 
       // Trigger: Karte gespielt
       if (event.type === 'card_played' && (event.card as PoliticianCard)) {
@@ -508,25 +515,28 @@ export function useGameState() {
 
         // Whistleblower (Tier 2 Regierung)
         if ((details?.name === 'Whistleblower' || key === 'Whistleblower') && isTier2Gov) {
-          tryApplyNegativeEffect(played, () => { adjustInfluence(played, -2, 'Whistleblower'); }, prev.round);
+          const amount = Math.min(0, -2 + interventionReduction);
+          tryApplyNegativeEffect(played, () => { adjustInfluence(played, amount, 'Whistleblower'); }, prev.round);
           oppTraps.splice(i, 1); i--; trapsChanged = true;
-          log(`Intervention ausgelöst: Whistleblower → ${played.name} -2 Einfluss.`);
+          log(`Intervention ausgelöst: Whistleblower → ${played.name} ${amount} Einfluss.`);
           continue;
         }
 
         // Berater-Affäre (Tier 1 Regierung)
         if ((details?.name === 'Berater-Affäre' || key === 'Berater_Affaere') && isTier1Gov) {
-          tryApplyNegativeEffect(played, () => { adjustInfluence(played, -2, 'Berater-Affäre'); }, prev.round);
+          const amount = Math.min(0, -2 + interventionReduction);
+          tryApplyNegativeEffect(played, () => { adjustInfluence(played, amount, 'Berater-Affäre'); }, prev.round);
           oppTraps.splice(i, 1); i--; trapsChanged = true;
-          log(`Intervention ausgelöst: Berater-Affäre → ${played.name} -2 Einfluss.`);
+          log(`Intervention ausgelöst: Berater-Affäre → ${played.name} ${amount} Einfluss.`);
           continue;
         }
 
         // Soft Power-Kollaps / Deepfake-Skandal (Diplomat)
         if ((details?.name === 'Soft Power-Kollaps' || key === 'Soft_Power_Kollaps') && isDiplomat) {
-          tryApplyNegativeEffect(played, () => { adjustInfluence(played, -3, 'Soft Power-Kollaps'); }, prev.round);
+          const amount = Math.min(0, -3 + interventionReduction);
+          tryApplyNegativeEffect(played, () => { adjustInfluence(played, amount, 'Soft Power-Kollaps'); }, prev.round);
           oppTraps.splice(i, 1); i--; trapsChanged = true;
-          log(`Intervention ausgelöst: Soft Power-Kollaps → ${played.name} -3 Einfluss.`);
+          log(`Intervention ausgelöst: Soft Power-Kollaps → ${played.name} ${amount} Einfluss.`);
           continue;
         }
         if ((details?.name === 'Deepfake-Skandal' || key === 'Deepfake_Skandal') && isDiplomat) {
@@ -542,12 +552,28 @@ export function useGameState() {
         if ((details?.name === 'Lobby Leak' || key === 'Lobby_Leak') && isNGO) {
           const hands = { ...prev.hands } as GameState['hands'];
           if (hands[actingPlayer].length > 0) {
-            hands[actingPlayer] = hands[actingPlayer].slice(1);
+            const discardIndex = Math.floor(Math.random() * hands[actingPlayer].length);
+            const [discarded] = hands[actingPlayer].splice(discardIndex, 1);
             prev.hands = hands;
+            prev.discard = [...prev.discard, discarded];
           }
           oppTraps.splice(i, 1); i--; trapsChanged = true;
           log(`Intervention ausgelöst: Lobby Leak → P${actingPlayer} wirft 1 Karte ab.`);
           continue;
+        }
+
+        // Interne Fraktionskämpfe (große Initiative 3-4 HP)
+        if ((details?.name === 'Interne Fraktionskämpfe' || key === 'Interne_Fraktionskaempfe') && event.card?.kind === 'spec') {
+          const specCard = event.card as SpecialCard;
+          const isLargeInitiative = specCard.type === 'Sofort-Initiative' && specCard.bp >= 3;
+          if (isLargeInitiative) {
+            const hands = { ...prev.hands } as GameState['hands'];
+            hands[actingPlayer].push(event.card);
+            prev.hands = hands;
+            oppTraps.splice(i, 1); i--; trapsChanged = true;
+            log(`Intervention ausgelöst: Interne Fraktionskämpfe → ${event.card.name} wird annulliert.`);
+            continue;
+          }
         }
         if ((details?.name === 'Boykott-Kampagne' || key === 'Boykott_Kampagne') && (isNGO || ['Greta Thunberg', 'Malala Yousafzai', 'Ai Weiwei', 'Alexei Navalny'].includes(played.name))) {
           tryApplyNegativeEffect(played, () => { played.deactivated = true; }, prev.round);
@@ -616,30 +642,16 @@ export function useGameState() {
           continue;
         }
 
-        // Interne Fraktionskämpfe (große Initiative 3-4 HP)
-        if ((details?.name === 'Interne Fraktionskämpfe' || key === 'Interne_Fraktionskaempfe') && event.type === 'card_played' && event.card?.kind === 'spec') {
-          const specCard = event.card as SpecialCard;
-          const isLargeInitiative = specCard.type === 'Sofort-Initiative' && (specCard.bp >= 3);
-          if (isLargeInitiative) {
-            // Initiative annullieren (vereinfacht: Karte zurück auf Hand)
-            const hands = { ...prev.hands } as GameState['hands'];
-            hands[actingPlayer].push(event.card);
-            prev.hands = hands;
-            oppTraps.splice(i, 1); i--; trapsChanged = true;
-            log(`Intervention ausgelöst: Interne Fraktionskämpfe → ${event.card.name} wird annulliert.`);
-            continue;
-          }
-        }
-
         // Massenproteste (2 Regierungskarten in der Runde)
         if ((details?.name === 'Massenproteste' || key === 'Massenproteste') && event.type === 'card_played' && event.lane === 'aussen') {
           // Vereinfacht: Beide Regierungskarten -1 Einfluss
           const govCards = board[actingPlayer].aussen.filter(c => c.kind === 'pol') as PoliticianCard[];
           if (govCards.length >= 2) {
-            adjustInfluence(govCards[0], -1, 'Massenproteste');
-            adjustInfluence(govCards[1], -1, 'Massenproteste');
+            const amount = Math.min(0, -1 + interventionReduction);
+            adjustInfluence(govCards[0], amount, 'Massenproteste');
+            adjustInfluence(govCards[1], amount, 'Massenproteste');
             oppTraps.splice(i, 1); i--; trapsChanged = true;
-            log(`Intervention ausgelöst: Massenproteste → ${govCards[0].name} und ${govCards[1].name} -1 Einfluss.`);
+            log(`Intervention ausgelöst: Massenproteste → ${govCards[0].name} und ${govCards[1].name} ${amount} Einfluss.`);
             continue;
           }
         }
@@ -708,9 +720,10 @@ export function useGameState() {
             const oppGovCards = board[opponent].aussen.filter(c => c.kind === 'pol') as PoliticianCard[];
             if (oppGovCards.length > 0) {
               // Erste Regierungskarte -2 Einfluss
-              adjustInfluence(oppGovCards[0], -2, 'Satire-Show');
+              const amount = Math.min(0, -2 + interventionReduction);
+              adjustInfluence(oppGovCards[0], amount, 'Satire-Show');
               oppTraps.splice(i, 1); i--; trapsChanged = true;
-              log(`Intervention ausgelöst: Satire-Show → ${oppGovCards[0].name} -2 Einfluss.`);
+              log(`Intervention ausgelöst: Satire-Show → ${oppGovCards[0].name} ${amount} Einfluss.`);
               continue;
             }
           }
@@ -742,7 +755,13 @@ export function useGameState() {
       const govSlot = state.permanentSlots[player].government;
       const pubSlot = state.permanentSlots[player].public;
 
-      // Koalitionszwang: Old Tier 2 bonus removed - now uses complex coalition bonus calculation
+      // Koalitionszwang: Coalition bonus for Tier 2 government cards
+      if (govSlot?.kind === 'spec' && (govSlot as SpecialCard).name === 'Koalitionszwang') {
+        const tier2GovCount = govCards.filter(card => card.T === 2).length;
+        if (tier2GovCount >= 2 && card.T === 2) {
+          influence += 1;
+        }
+      }
 
       // Napoleon Komplex: Tier 1 Regierungskarten +1 Einfluss
       if (govSlot?.kind === 'spec' && (govSlot as SpecialCard).name === 'Napoleon Komplex') {
