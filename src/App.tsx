@@ -24,6 +24,7 @@ import { CardHoverInfoPanel } from './components/CardHoverInfoPanel';
 import { IntroVideo } from './components/IntroVideo';
 import { SequentialVideoPlayer } from './components/SequentialVideoPlayer';
 import { MusicToggle } from './components/MusicToggle';
+import { TutorialModal } from './components/TutorialModal';
 import { AIBalanceTester } from './components/AIBalanceTester';
 import Dice3D, { Dice3DHandle } from './components/Dice3D';
 import SimpleDice from './components/SimpleDice';
@@ -41,6 +42,8 @@ function AppContent() {
   const [gameLogModalOpen, setGameLogModalOpen] = useState(false);
   const [aiBalanceTesterOpen, setAiBalanceTesterOpen] = useState(false);
   const [hoveredCard, setHoveredCard] = useState<any>(null);
+  const [tutorialOpen, setTutorialOpen] = useState(false);
+  const corruptionActive = (gameState as any).pendingAbilitySelect?.type === 'corruption_steal';
 
   // 🔧 DEV MODE: Toggle für lokales Testing ohne KI
   const [devMode, setDevMode] = useState(false);
@@ -493,6 +496,31 @@ function AppContent() {
           <option value="sprite-demo">🦾 Sprite Demo</option>
         </select>
       </div>
+      <div style={{
+        position: 'fixed',
+        top: '52px',
+        left: '10px',
+        zIndex: 1001,
+      }}>
+        <button
+          type="button"
+          onClick={() => setTutorialOpen(true)}
+          style={{
+            background: '#0ea5e9',
+            color: 'white',
+            border: 'none',
+            padding: '8px 12px',
+            borderRadius: '6px',
+            fontSize: '12px',
+            fontWeight: 600,
+            cursor: 'pointer',
+            minWidth: '150px',
+            boxShadow: '0 2px 6px rgba(0,0,0,0.25)'
+          }}
+        >
+          📘 Tutorial starten
+        </button>
+      </div>
 
       {currentRoute === 'ui-editor' ? (
         <UILayoutEditor />
@@ -591,10 +619,12 @@ function AppContent() {
                 />
               )}
 
+              <TutorialModal isVisible={tutorialOpen} onClose={() => setTutorialOpen(false)} />
+
               <CardHoverInfoPanel hovered={hoveredCard} />
 
               {/* Dice - Dev utility with fallback */}
-              <div style={{ position: 'fixed', left: 16, bottom: 16, zIndex: 1200 }}>
+              <div className={corruptionActive ? 'game-dice game-dice--highlight' : 'game-dice'}>
                 {useSimpleDice ? (
                   <SimpleDice
                     size={120}
