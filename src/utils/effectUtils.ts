@@ -236,17 +236,26 @@ export class ActiveAbilitiesManager {
 
       case 'oligarch_influence':
         if (select.targetCard) {
-          adjustInfluence(select.targetCard, 2, 'Oligarchen-Einfluss');
+          const ownGov = newState.board[select.actorPlayer].aussen;
+          const isGovTarget = ownGov.some(card => card.uid === select.targetCard?.uid);
+          if (isGovTarget) {
+            adjustInfluence(select.targetCard, 2, 'Oligarchen-Einfluss');
+          }
         }
         break;
 
       case 'diplomat_transfer':
         // Handled separately in useGameEffects
+        applied = true;
         break;
 
       case 'putin_double_intervention':
         // Handled by executePutinDoubleIntervention
         break;
+    }
+
+    if (!applied) {
+      return state;
     }
 
     // Mark ability as used
@@ -272,6 +281,10 @@ export class ActiveAbilitiesManager {
     const putin = allCards.find(c => c.name === 'Vladimir Putin');
 
     if (!putin || putin.deactivated || putin._activeUsed || newState.actionPoints[player] < 2) {
+      return state;
+    }
+
+    if (newState.actionPoints[player] < 2) {
       return state;
     }
 
