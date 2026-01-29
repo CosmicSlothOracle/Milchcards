@@ -132,11 +132,178 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
     }
   }, [isOpen, currentTrack, playMusic]);
 
+  const getEntryCost = useCallback((entry: BuilderEntry): number => {
+    if (entry.kind === 'pol') {
+      const pol = Pols.find(p => p.id === entry.baseId);
+      if (!pol) return 0;
+      const details = getCardDetails(pol.name);
+      return details?.deckCost ?? pol.BP ?? 0;
+    }
+    const spec = Specials.find(s => s.id === entry.baseId);
+    if (!spec) return 0;
+    const details = getCardDetails(spec.name);
+    return details?.deckCost ?? spec.bp ?? 0;
+  }, []);
+
+  const normalizePresetDeck = useCallback((entries: BuilderEntry[]) => {
+    const MAX_CARDS = 10;
+    const MIN_CARDS = 5;
+    const MIN_GOV = 5;
+    const MIN_BUDGET = 50;
+    const MAX_BUDGET = 69;
+
+    const availablePols = Pols.filter(p => !disabledCards.has(p.name));
+    const availableSpecs = Specials.filter(s => !disabledCards.has(s.name));
+
+    const deck: BuilderEntry[] = entries
+      .filter(entry => entry.count > 0)
+      .map(entry => ({ ...entry, count: 1 }));
+
+    const isInDeck = (kind: 'pol' | 'spec', baseId: number) =>
+      deck.some(entry => entry.kind === kind && entry.baseId === baseId);
+
+    const deckCount = () => currentBuilderCount(deck);
+    const govCount = () => deck.reduce((sum, entry) => sum + (entry.kind === 'pol' ? entry.count : 0), 0);
+    const budget = () => currentBuilderBudget(deck);
+
+    const addEntry = (entry: BuilderEntry) => {
+      if (!isInDeck(entry.kind, entry.baseId)) {
+        deck.push({ ...entry, count: 1 });
+        return true;
+      }
+      return false;
+    };
+
+    const removeEntry = (predicate: (entry: BuilderEntry) => boolean) => {
+      let bestIndex = -1;
+      let bestCost = -1;
+      deck.forEach((entry, idx) => {
+        if (!predicate(entry)) return;
+        const cost = getEntryCost(entry);
+        if (cost > bestCost) {
+          bestCost = cost;
+          bestIndex = idx;
+        }
+      });
+      if (bestIndex >= 0) {
+        deck.splice(bestIndex, 1);
+        return true;
+      }
+      return false;
+    };
+
+    const cheapestGov = [...availablePols]
+      .sort((a, b) => (getCardDetails(a.name)?.deckCost ?? a.BP ?? 0) - (getCardDetails(b.name)?.deckCost ?? b.BP ?? 0));
+    const expensiveCandidates = [
+      ...availablePols.map(p => ({ kind: 'pol' as const, baseId: p.id, cost: getCardDetails(p.name)?.deckCost ?? p.BP ?? 0 })),
+      ...availableSpecs.map(s => ({ kind: 'spec' as const, baseId: s.id, cost: getCardDetails(s.name)?.deckCost ?? s.bp ?? 0 })),
+    ].sort((a, b) => b.cost - a.cost);
+
+    let safety = 0;
+    while (deckCount() > MAX_CARDS && safety < 40) {
+      const canRemoveGov = govCount() > MIN_GOV;
+      removeEntry(entry => entry.kind !== 'pol' || canRemoveGov);
+      safety += 1;
+    }
+
+    while (govCount() < MIN_GOV && safety < 80) {
+      if (deckCount() < MAX_CARDS) {
+        const nextGov = cheapestGov.find(pol => !isInDeck('pol', pol.id));
+        if (!nextGov) break;
+        addEntry({ kind: 'pol', baseId: nextGov.id, count: 1 });
+      } else {
+        const removed = removeEntry(entry => entry.kind !== 'pol');
+        if (!removed) break;
+      }
+      safety += 1;
+    }
+
+    while (deckCount() < MIN_CARDS && safety < 120) {
+      const nextGov = cheapestGov.find(pol => !isInDeck('pol', pol.id));
+      if (nextGov) {
+        addEntry({ kind: 'pol', baseId: nextGov.id, count: 1 });
+      } else if (availableSpecs.length > 0) {
+        const nextSpec = availableSpecs.find(spec => !isInDeck('spec', spec.id));
+        if (nextSpec) addEntry({ kind: 'spec', baseId: nextSpec.id, count: 1 });
+      }
+      safety += 1;
+    }
+
+    while (budget() < MIN_BUDGET && safety < 200) {
+      if (deckCount() < MAX_CARDS) {
+        const candidate = expensiveCandidates.find(c => !isInDeck(c.kind, c.baseId) && budget() + c.cost <= MAX_BUDGET);
+        if (!candidate) break;
+        addEntry({ kind: candidate.kind, baseId: candidate.baseId, count: 1 });
+      } else {
+        let swapped = false;
+        const cheapestIndex = deck.reduce((best, entry, idx) => {
+          const cost = getEntryCost(entry);
+          if (best === -1 || cost < getEntryCost(deck[best])) return idx;
+          return best;
+        }, -1);
+        if (cheapestIndex >= 0) {
+          const cheapest = deck[cheapestIndex];
+          const cheapestCost = getEntryCost(cheapest);
+          const replacement = expensiveCandidates.find(candidate => {
+            if (isInDeck(candidate.kind, candidate.baseId)) return false;
+            const newBudget = budget() - cheapestCost + candidate.cost;
+            if (newBudget > MAX_BUDGET) return false;
+            if (cheapest.kind === 'pol' && candidate.kind !== 'pol' && govCount() <= MIN_GOV) return false;
+            return newBudget > budget();
+          });
+          if (replacement) {
+            deck.splice(cheapestIndex, 1, { kind: replacement.kind, baseId: replacement.baseId, count: 1 });
+            swapped = true;
+          }
+        }
+        if (!swapped) break;
+      }
+      safety += 1;
+    }
+
+    while (budget() > MAX_BUDGET && safety < 240) {
+      if (deckCount() > MIN_CARDS) {
+        const canRemoveGov = govCount() > MIN_GOV;
+        const removed = removeEntry(entry => entry.kind !== 'pol' || canRemoveGov);
+        if (!removed) break;
+      } else {
+        const expensiveIndex = deck.reduce((best, entry, idx) => {
+          const cost = getEntryCost(entry);
+          if (best === -1 || cost > getEntryCost(deck[best])) return idx;
+          return best;
+        }, -1);
+        if (expensiveIndex >= 0) {
+          const expensive = deck[expensiveIndex];
+          const expensiveCost = getEntryCost(expensive);
+          const cheaperReplacement = expensiveCandidates
+            .slice()
+            .reverse()
+            .find(candidate => {
+              if (isInDeck(candidate.kind, candidate.baseId)) return false;
+              if (expensive.kind === 'pol' && candidate.kind !== 'pol' && govCount() <= MIN_GOV) return false;
+              return budget() - expensiveCost + candidate.cost <= MAX_BUDGET;
+            });
+          if (cheaperReplacement) {
+            deck.splice(expensiveIndex, 1, { kind: cheaperReplacement.kind, baseId: cheaperReplacement.baseId, count: 1 });
+          } else {
+            break;
+          }
+        } else {
+          break;
+        }
+      }
+      safety += 1;
+    }
+
+    return deck;
+  }, [getEntryCost, disabledCards]);
+
   const applyPreset = useCallback((idx: number) => {
     const preset = PRESETS[idx];
     if (!preset) return;
     const newDeck: BuilderEntry[] = [];
     preset.cards.forEach(name => {
+      if (disabledCards.has(name)) return;
       const pol = Pols.find((p: BasePolitician) => p.name === name);
       if (pol) {
         newDeck.push({ kind: 'pol', baseId: pol.id, count: 1 });
@@ -149,8 +316,8 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
       }
       // name not found -> ignore
     });
-    setDeck(newDeck);
-  }, [setDeck]);
+    setDeck(normalizePresetDeck(newDeck));
+  }, [disabledCards, normalizePresetDeck]);
 
   const budget = currentBuilderBudget(deck);
   const count = currentBuilderCount(deck);
