@@ -290,22 +290,22 @@ export function useGameEffects(
 
       if (!hasDiplomatCard(player, prev)) return prev;
 
-      const govCards = prev.board[player].aussen;
-      const fromCard = govCards.find(c => c.uid === fromCardUid && c.kind === 'pol') as PoliticianCard;
-      const toCard = govCards.find(c => c.uid === toCardUid && c.kind === 'pol') as PoliticianCard;
+      const governmentCards = prev.board[player].aussen;
+      const fromGovCard = governmentCards.find(c => c.uid === fromCardUid && c.kind === 'pol') as PoliticianCard;
+      const toGovCard = governmentCards.find(c => c.uid === toCardUid && c.kind === 'pol') as PoliticianCard;
 
-      if (!fromCard || !toCard || fromCard.influence < amount) return prev;
+      if (!fromGovCard || !toGovCard || fromGovCard.influence < amount) return prev;
 
-      adjustInfluence(fromCard, -amount, 'Diplomat-Transfer');
-      adjustInfluence(toCard, amount, 'Diplomat-Transfer');
+      adjustInfluence(fromGovCard, -amount, 'Diplomat-Transfer');
+      adjustInfluence(toGovCard, amount, 'Diplomat-Transfer');
 
       const newFlags = { ...flags, diplomatInfluenceTransferUsed: true };
       const newEffectFlags = { ...prev.effectFlags, [player]: newFlags } as GameState['effectFlags'];
 
-      const diplomat = govCards.find(c => c.kind === 'pol' && (c as PoliticianCard).tag === 'Diplomat') as PoliticianCard | undefined;
+      const diplomat = governmentCards.find(c => c.kind === 'pol' && (c as PoliticianCard).tag === 'Diplomat') as PoliticianCard | undefined;
       if (diplomat) diplomat._activeUsed = true;
 
-      log(`P${player} transferiert ${amount} Einfluss von ${fromCard.name} zu ${toCard.name} (Diplomat).`);
+      log(`P${player} transferiert ${amount} Einfluss von ${fromGovCard.name} zu ${toGovCard.name} (Diplomat).`);
 
       return {
         ...prev,
