@@ -296,8 +296,8 @@ import { GameState, Card, Player, PoliticianCard, SpecialCard } from '../types/g
 
       if (!fromCard || !toCard || fromCard.influence < amount) return prev;
 
-      adjustInfluence(fromCard, -amount, 'Diplomat-Transfer');
-      adjustInfluence(toCard, amount, 'Diplomat-Transfer');
+      adjustInfluence(fromGovCard, -amount, 'Diplomat-Transfer');
+      adjustInfluence(toGovCard, amount, 'Diplomat-Transfer');
 
       const newFlags = { ...flags, diplomatInfluenceTransferUsed: true };
       const newEffectFlags = { ...prev.effectFlags, [player]: newFlags } as GameState['effectFlags'];
