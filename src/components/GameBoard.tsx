@@ -44,6 +44,8 @@ const GameBoard: React.FC<GameBoardProps> = ({
 }) => {
   const { ref: boardRef, size } = useBoardSize();
   const transform = useMemo(() => getUiTransform(size.width, size.height), [size.height, size.width]);
+  const corruptionActive = (gameState as any).pendingAbilitySelect?.type === 'corruption_steal';
+  const corruptionTargetPlayer = gameState.current === 1 ? 2 : 1;
 
   const handleHover = useCallback(
     (card: Card | null, event?: React.MouseEvent) => {
@@ -60,6 +62,11 @@ const GameBoard: React.FC<GameBoardProps> = ({
     card: Card,
     style: React.CSSProperties,
     data: any,
+    options?: { selected?: boolean; showActivate?: boolean; onActivate?: () => void; highlight?: boolean }
+  ) => (
+    <div
+      key={card.uid}
+      className={`game-board__card${options?.selected ? ' game-board__card--selected' : ''}${options?.highlight ? ' game-board__card--corruption' : ''}`}
     options?: { selected?: boolean; showActivate?: boolean; onActivate?: () => void }
   ) => (
     <div
@@ -92,10 +99,12 @@ const GameBoard: React.FC<GameBoardProps> = ({
     style: React.CSSProperties,
     label: string,
     onClick?: () => void,
+    highlight?: boolean,
   ) => (
     <button
       key={key}
       type="button"
+      className={`game-board__slot${highlight ? ' game-board__slot--corruption' : ''}`}
       className="game-board__slot"
       style={style}
       onClick={onClick}
@@ -110,6 +119,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
     lane: 'aussen' | 'innen',
     label: string,
   ) => {
+    const isCorruptionTarget = corruptionActive && lane === 'aussen' && player === corruptionTargetPlayer;
     const rects = lane === 'aussen'
       ? getGovernmentRects(player === 1 ? 'player' : 'opponent')
       : getPublicRects(player === 1 ? 'player' : 'opponent');
@@ -124,6 +134,10 @@ const GameBoard: React.FC<GameBoardProps> = ({
           style,
           label,
           () => onCardClick({ type: 'row_slot', player, lane, index }),
+          isCorruptionTarget,
+        );
+      }
+      return renderCard(card, style, { type: 'board_card', player, lane, index, card }, { highlight: isCorruptionTarget });
         );
       }
       return renderCard(card, style, { type: 'board_card', player, lane, index, card });
