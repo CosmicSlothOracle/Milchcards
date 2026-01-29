@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import './App.css';
 import { logger } from './debug/logger';
 import GameBoard from './components/GameBoard';
@@ -43,6 +44,7 @@ function AppContent() {
   const [aiBalanceTesterOpen, setAiBalanceTesterOpen] = useState(false);
   const [hoveredCard, setHoveredCard] = useState<any>(null);
   const [tutorialOpen, setTutorialOpen] = useState(false);
+  const corruptionActive = (gameState as any).pendingAbilitySelect?.type === 'corruption_steal';
 
   // 🔧 DEV MODE: Toggle für lokales Testing ohne KI
   const [devMode, setDevMode] = useState(false);
@@ -67,28 +69,6 @@ function AppContent() {
     nextTurn,
   } = useGameState();
   const corruptionActive = (gameState as any).pendingAbilitySelect?.type === 'corruption_steal';
-  const [apFlash, setApFlash] = useState(false);
-  const apFlashTimeout = useRef<number | null>(null);
-  const prevApRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    const currentAp = gameState.actionPoints[gameState.current] ?? 0;
-    const prevAp = prevApRef.current;
-    if (prevAp !== null && currentAp > prevAp) {
-      setApFlash(true);
-      if (apFlashTimeout.current) {
-        window.clearTimeout(apFlashTimeout.current);
-      }
-      apFlashTimeout.current = window.setTimeout(() => setApFlash(false), 900);
-    }
-    prevApRef.current = currentAp;
-    return () => {
-      if (apFlashTimeout.current) {
-        window.clearTimeout(apFlashTimeout.current);
-        apFlashTimeout.current = null;
-      }
-    };
-  }, [gameState.actionPoints, gameState.current]);
 
   const actionHint = useMemo(() => {
     if (deckBuilderOpen) return null;
@@ -109,8 +89,6 @@ function AppContent() {
       body: 'Wähle eine Karte aus deiner Hand, um eine Aktion zu starten.',
     };
   }, [deckBuilderOpen, corruptionActive, selectedHandIndex]);
-
-  const latestLog = gameState.log.length ? gameState.log[gameState.log.length - 1] : null;
 
   // No global image preloading required
 
@@ -665,26 +643,10 @@ function AppContent() {
 
               <TutorialModal isVisible={tutorialOpen} onClose={() => setTutorialOpen(false)} />
 
-              <div className="status-hud">
-                <div className={`status-hud__ap${apFlash ? ' status-hud__ap--flash' : ''}`}>
-                  AP: {gameState.actionPoints[gameState.current]}
-                </div>
-                <div className="status-hud__round">
-                  Runde {gameState.round} · P1 {gameState.roundsWon[1]} - P2 {gameState.roundsWon[2]}
-                </div>
-              </div>
-
               {actionHint && (
                 <div className="action-hint">
                   <div className="action-hint__title">{actionHint.title}</div>
                   <div className="action-hint__body">{actionHint.body}</div>
-                </div>
-              )}
-
-              {latestLog && (
-                <div className={`action-feed${corruptionActive ? ' action-feed--alert' : ''}`}>
-                  <span className="action-feed__label">Letzte Aktion</span>
-                  <span className="action-feed__text">{latestLog}</span>
                 </div>
               )}
 
