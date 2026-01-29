@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import React, { useState, useEffect, useCallback, useRef } from 'react';
 import './App.css';
 import { logger } from './debug/logger';
 import GameBoard from './components/GameBoard';
@@ -44,8 +43,6 @@ function AppContent() {
   const [aiBalanceTesterOpen, setAiBalanceTesterOpen] = useState(false);
   const [hoveredCard, setHoveredCard] = useState<any>(null);
   const [tutorialOpen, setTutorialOpen] = useState(false);
-  const corruptionActive = (gameState as any).pendingAbilitySelect?.type === 'corruption_steal';
-
   // 🔧 DEV MODE: Toggle für lokales Testing ohne KI
   const [devMode, setDevMode] = useState(false);
 
