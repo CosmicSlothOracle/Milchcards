@@ -6,7 +6,7 @@ import { makeUid } from './id';
 import { getLaneCapacity } from '../ui/layout';
 
 // Re-export helpers from effectUtils
-export { EffectQueueManager, ActiveAbilitiesManager, tryApplyNegativeEffect } from './effectUtils';
+export { EffectQueueManager, ActiveAbilitiesManager, tryApplyNegativeEffect, hasDiplomatCard } from './effectUtils';
 
 // Re-export helpers from cardUtils
 export {
@@ -63,6 +63,8 @@ export function sumGovernmentInfluenceWithAuras(state: GameState, player: Player
 
   const govSlot = state.permanentSlots[player].government;
   const pubSlot = state.permanentSlots[player].public;
+  const hasCoalitionBonus = govSlot?.kind === 'spec' && (govSlot as SpecialCard).name === 'Koalitionszwang';
+  const tier2GovCount = govCards.filter(card => card.T === 2).length;
 
   govCards.forEach(card => {
     let influence = card.influence;

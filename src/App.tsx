@@ -1,3 +1,4 @@
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import './App.css';
 import { logger } from './debug/logger';
@@ -67,6 +68,27 @@ function AppContent() {
     passTurn,
     nextTurn,
   } = useGameState();
+  const corruptionActive = (gameState as any).pendingAbilitySelect?.type === 'corruption_steal';
+
+  const actionHint = useMemo(() => {
+    if (deckBuilderOpen) return null;
+    if (corruptionActive) {
+      return {
+        title: 'Korruption aktiv',
+        body: 'Wähle eine gegnerische Regierungs-Karte (gelb markiert) und würfle danach mit dem Dice.',
+      };
+    }
+    if (selectedHandIndex !== null) {
+      return {
+        title: 'Slot wählen',
+        body: 'Klicke auf einen passenden Slot, um die ausgewählte Handkarte auszuspielen.',
+      };
+    }
+    return {
+      title: 'Handkarte auswählen',
+      body: 'Wähle eine Karte aus deiner Hand, um eine Aktion zu starten.',
+    };
+  }, [deckBuilderOpen, corruptionActive, selectedHandIndex]);
 
   // No global image preloading required
 
@@ -620,6 +642,13 @@ function AppContent() {
               )}
 
               <TutorialModal isVisible={tutorialOpen} onClose={() => setTutorialOpen(false)} />
+
+              {actionHint && (
+                <div className="action-hint">
+                  <div className="action-hint__title">{actionHint.title}</div>
+                  <div className="action-hint__body">{actionHint.body}</div>
+                </div>
+              )}
 
               <CardHoverInfoPanel hovered={hoveredCard} />
 

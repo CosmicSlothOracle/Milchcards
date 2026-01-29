@@ -1,16 +1,17 @@
 import { Card, GameState, Player } from '../types/game';
+import { getCardActionPointCost as getCardActionPointCostFromDetails } from './cardUtils';
 
-// Simplified AP system (2025-08-25)
+// AP system (2025-08-25)
 // ------------------------------------------------------------
 // Rules:
-// 1. Each card costs exactly 1 AP to play.
+// 1. Base cost is 1 AP, higher tier cards may cost more (see cardDetails).
 // 2. Players start every turn with 2 AP (handled in game logic).
 // 3. AP effects simply ADD to the current AP via queued ADD_AP events.
 // 4. There is **no upper AP cap**. Values may exceed previous MAX_AP of 4.
 
 export const START_AP = 2;
 export const MAX_AP = Number.MAX_SAFE_INTEGER; // unlimited cap used for legacy code
-export const BASE_AP_COST = 1; // fixed cost for every card
+export const BASE_AP_COST = 1; // default cost before tier adjustments
 
 // Cache for AP calculations to prevent redundant calls
 const apCache = new Map<string, { cost: number; refund: number; net: number; reasons: string[] }>();
@@ -40,12 +41,13 @@ function isGovernment(card: Card): boolean {
  * refactors elsewhere.
  */
 export function getCardActionPointCost(
-  _state: GameState,
-  _player: Player,
-  _card: Card,
+  state: GameState,
+  player: Player,
+  card: Card,
   _lane?: 'innen' | 'aussen' | 'sofort'
 ): { cost: number; reasons: string[] } {
-  return { cost: BASE_AP_COST, reasons: [] };
+  const cost = getCardActionPointCostFromDetails(card, state, player);
+  return { cost, reasons: [] };
 }
 
 export function getNetApCost(
@@ -54,10 +56,9 @@ export function getNetApCost(
   card: Card,
   lane?: 'innen' | 'aussen' | 'sofort'
 ): { cost: number; refund: number; net: number; reasons: string[] } {
-  // Simplified AP system: All cards cost exactly 1 AP
-  const cost = BASE_AP_COST;
+  const cost = getCardActionPointCostFromDetails(card, state, player);
   const refund = 0;
-  const net = cost; // always 1
+  const net = cost;
 
   return { cost, refund, net, reasons: [] };
 }
@@ -82,7 +83,8 @@ export const isGovernmentCard = isGovernment;
 export const isNetZeroMove = wouldBeNetZero;
 export const canPlayCard = (state: GameState, p: Player, card: Card): boolean => {
   // In the simplified AP system we only check that the player still has AP.
-  return state.actionPoints[p] > 0;
+  const cost = getCardActionPointCostFromDetails(card, state, p);
+  return state.actionPoints[p] >= cost;
 };
 
 export const hasGretaOnBoard = (state: GameState, p: Player) =>
