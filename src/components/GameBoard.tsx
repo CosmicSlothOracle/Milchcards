@@ -1,4 +1,4 @@
-import React, { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Card, GameState } from '../types/game';
 import { getCardImagePath } from '../data/gameData';
 import { LAYOUT, UI_BASE, computeSlotRects, getGovernmentRects, getPublicRects, getSofortRect, getUiTransform, getZone } from '../ui/layout';
@@ -46,6 +46,63 @@ const GameBoard: React.FC<GameBoardProps> = ({
   const transform = useMemo(() => getUiTransform(size.width, size.height), [size.height, size.width]);
   const corruptionActive = (gameState as any).pendingAbilitySelect?.type === 'corruption_steal';
   const corruptionTargetPlayer = gameState.current === 1 ? 2 : 1;
+  const [recentlyPlayed, setRecentlyPlayed] = useState<Set<number>>(new Set());
+  const previousBoardUids = useRef<Set<number>>(new Set());
+  const removalTimers = useRef<Map<number, number>>(new Map());
+
+  useEffect(() => {
+    const currentUids = new Set<number>();
+    const addCard = (card?: Card | null) => {
+      if (card) currentUids.add(card.uid);
+    };
+
+    ([1, 2] as const).forEach((player) => {
+      gameState.board[player].innen.forEach(addCard);
+      gameState.board[player].aussen.forEach(addCard);
+      addCard(gameState.board[player].sofort[0]);
+      addCard((gameState.traps[player] || [])[0]);
+      addCard(gameState.permanentSlots[player].government);
+      addCard(gameState.permanentSlots[player].public);
+    });
+
+    const newUids: number[] = [];
+    currentUids.forEach((uid) => {
+      if (!previousBoardUids.current.has(uid)) {
+        newUids.push(uid);
+      }
+    });
+
+    if (newUids.length) {
+      setRecentlyPlayed((prev) => {
+        const next = new Set(prev);
+        newUids.forEach((uid) => next.add(uid));
+        return next;
+      });
+
+      newUids.forEach((uid) => {
+        const existingTimer = removalTimers.current.get(uid);
+        if (existingTimer) window.clearTimeout(existingTimer);
+        const timer = window.setTimeout(() => {
+          setRecentlyPlayed((prev) => {
+            const next = new Set(prev);
+            next.delete(uid);
+            return next;
+          });
+          removalTimers.current.delete(uid);
+        }, 1200);
+        removalTimers.current.set(uid, timer);
+      });
+    }
+
+    previousBoardUids.current = currentUids;
+  }, [gameState]);
+
+  useEffect(() => (
+    () => {
+      removalTimers.current.forEach((timer) => window.clearTimeout(timer));
+      removalTimers.current.clear();
+    }
+  ), []);
 
   const handleHover = useCallback(
     (card: Card | null, event?: React.MouseEvent) => {
@@ -66,12 +123,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
   ) => (
     <div
       key={card.uid}
-      className={`game-board__card${options?.selected ? ' game-board__card--selected' : ''}${options?.highlight ? ' game-board__card--corruption' : ''}`}
-    options?: { selected?: boolean; showActivate?: boolean; onActivate?: () => void }
-  ) => (
-    <div
-      key={card.uid}
-      className={`game-board__card${options?.selected ? ' game-board__card--selected' : ''}`}
+      className={`game-board__card${options?.selected ? ' game-board__card--selected' : ''}${options?.highlight ? ' game-board__card--corruption' : ''}${recentlyPlayed.has(card.uid) ? ' game-board__card--spawn' : ''}`}
       style={style}
       onClick={() => onCardClick(data)}
       onMouseEnter={(event) => handleHover(card, event)}
@@ -105,7 +157,6 @@ const GameBoard: React.FC<GameBoardProps> = ({
       key={key}
       type="button"
       className={`game-board__slot${highlight ? ' game-board__slot--corruption' : ''}`}
-      className="game-board__slot"
       style={style}
       onClick={onClick}
       onMouseLeave={() => onCardHover(null)}
@@ -137,10 +188,12 @@ const GameBoard: React.FC<GameBoardProps> = ({
           isCorruptionTarget,
         );
       }
-      return renderCard(card, style, { type: 'board_card', player, lane, index, card }, { highlight: isCorruptionTarget });
-        );
-      }
-      return renderCard(card, style, { type: 'board_card', player, lane, index, card });
+      return renderCard(
+        card,
+        style,
+        { type: 'board_card', player, lane, index, card },
+        { highlight: isCorruptionTarget },
+      );
     });
   };
 

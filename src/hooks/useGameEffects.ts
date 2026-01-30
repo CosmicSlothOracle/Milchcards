@@ -1,5 +1,21 @@
 import { useCallback } from 'react';
-import { GameState, Card, Player, PoliticianCard, SpecialCard } from '../types/game';
+import { Card, GameState, Player, PoliticianCard, SpecialCard } from '../types/game';
+import { ActiveAbilitiesManager, EffectQueueManager, adjustInfluence, drawCards, hasDiplomatCard, sumRow } from '../utils/gameUtils';
+import { getCardDetails } from '../data/cardDetails';
+
+type GameEffectLoggers = {
+  logFunctionCall?: (functionName: string, params: any, context: string) => void;
+  logCardEffect?: (cardName: string, message: string) => void;
+  logDataFlow?: (from: string, to: string, data: any, action: string) => void;
+  logWarning?: (warning: string, context: string) => void;
+};
+
+export function useGameEffects(
+  gameState: GameState,
+  setGameState: React.Dispatch<React.SetStateAction<GameState>>,
+  log: (msg: string) => void,
+  loggers: GameEffectLoggers = {},
+) {
   const {
     logFunctionCall = () => {},
     logCardEffect = () => {},
@@ -10,8 +26,7 @@ import { GameState, Card, Player, PoliticianCard, SpecialCard } from '../types/g
   const executeCardEffect = useCallback((
     card: Card,
     player: Player,
-    state: GameState,
-    logFunc: (msg: string) => void
+    state: GameState
   ): GameState => {
     let newState = { ...state };
 
@@ -273,31 +288,13 @@ import { GameState, Card, Player, PoliticianCard, SpecialCard } from '../types/g
       if (!hasDiplomatCard(player, prev)) return prev;
 
       const governmentCards = prev.board[player].aussen;
-      const fromGovCard = governmentCards.find(c => c.uid === fromCardUid && c.kind === 'pol') as PoliticianCard;
-      const toGovCard = governmentCards.find(c => c.uid === toCardUid && c.kind === 'pol') as PoliticianCard;
-      // Finde beide Karten in der Regierungsreihe
-      const govCards = prev.board[player].aussen;
-      const fromCard = govCards.find(c => c.uid === fromCardUid && c.kind === 'pol') as PoliticianCard;
-      const toCard = govCards.find(c => c.uid === toCardUid && c.kind === 'pol') as PoliticianCard;
-
-      if (!fromGovCard || !toGovCard || fromGovCard.influence < amount) return prev;
-
-      adjustInfluence(fromGovCard, -amount, 'Diplomat-Transfer');
-      adjustInfluence(toGovCard, amount, 'Diplomat-Transfer');
-      // Transfer durchführen
-      adjustInfluence(fromCard, -amount, 'Diplomat-Transfer');
-      adjustInfluence(toCard, amount, 'Diplomat-Transfer');
-
-      if (!hasDiplomatCard(player, prev)) return prev;
-
-      const governmentCards = prev.board[player].aussen;
       const fromCard = governmentCards.find(c => c.uid === fromCardUid && c.kind === 'pol') as PoliticianCard;
       const toCard = governmentCards.find(c => c.uid === toCardUid && c.kind === 'pol') as PoliticianCard;
 
       if (!fromCard || !toCard || fromCard.influence < amount) return prev;
 
-      adjustInfluence(fromGovCard, -amount, 'Diplomat-Transfer');
-      adjustInfluence(toGovCard, amount, 'Diplomat-Transfer');
+      adjustInfluence(fromCard, -amount, 'Diplomat-Transfer');
+      adjustInfluence(toCard, amount, 'Diplomat-Transfer');
 
       const newFlags = { ...flags, diplomatInfluenceTransferUsed: true };
       const newEffectFlags = { ...prev.effectFlags, [player]: newFlags } as GameState['effectFlags'];
@@ -305,38 +302,17 @@ import { GameState, Card, Player, PoliticianCard, SpecialCard } from '../types/g
       const diplomat = governmentCards.find(c => c.kind === 'pol' && (c as PoliticianCard).tag === 'Diplomat') as PoliticianCard | undefined;
       if (diplomat) diplomat._activeUsed = true;
 
-      log(`P${player} transferiert ${amount} Einfluss von ${fromGovCard.name} zu ${toGovCard.name} (Diplomat).`);
+      log(`P${player} transferiert ${amount} Einfluss von ${fromCard.name} zu ${toCard.name} (Diplomat).`);
 
       return {
         ...prev,
         effectFlags: newEffectFlags
       };
     });
-  }, [log]);
-
-  const resetActiveAbilities = useCallback((state: GameState): GameState => {
-    const newState = { ...state };
-    [1, 2].forEach(player => {
-      const allCards = [...newState.board[player as Player].innen, ...newState.board[player as Player].aussen].filter(c => c.kind === 'pol') as PoliticianCard[];
-      allCards.forEach(card => {
-        card._activeUsed = false;
-      });
-    });
-
-    return newState;
-  }, []);
-
-  const executePutinDoubleIntervention = useCallback((interventionCardIds: number[]) => {
-    setGameState(prev => {
-      const player = prev.current;
-      return ActiveAbilitiesManager.executePutinDoubleIntervention(prev, player, interventionCardIds, log);
-    });
   }, [log, setGameState]);
 
   const resetActiveAbilities = useCallback((state: GameState): GameState => {
     const newState = { ...state };
-
-    // Reset _activeUsed für alle Politikerkarten
     [1, 2].forEach(player => {
       const allCards = [...newState.board[player as Player].innen, ...newState.board[player as Player].aussen].filter(c => c.kind === 'pol') as PoliticianCard[];
       allCards.forEach(card => {
@@ -354,17 +330,6 @@ import { GameState, Card, Player, PoliticianCard, SpecialCard } from '../types/g
       return newState;
     });
   }, [log, setGameState]);
-
-  const canUsePutinDoubleIntervention = useCallback((player: Player): boolean => {
-    const board = gameState.board[player];
-    const allCards = [...board.innen, ...board.aussen].filter(c => c.kind === 'pol') as PoliticianCard[];
-    const putin = allCards.find(c => c.name === 'Vladimir Putin');
-
-    if (!putin || putin.deactivated || putin._activeUsed) return false;
-
-    const interventions = gameState.hands[player].filter(c => c.kind === 'spec');
-    return interventions.length >= 2;
-  }, [gameState]);
 
   const canUsePutinDoubleIntervention = useCallback((player: Player): boolean => {
     const board = gameState.board[player];
