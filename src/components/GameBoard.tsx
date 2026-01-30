@@ -187,7 +187,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
   ) => (
     <div
       key={card.uid}
-      className={`game-board__card${options?.selected ? ' game-board__card--selected' : ''}${options?.highlight ? ' game-board__card--corruption' : ''}${recentlyPlayed.has(card.uid) ? ' game-board__card--spawn' : ''}${corruptionSuccessUids.has(card.uid) ? ' game-board__card--corruption-success' : ''}${corruptionFailUids.has(card.uid) ? ' game-board__card--corruption-fail' : ''}`}
+      className={`game-board__card${options?.selected ? ' game-board__card--selected' : ''}${options?.highlight ? ' game-board__card--corruption' : ''}`}
       style={style}
       onClick={() => onCardClick(data)}
       onMouseEnter={(event) => handleHover(card, event)}
@@ -255,14 +255,14 @@ const GameBoard: React.FC<GameBoardProps> = ({
           style,
           label,
           () => onCardClick({ type: 'row_slot', player, lane, index }),
-          false,
+          isCorruptionTarget,
         );
       }
       return renderCard(
         card,
         style,
         { type: 'board_card', player, lane, index, card },
-        { highlight: shouldHighlightCorruption || (maulwurfTargetUid && card.uid === maulwurfTargetUid) },
+        { highlight: isCorruptionTarget },
       );
     });
   };
