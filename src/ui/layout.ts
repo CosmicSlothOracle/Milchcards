@@ -55,7 +55,7 @@ export function getZone(id: string): UiZone {
 export function getUiTransform(canvasW: number, canvasH: number) {
   const sx = canvasW / UI_BASE.width;
   const sy = canvasH / UI_BASE.height;
-  const scale = Math.min(sx, sy);
+  const scale = Math.min(sx, sy, 1);
   const offsetX = Math.floor((canvasW - UI_BASE.width * scale) / 2);
   const offsetY = Math.floor((canvasH - UI_BASE.height * scale) / 2);
   return { scale, offsetX, offsetY };

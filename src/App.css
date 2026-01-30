@@ -54,7 +54,7 @@
 .game-board__background {
   position: absolute;
   inset: 0;
-  background-size: cover;
+  background-size: 100% 100%;
   background-position: center;
   filter: saturate(1.05) contrast(1.05);
 }

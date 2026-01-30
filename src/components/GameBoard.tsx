@@ -67,11 +67,6 @@ const GameBoard: React.FC<GameBoardProps> = ({
     <div
       key={card.uid}
       className={`game-board__card${options?.selected ? ' game-board__card--selected' : ''}${options?.highlight ? ' game-board__card--corruption' : ''}`}
-    options?: { selected?: boolean; showActivate?: boolean; onActivate?: () => void }
-  ) => (
-    <div
-      key={card.uid}
-      className={`game-board__card${options?.selected ? ' game-board__card--selected' : ''}`}
       style={style}
       onClick={() => onCardClick(data)}
       onMouseEnter={(event) => handleHover(card, event)}
@@ -105,7 +100,6 @@ const GameBoard: React.FC<GameBoardProps> = ({
       key={key}
       type="button"
       className={`game-board__slot${highlight ? ' game-board__slot--corruption' : ''}`}
-      className="game-board__slot"
       style={style}
       onClick={onClick}
       onMouseLeave={() => onCardHover(null)}
@@ -137,10 +131,12 @@ const GameBoard: React.FC<GameBoardProps> = ({
           isCorruptionTarget,
         );
       }
-      return renderCard(card, style, { type: 'board_card', player, lane, index, card }, { highlight: isCorruptionTarget });
-        );
-      }
-      return renderCard(card, style, { type: 'board_card', player, lane, index, card });
+      return renderCard(
+        card,
+        style,
+        { type: 'board_card', player, lane, index, card },
+        { highlight: isCorruptionTarget },
+      );
     });
   };
 
