@@ -1,5 +1,5 @@
-import React, { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { Card, GameState } from '../types/game';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { Card, GameState, Player } from '../types/game';
 import { getCardImagePath } from '../data/gameData';
 import { LAYOUT, UI_BASE, computeSlotRects, getGovernmentRects, getPublicRects, getSofortRect, getUiTransform, getZone } from '../ui/layout';
 import { sortHandCards } from '../utils/gameUtils';
@@ -11,6 +11,27 @@ interface GameBoardProps {
   onCardHover: (data: any) => void;
   devMode?: boolean;
 }
+
+const collectBoardUids = (state: GameState) => {
+  const uids = new Set<number>();
+  const addCard = (card?: Card | null) => {
+    if (card?.uid !== undefined) {
+      uids.add(card.uid);
+    }
+  };
+
+  const players: Player[] = [1, 2];
+  players.forEach((player) => {
+    state.board[player].innen.forEach(addCard);
+    state.board[player].aussen.forEach(addCard);
+    addCard(state.permanentSlots[player].government);
+    addCard(state.permanentSlots[player].public);
+    addCard(state.board[player].sofort[0]);
+    (state.traps[player] || []).forEach(addCard);
+  });
+
+  return uids;
+};
 
 const useBoardSize = () => {
   const ref = useRef<HTMLDivElement | null>(null);
@@ -46,6 +67,52 @@ const GameBoard: React.FC<GameBoardProps> = ({
   const transform = useMemo(() => getUiTransform(size.width, size.height), [size.height, size.width]);
   const corruptionActive = (gameState as any).pendingAbilitySelect?.type === 'corruption_steal';
   const corruptionTargetPlayer = gameState.current === 1 ? 2 : 1;
+  const [playedUids, setPlayedUids] = useState<Set<number>>(new Set());
+  const prevBoardUidsRef = useRef<Set<number>>(new Set());
+  const playedTimeoutsRef = useRef<Map<number, number>>(new Map());
+  const hasInitializedRef = useRef(false);
+
+  useEffect(() => {
+    const currentUids = collectBoardUids(gameState);
+    const prevUids = prevBoardUidsRef.current;
+    if (!hasInitializedRef.current) {
+      prevBoardUidsRef.current = currentUids;
+      hasInitializedRef.current = true;
+      return;
+    }
+    const newUids = Array.from(currentUids).filter((uid) => !prevUids.has(uid));
+
+    if (newUids.length > 0) {
+      setPlayedUids((prevSet) => {
+        const next = new Set(prevSet);
+        newUids.forEach((uid) => next.add(uid));
+        return next;
+      });
+      newUids.forEach((uid) => {
+        const existingTimeout = playedTimeoutsRef.current.get(uid);
+        if (existingTimeout) {
+          window.clearTimeout(existingTimeout);
+        }
+        const timeoutId = window.setTimeout(() => {
+          setPlayedUids((prevSet) => {
+            if (!prevSet.has(uid)) return prevSet;
+            const next = new Set(prevSet);
+            next.delete(uid);
+            return next;
+          });
+          playedTimeoutsRef.current.delete(uid);
+        }, 900);
+        playedTimeoutsRef.current.set(uid, timeoutId);
+      });
+    }
+
+    prevBoardUidsRef.current = currentUids;
+  }, [gameState]);
+
+  useEffect(() => () => {
+    playedTimeoutsRef.current.forEach((timeoutId) => window.clearTimeout(timeoutId));
+    playedTimeoutsRef.current.clear();
+  }, []);
 
   const handleHover = useCallback(
     (card: Card | null, event?: React.MouseEvent) => {
@@ -66,12 +133,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
   ) => (
     <div
       key={card.uid}
-      className={`game-board__card${options?.selected ? ' game-board__card--selected' : ''}${options?.highlight ? ' game-board__card--corruption' : ''}`}
-    options?: { selected?: boolean; showActivate?: boolean; onActivate?: () => void }
-  ) => (
-    <div
-      key={card.uid}
-      className={`game-board__card${options?.selected ? ' game-board__card--selected' : ''}`}
+      className={`game-board__card${options?.selected ? ' game-board__card--selected' : ''}${options?.highlight ? ' game-board__card--corruption' : ''}${playedUids.has(card.uid) ? ' game-board__card--played' : ''}`}
       style={style}
       onClick={() => onCardClick(data)}
       onMouseEnter={(event) => handleHover(card, event)}
@@ -105,7 +167,6 @@ const GameBoard: React.FC<GameBoardProps> = ({
       key={key}
       type="button"
       className={`game-board__slot${highlight ? ' game-board__slot--corruption' : ''}`}
-      className="game-board__slot"
       style={style}
       onClick={onClick}
       onMouseLeave={() => onCardHover(null)}
@@ -137,10 +198,12 @@ const GameBoard: React.FC<GameBoardProps> = ({
           isCorruptionTarget,
         );
       }
-      return renderCard(card, style, { type: 'board_card', player, lane, index, card }, { highlight: isCorruptionTarget });
-        );
-      }
-      return renderCard(card, style, { type: 'board_card', player, lane, index, card });
+      return renderCard(
+        card,
+        style,
+        { type: 'board_card', player, lane, index, card },
+        { highlight: isCorruptionTarget },
+      );
     });
   };
 
