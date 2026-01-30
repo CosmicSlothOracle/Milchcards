@@ -146,11 +146,11 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
   }, []);
 
   const normalizePresetDeck = useCallback((entries: BuilderEntry[]) => {
-    const MAX_CARDS = 10;
-    const MIN_CARDS = 5;
-    const MIN_GOV = 5;
-    const MIN_BUDGET = 50;
-    const MAX_BUDGET = 69;
+    const MAX_CARDS = 15;
+    const MIN_CARDS = 10;
+    const MIN_GOV = 6;
+    const MIN_BUDGET = 75;
+    const MAX_BUDGET = 105;
 
     const availablePols = Pols.filter(p => !disabledCards.has(p.name));
     const availableSpecs = Specials.filter(s => !disabledCards.has(s.name));
@@ -302,6 +302,13 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
     const preset = PRESETS[idx];
     if (!preset) return;
     const newDeck: BuilderEntry[] = [];
+    const extraNames = [
+      'Bestechungsskandal 2.0',
+      'Maulwurf',
+      'Greta Thunberg',
+      'Mark Zuckerberg',
+      'Symbolpolitik'
+    ];
     preset.cards.forEach(name => {
       if (disabledCards.has(name)) return;
       const pol = Pols.find((p: BasePolitician) => p.name === name);
@@ -315,6 +322,27 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
         return;
       }
       // name not found -> ignore
+    });
+    extraNames.forEach(name => {
+      if (disabledCards.has(name)) return;
+      const exists = newDeck.some(entry => {
+        if (entry.kind === 'pol') {
+          const pol = Pols.find((p: BasePolitician) => p.id === entry.baseId);
+          return pol?.name === name;
+        }
+        const spec = Specials.find((s: BaseSpecial) => s.id === entry.baseId);
+        return spec?.name === name;
+      });
+      if (exists) return;
+      const pol = Pols.find((p: BasePolitician) => p.name === name);
+      if (pol) {
+        newDeck.push({ kind: 'pol', baseId: pol.id, count: 1 });
+        return;
+      }
+      const spec = Specials.find((s: BaseSpecial) => s.name === name);
+      if (spec) {
+        newDeck.push({ kind: 'spec', baseId: spec.id, count: 1 });
+      }
     });
     setDeck(normalizePresetDeck(newDeck));
   }, [disabledCards, normalizePresetDeck]);
@@ -330,8 +358,8 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
     return sum;
   }, 0);
 
-  // Deck validation: minimum 5 government cards, maximum 10 total cards, budget 50-69 BP
-  const isDeckValid = count >= 5 && governmentCount >= 5 && count <= 10 && budget >= 50 && budget <= 69;
+  // Deck validation: minimum 6 government cards, maximum 15 total cards, budget 75-105 BP
+  const isDeckValid = count >= 10 && governmentCount >= 6 && count <= 15 && budget >= 75 && budget <= 105;
 
   // Helper function to get category color for a card
   const getCategoryColor = (kind: 'pol' | 'spec', base: BasePolitician | BaseSpecial) => {
@@ -502,8 +530,8 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
     // Check if card is disabled
     if (disabledCards.has(base.name)) return false;
 
-    // Check deck size limit (10 cards maximum)
-    if (count >= 10) return false;
+    // Check deck size limit (15 cards maximum)
+    if (count >= 15) return false;
 
     const tier = kind === 'spec' ? (base as BaseSpecial).tier : (base as BasePolitician).T;
     const limit = tier >= 3 ? 1 : 2;
@@ -511,7 +539,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
     const already = entry ? entry.count : 0;
     const cost = kind === 'pol' ? ((base as BasePolitician).BP ?? 0) : (base as BaseSpecial).bp;
 
-    return already < limit && (budget + cost) <= 69;
+    return already < limit && (budget + cost) <= 105;
   }, [deck, budget, count, disabledCards]);
 
   const builderAdd = useCallback((base: BasePolitician | BaseSpecial, kind: 'pol' | 'spec') => {
@@ -547,7 +575,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
 
 
   const handleApplyDeck = useCallback(() => {
-    const isDeckValid = count >= 5 && governmentCount >= 5 && count <= 10 && budget >= 50 && budget <= 69;
+    const isDeckValid = count >= 10 && governmentCount >= 6 && count <= 15 && budget >= 75 && budget <= 105;
     if (isDeckValid) {
       onApplyDeck(deck);
       onClose();
@@ -625,7 +653,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
   }, [deck, onStartMatch, onClose]);
 
   const handleStartVsAI = useCallback(() => {
-    const isDeckValid = count >= 5 && governmentCount >= 5 && count <= 10 && budget >= 50 && budget <= 69;
+    const isDeckValid = count >= 10 && governmentCount >= 6 && count <= 15 && budget >= 75 && budget <= 105;
     if (!isDeckValid || !onStartVsAI) return;
 
     const p1Deck: BuilderEntry[] = deck.length ? deck : [];
@@ -783,13 +811,13 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
 
   if (!isOpen) return null;
 
-  const BP_LIMIT = 69; // Budget limit
-  const BP_MIN = 50; // Minimum budget
+  const BP_LIMIT = 105; // Budget limit
+  const BP_MIN = 75; // Minimum budget
   const overBudget = budget > BP_LIMIT;
   const underBudget = budget < BP_MIN;
-  const overCount = count > 10;
-  const underMinGovernment = governmentCount < 5;
-  const underMinCards = count < 5;
+  const overCount = count > 15;
+  const underMinGovernment = governmentCount < 6;
+  const underMinCards = count < 10;
   const isValid = !overBudget && !underBudget && !overCount && !underMinGovernment && !underMinCards;
 
   return (
@@ -830,7 +858,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
               border: '1px solid #203043',
               fontSize: '12px',
             }}>
-              Budget (BP): {budget} / 69 (Min: 50)
+              Budget (BP): {budget} / 105 (Min: 75)
             </span>
             <span style={{
               padding: '4px 8px',
@@ -839,7 +867,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
               border: '1px solid #203043',
               fontSize: '12px',
             }}>
-              Deck: {count}/10
+              Deck: {count}/15
             </span>
           </div>
 
@@ -862,7 +890,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                 gap: '6px',
               }}
               disabled={!isValid}
-              title={!isValid ? `Deck muss gültig sein: 5-10 Karten, ≥5 Government, 50-69 BP (aktuell: ${budget} BP)` : 'Starte Spiel gegen KI'}
+              title={!isValid ? `Deck muss gültig sein: 10-15 Karten, ≥6 Government, 75-105 BP (aktuell: ${budget} BP)` : 'Starte Spiel gegen KI'}
             >
               🤖 Start vs KI
             </button>
@@ -1287,29 +1315,29 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                 <div style={{
                   padding: '2px 6px',
                   borderRadius: '4px',
-                  background: governmentCount >= 5 ? '#1f2937' : '#7f1d1d',
-                  color: governmentCount >= 5 ? '#d1d5db' : '#fca5a5',
-                  border: `1px solid ${governmentCount >= 5 ? '#374151' : '#dc2626'}`,
+                  background: governmentCount >= 6 ? '#1f2937' : '#7f1d1d',
+                  color: governmentCount >= 6 ? '#d1d5db' : '#fca5a5',
+                  border: `1px solid ${governmentCount >= 6 ? '#374151' : '#dc2626'}`,
                 }}>
-                  Gov: {governmentCount}/5+
+                  Gov: {governmentCount}/6+
                 </div>
                 <div style={{
                   padding: '2px 6px',
                   borderRadius: '4px',
-                  background: count <= 10 ? '#1f2937' : '#7f1d1d',
-                  color: count <= 10 ? '#d1d5db' : '#fca5a5',
-                  border: `1px solid ${count <= 10 ? '#374151' : '#dc2626'}`,
+                  background: count <= 15 ? '#1f2937' : '#7f1d1d',
+                  color: count <= 15 ? '#d1d5db' : '#fca5a5',
+                  border: `1px solid ${count <= 15 ? '#374151' : '#dc2626'}`,
                 }}>
-                  Cards: {count}/10
+                  Cards: {count}/15
                 </div>
                 <div style={{
                   padding: '2px 6px',
                   borderRadius: '4px',
-                  background: (budget >= 50 && budget <= 69) ? '#1f2937' : '#7f1d1d',
-                  color: (budget >= 50 && budget <= 69) ? '#d1d5db' : '#fca5a5',
-                  border: `1px solid ${(budget >= 50 && budget <= 69) ? '#374151' : '#dc2626'}`,
+                  background: (budget >= 75 && budget <= 105) ? '#1f2937' : '#7f1d1d',
+                  color: (budget >= 75 && budget <= 105) ? '#d1d5db' : '#fca5a5',
+                  border: `1px solid ${(budget >= 75 && budget <= 105) ? '#374151' : '#dc2626'}`,
                 }}>
-                  Budget: {budget}/69
+                  Budget: {budget}/105
                 </div>
               </div>
             </div>
