@@ -44,11 +44,18 @@ const GameBoard: React.FC<GameBoardProps> = ({
 }) => {
   const { ref: boardRef, size } = useBoardSize();
   const transform = useMemo(() => getUiTransform(size.width, size.height), [size.height, size.width]);
-  const corruptionActive = (gameState as any).pendingAbilitySelect?.type === 'corruption_steal';
+  const pendingAbility = (gameState as any).pendingAbilitySelect;
+  const corruptionActive = pendingAbility?.type === 'corruption_steal';
+  const maulwurfTargetUid = pendingAbility?.type === 'maulwurf_steal' ? pendingAbility?.targetUid : null;
   const corruptionTargetPlayer = gameState.current === 1 ? 2 : 1;
   const [recentlyPlayed, setRecentlyPlayed] = useState<Set<number>>(new Set());
   const previousBoardUids = useRef<Set<number>>(new Set());
   const removalTimers = useRef<Map<number, number>>(new Map());
+  const [corruptionHold, setCorruptionHold] = useState<{ player: 1 | 2 | null }>({ player: null });
+  const corruptionHoldTimer = useRef<number | null>(null);
+  const [corruptionSuccessUids, setCorruptionSuccessUids] = useState<Set<number>>(new Set());
+  const [corruptionFailUids, setCorruptionFailUids] = useState<Set<number>>(new Set());
+  const corruptionResultTimers = useRef<Map<number, number>>(new Map());
 
   useEffect(() => {
     const currentUids = new Set<number>();
@@ -104,6 +111,63 @@ const GameBoard: React.FC<GameBoardProps> = ({
     }
   ), []);
 
+  useEffect(() => {
+    const handleCorruptionRoll = (event: Event) => {
+      const detail = (event as CustomEvent).detail as { victim?: 1 | 2 };
+      if (!detail?.victim) return;
+      setCorruptionHold({ player: detail.victim });
+      if (corruptionHoldTimer.current) {
+        window.clearTimeout(corruptionHoldTimer.current);
+      }
+      corruptionHoldTimer.current = window.setTimeout(() => {
+        setCorruptionHold({ player: null });
+        corruptionHoldTimer.current = null;
+      }, 1200);
+    };
+
+    const handleCorruptionResolved = (event: Event) => {
+      const detail = (event as CustomEvent).detail as { targetUid?: number; success?: boolean };
+      if (!detail?.targetUid) return;
+      const targetUid = detail.targetUid;
+      const isSuccess = Boolean(detail.success);
+      const setResult = isSuccess ? setCorruptionSuccessUids : setCorruptionFailUids;
+      setResult((prev) => {
+        const next = new Set(prev);
+        next.add(targetUid);
+        return next;
+      });
+
+      const existingTimer = corruptionResultTimers.current.get(targetUid);
+      if (existingTimer) window.clearTimeout(existingTimer);
+      const timer = window.setTimeout(() => {
+        setResult((prev) => {
+          const next = new Set(prev);
+          next.delete(targetUid);
+          return next;
+        });
+        corruptionResultTimers.current.delete(targetUid);
+      }, 1400);
+      corruptionResultTimers.current.set(targetUid, timer);
+    };
+
+    window.addEventListener('pc:corruption_roll_started', handleCorruptionRoll as EventListener);
+    window.addEventListener('pc:corruption_resolved', handleCorruptionResolved as EventListener);
+    return () => {
+      window.removeEventListener('pc:corruption_roll_started', handleCorruptionRoll as EventListener);
+      window.removeEventListener('pc:corruption_resolved', handleCorruptionResolved as EventListener);
+    };
+  }, []);
+
+  useEffect(() => (
+    () => {
+      if (corruptionHoldTimer.current) {
+        window.clearTimeout(corruptionHoldTimer.current);
+      }
+      corruptionResultTimers.current.forEach((timer) => window.clearTimeout(timer));
+      corruptionResultTimers.current.clear();
+    }
+  ), []);
+
   const handleHover = useCallback(
     (card: Card | null, event?: React.MouseEvent) => {
       if (!card || !event) {
@@ -123,7 +187,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
   ) => (
     <div
       key={card.uid}
-      className={`game-board__card${options?.selected ? ' game-board__card--selected' : ''}${options?.highlight ? ' game-board__card--corruption' : ''}${recentlyPlayed.has(card.uid) ? ' game-board__card--spawn' : ''}`}
+      className={`game-board__card${options?.selected ? ' game-board__card--selected' : ''}${options?.highlight ? ' game-board__card--corruption' : ''}${recentlyPlayed.has(card.uid) ? ' game-board__card--spawn' : ''}${corruptionSuccessUids.has(card.uid) ? ' game-board__card--corruption-success' : ''}${corruptionFailUids.has(card.uid) ? ' game-board__card--corruption-fail' : ''}`}
       style={style}
       onClick={() => onCardClick(data)}
       onMouseEnter={(event) => handleHover(card, event)}
@@ -170,7 +234,13 @@ const GameBoard: React.FC<GameBoardProps> = ({
     lane: 'aussen' | 'innen',
     label: string,
   ) => {
-    const isCorruptionTarget = corruptionActive && lane === 'aussen' && player === corruptionTargetPlayer;
+    const shouldHighlightCorruption = (
+      lane === 'aussen'
+      && (
+        (corruptionActive && player === corruptionTargetPlayer)
+        || (corruptionHold.player && player === corruptionHold.player)
+      )
+    );
     const rects = lane === 'aussen'
       ? getGovernmentRects(player === 1 ? 'player' : 'opponent')
       : getPublicRects(player === 1 ? 'player' : 'opponent');
@@ -185,14 +255,14 @@ const GameBoard: React.FC<GameBoardProps> = ({
           style,
           label,
           () => onCardClick({ type: 'row_slot', player, lane, index }),
-          isCorruptionTarget,
+          false,
         );
       }
       return renderCard(
         card,
         style,
         { type: 'board_card', player, lane, index, card },
-        { highlight: isCorruptionTarget },
+        { highlight: shouldHighlightCorruption || (maulwurfTargetUid && card.uid === maulwurfTargetUid) },
       );
     });
   };

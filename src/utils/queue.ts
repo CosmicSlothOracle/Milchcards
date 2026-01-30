@@ -438,6 +438,16 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
         const { player: actor, targetUid } = ev as any;
         const victim: Player = actor === 1 ? 2 : 1;
 
+        if (typeof window !== 'undefined') {
+          try {
+            window.dispatchEvent(new CustomEvent('pc:corruption_roll_started', {
+              detail: { actor, victim, targetUid, type: 'bribery' }
+            }));
+          } catch (e) {
+            console.error('🎲 ENGINE: Error dispatching corruption roll start', e);
+          }
+        }
+
         // Calculate W6 roll first
         let roll = 1 + rng.randomInt(6);
         console.log('🎲 ENGINE: Calculated W6 roll:', roll);
@@ -495,6 +505,9 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
 
         const effectiveTotal = total - navalnyPenalty;
 
+        let corruptionSuccess = false;
+        let transferOutcome: 'stolen' | 'discarded' | 'none' = 'none';
+
         if (effectiveTotal >= targetInfluence) {
           const maxSlots = 3;
           if (state.board[actor as Player].aussen.length < maxSlots) {
@@ -502,13 +515,33 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
             state.board[victim].aussen.splice(targetIdx,1);
             state.board[actor as Player].aussen.push(target as any);
             events.unshift({ type: 'LOG', msg: `Bribery Scandal 2.0: Erfolg! ${target.name} übernommen.` });
+            transferOutcome = 'stolen';
           } else {
             state.board[victim].aussen.splice(targetIdx,1);
             state.discard.push(target as any);
             events.unshift({ type: 'LOG', msg: `Bribery Scandal 2.0: Erfolg, aber kein Slot frei – ${target.name} entfernt.` });
+            transferOutcome = 'discarded';
           }
+          corruptionSuccess = true;
         } else {
           events.unshift({ type: 'LOG', msg: 'Bribery Scandal 2.0: Wurf zu niedrig – keine Übernahme.' });
+        }
+
+        if (typeof window !== 'undefined') {
+          try {
+            window.dispatchEvent(new CustomEvent('pc:corruption_resolved', {
+              detail: {
+                actor,
+                victim,
+                targetUid,
+                success: corruptionSuccess,
+                outcome: transferOutcome,
+                type: 'bribery'
+              }
+            }));
+          } catch (e) {
+            console.error('🎲 ENGINE: Error dispatching corruption resolved', e);
+          }
         }
 
         // Clear pending selection
@@ -572,6 +605,16 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
         const { player: actor, targetUid } = ev as any;
         const victim: Player = actor === 1 ? 2 : 1;
 
+        if (typeof window !== 'undefined') {
+          try {
+            window.dispatchEvent(new CustomEvent('pc:corruption_roll_started', {
+              detail: { actor, victim, targetUid, type: 'mole' }
+            }));
+          } catch (e) {
+            console.error('🎲 ENGINE: Error dispatching maulwurf roll start', e);
+          }
+        }
+
         // Calculate W6 roll first
         const roll = 1 + rng.randomInt(6);
         console.log('🎲 ENGINE: Calculated W6 roll for Maulwurf:', roll);
@@ -602,6 +645,9 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
 
         events.unshift({ type: 'LOG', msg: `Maulwurf: Roll ${roll} vs benötigt ${requiredRoll} (${target.name}).` });
 
+        let corruptionSuccess = false;
+        let transferOutcome: 'stolen' | 'discarded' | 'none' = 'none';
+
         if (roll >= requiredRoll) {
           const maxSlots = 5; // Government slots
           if (state.board[actor as Player].aussen.length < maxSlots) {
@@ -609,14 +655,34 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
             state.board[victim].aussen.splice(targetIdx,1);
             state.board[actor as Player].aussen.push(target as any);
             events.unshift({ type: 'LOG', msg: `Maulwurf: Erfolg! ${target.name} übernommen.` });
+            transferOutcome = 'stolen';
           } else {
             // No space - remove card
             state.board[victim].aussen.splice(targetIdx,1);
             state.discard.push(target as any);
             events.unshift({ type: 'LOG', msg: `Maulwurf: Erfolg, aber kein Slot frei – ${target.name} entfernt.` });
+            transferOutcome = 'discarded';
           }
+          corruptionSuccess = true;
         } else {
           events.unshift({ type: 'LOG', msg: 'Maulwurf: Wurf zu niedrig – keine Übernahme.' });
+        }
+
+        if (typeof window !== 'undefined') {
+          try {
+            window.dispatchEvent(new CustomEvent('pc:corruption_resolved', {
+              detail: {
+                actor,
+                victim,
+                targetUid,
+                success: corruptionSuccess,
+                outcome: transferOutcome,
+                type: 'mole'
+              }
+            }));
+          } catch (e) {
+            console.error('🎲 ENGINE: Error dispatching maulwurf resolved', e);
+          }
         }
 
         // Clear pending selection

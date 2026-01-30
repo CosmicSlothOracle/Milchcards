@@ -155,9 +155,27 @@ export function useGameState() {
 
       // prefer more useful/implemented specials
       const implFirst = ['media', 'pledge', 'pledge2', 'sanctions', 'dnc1', 'dnc2', 'dnc3', 'reshuffle', 'mission', 'trap_fakenews', 'trap_protest', 'trap_scandal'];
-      const srt = specPool.slice().sort((a, b) => implFirst.indexOf(a.impl) - implFirst.indexOf(b.impl));
-      srt.slice(0, 11).forEach(s => deck.push(makeSpecInstance(s)));
-      return shuffle(deck).slice(0, 25);
+      const forcedSpecials = [
+        'Bestechungsskandal 2.0',
+        'Maulwurf',
+        'Greta Thunberg',
+        'Mark Zuckerberg',
+        'Symbolpolitik',
+      ];
+      const forcedSpecCards = forcedSpecials
+        .map(name => specPool.find(s => s.name === name))
+        .filter((s): s is (typeof Specials)[number] => Boolean(s));
+      forcedSpecCards.forEach(s => deck.push(makeSpecInstance(s)));
+
+      const remainingSpecs = specPool
+        .filter(s => !forcedSpecCards.some(forced => forced.id === s.id))
+        .slice()
+        .sort((a, b) => implFirst.indexOf(a.impl) - implFirst.indexOf(b.impl));
+
+      const desiredSpecCount = 16;
+      const remainingNeeded = Math.max(0, desiredSpecCount - forcedSpecCards.length);
+      remainingSpecs.slice(0, remainingNeeded).forEach(s => deck.push(makeSpecInstance(s)));
+      return shuffle(deck).slice(0, 30);
     }
 
     const deck1 = buildDeck();
