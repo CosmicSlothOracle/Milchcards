@@ -10,6 +10,7 @@ interface GameInfoModalProps {
   onPassTurn: (player: 1 | 2) => void;
   onToggleLog: () => void;
   onCardClick: (data: any) => void;
+  onRestartGame: () => void;
   devMode?: boolean;
 }
 
@@ -30,6 +31,7 @@ export const GameInfoModal: React.FC<GameInfoModalProps> = ({
   onPassTurn,
   onToggleLog,
   onCardClick,
+  onRestartGame,
   devMode = false
 }) => {
   const [position, setPosition] = useState<Position>({ x: 50, y: 50 });
@@ -592,6 +594,26 @@ export const GameInfoModal: React.FC<GameInfoModalProps> = ({
             }}>
               Round Standings: {gameState.roundsWon[1]} - {gameState.roundsWon[2]}
             </div>
+            <button
+              type="button"
+              onClick={onRestartGame}
+              style={{
+                marginTop: '18px',
+                background: 'rgba(15, 23, 42, 0.9)',
+                color: 'white',
+                border: '1px solid rgba(255, 255, 255, 0.35)',
+                padding: '10px 18px',
+                borderRadius: '8px',
+                fontSize: '14px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                boxShadow: '0 6px 16px rgba(0,0,0,0.35)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.08em'
+              }}
+            >
+              Play again
+            </button>
           </div>
         )}
         {/* Game Phase with Matchball */}

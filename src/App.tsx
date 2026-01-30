@@ -48,6 +48,10 @@ function AppContent() {
 
   // 🎲 DICE: Toggle zwischen 3D und einfachem Würfel (Standard: einfacher Würfel für bessere Kompatibilität)
   const [useSimpleDice, setUseSimpleDice] = useState(true);
+  const [diceOutcome, setDiceOutcome] = useState<'success' | 'fail' | null>(null);
+  const diceOutcomeTimer = useRef<number | null>(null);
+  const [diceRolling, setDiceRolling] = useState(false);
+  const diceRollingTimer = useRef<number | null>(null);
 
   // UI Layout Editor Route
   const [currentRoute, setCurrentRoute] = useState<'game' | 'ui-editor' | 'test-suite' | 'qte' | 'sprite-demo'>('game');
@@ -60,12 +64,51 @@ function AppContent() {
     startMatchVsAI,
     playCard,
     activateInstantInitiative,
+    startNewGame,
     runAITurn,
     selectHandCard,
     passTurn,
     nextTurn,
   } = useGameState();
-  const corruptionActive = (gameState as any).pendingAbilitySelect?.type === 'corruption_steal';
+  const pendingAbility = (gameState as any).pendingAbilitySelect?.type;
+  const corruptionActive = pendingAbility === 'corruption_steal';
+  const maulwurfActive = pendingAbility === 'maulwurf_steal';
+
+  useEffect(() => {
+    const handleCorruptionResolved = (event: Event) => {
+      const detail = (event as CustomEvent).detail as { success?: boolean };
+      const success = Boolean(detail?.success);
+      setDiceOutcome(success ? 'success' : 'fail');
+      if (diceOutcomeTimer.current) window.clearTimeout(diceOutcomeTimer.current);
+      diceOutcomeTimer.current = window.setTimeout(() => {
+        setDiceOutcome(null);
+        diceOutcomeTimer.current = null;
+      }, 1400);
+    };
+
+    const handleCorruptionRoll = () => {
+      setDiceRolling(true);
+      if (diceRollingTimer.current) window.clearTimeout(diceRollingTimer.current);
+      diceRollingTimer.current = window.setTimeout(() => {
+        setDiceRolling(false);
+        diceRollingTimer.current = null;
+      }, 1100);
+    };
+
+    window.addEventListener('pc:corruption_resolved', handleCorruptionResolved as EventListener);
+    window.addEventListener('pc:corruption_roll_started', handleCorruptionRoll as EventListener);
+    return () => {
+      window.removeEventListener('pc:corruption_resolved', handleCorruptionResolved as EventListener);
+      window.removeEventListener('pc:corruption_roll_started', handleCorruptionRoll as EventListener);
+    };
+  }, []);
+
+  useEffect(() => (
+    () => {
+      if (diceOutcomeTimer.current) window.clearTimeout(diceOutcomeTimer.current);
+      if (diceRollingTimer.current) window.clearTimeout(diceRollingTimer.current);
+    }
+  ), []);
 
   const actionHint = useMemo(() => {
     if (deckBuilderOpen) return null;
@@ -73,6 +116,12 @@ function AppContent() {
       return {
         title: 'Korruption aktiv',
         body: 'Wähle eine gegnerische Regierungs-Karte (gelb markiert) und würfle danach mit dem Dice.',
+      };
+    }
+    if (maulwurfActive) {
+      return {
+        title: 'Maulwurf aktiv',
+        body: 'Ziel ist markiert. Würfle, um die Übernahme zu prüfen.',
       };
     }
     if (selectedHandIndex !== null) {
@@ -608,6 +657,7 @@ function AppContent() {
                   onPassTurn={passTurn}
                   onToggleLog={() => setGameLogModalOpen(!gameLogModalOpen)}
                   onCardClick={handleCardClick}
+                  onRestartGame={startNewGame}
                   devMode={devMode}
                 />
               )}
@@ -650,7 +700,7 @@ function AppContent() {
               <CardHoverInfoPanel hovered={hoveredCard} />
 
               {/* Dice - Dev utility with fallback */}
-              <div className={corruptionActive ? 'game-dice game-dice--highlight' : 'game-dice'}>
+              <div className={`game-dice${corruptionActive || maulwurfActive ? ' game-dice--highlight' : ''}${diceOutcome === 'success' ? ' game-dice--success' : ''}${diceOutcome === 'fail' ? ' game-dice--fail' : ''}${diceRolling ? ' game-dice--rolling' : ''}`}>
                 {useSimpleDice ? (
                   <SimpleDice
                     size={120}
