@@ -255,14 +255,14 @@ const GameBoard: React.FC<GameBoardProps> = ({
           style,
           label,
           () => onCardClick({ type: 'row_slot', player, lane, index }),
-          isCorruptionTarget,
+          shouldHighlightCorruption,
         );
       }
       return renderCard(
         card,
         style,
         { type: 'board_card', player, lane, index, card },
-        { highlight: isCorruptionTarget },
+        { highlight: shouldHighlightCorruption },
       );
     });
   };
