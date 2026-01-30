@@ -208,10 +208,12 @@ export class ActiveAbilitiesManager {
       ...state,
       actionPoints: { ...state.actionPoints }
     };
+    let applied = false;
 
     switch (ability.type) {
       case 'hardliner':
         if (select.targetCard) {
+          applied = true;
           const loc = findCardLocation(select.targetCard, state);
           if (loc && loc.lane === 'innen' && loc.player !== select.actorPlayer) {
             const updatedLane = state.board[loc.player][loc.lane].filter(c => c.uid !== select.targetCard!.uid);
@@ -240,13 +242,13 @@ export class ActiveAbilitiesManager {
           const isGovTarget = ownGov.some(card => card.uid === select.targetCard?.uid);
           if (isGovTarget) {
             adjustInfluence(select.targetCard, 2, 'Oligarchen-Einfluss');
+            applied = true;
           }
         }
         break;
 
       case 'diplomat_transfer':
         // Handled separately in useGameEffects
-        applied = true;
         break;
 
       case 'putin_double_intervention':
