@@ -234,12 +234,12 @@ const GameBoard: React.FC<GameBoardProps> = ({
     lane: 'aussen' | 'innen',
     label: string,
   ) => {
-    const shouldHighlightCorruption = (
+    const shouldHighlightCorruption = Boolean(
       lane === 'aussen'
-      && (
-        (corruptionActive && player === corruptionTargetPlayer)
-        || (corruptionHold.player && player === corruptionHold.player)
-      )
+        && (
+          (corruptionActive && player === corruptionTargetPlayer)
+          || (corruptionHold.player && player === corruptionHold.player)
+        ),
     );
     const rects = lane === 'aussen'
       ? getGovernmentRects(player === 1 ? 'player' : 'opponent')
@@ -255,14 +255,14 @@ const GameBoard: React.FC<GameBoardProps> = ({
           style,
           label,
           () => onCardClick({ type: 'row_slot', player, lane, index }),
-          isCorruptionTarget,
+          shouldHighlightCorruption,
         );
       }
       return renderCard(
         card,
         style,
         { type: 'board_card', player, lane, index, card },
-        { highlight: isCorruptionTarget },
+        { highlight: shouldHighlightCorruption },
       );
     });
   };
