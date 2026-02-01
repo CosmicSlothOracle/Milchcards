@@ -73,6 +73,80 @@ function AppContent() {
   const pendingAbility = (gameState as any).pendingAbilitySelect?.type;
   const corruptionActive = pendingAbility === 'corruption_steal';
   const maulwurfActive = pendingAbility === 'maulwurf_steal';
+  const pendingAbilityRef = useRef<any>(null);
+  const corruptionTargetUidRef = useRef<number | null>(null);
+  const awaitingCorruptionRollRef = useRef(false);
+  const awaitingMaulwurfRollRef = useRef(false);
+
+  useEffect(() => {
+    pendingAbilityRef.current = (gameState as any).pendingAbilitySelect ?? null;
+  }, [gameState]);
+
+  useEffect(() => {
+    const handleTargetSelected = (event: Event) => {
+      const detail = (event as CustomEvent).detail as { targetUid?: number };
+      corruptionTargetUidRef.current = detail?.targetUid ?? null;
+      awaitingCorruptionRollRef.current = Boolean(detail?.targetUid);
+    };
+
+    const handleMaulwurfSelect = (event: Event) => {
+      const detail = (event as CustomEvent).detail as { targetUid?: number };
+      awaitingMaulwurfRollRef.current = Boolean(detail?.targetUid);
+    };
+
+    const handleClearSelection = () => {
+      corruptionTargetUidRef.current = null;
+      awaitingCorruptionRollRef.current = false;
+      awaitingMaulwurfRollRef.current = false;
+    };
+
+    window.addEventListener('pc:corruption_target_selected', handleTargetSelected as EventListener);
+    window.addEventListener('pc:maulwurf_select_target', handleMaulwurfSelect as EventListener);
+    window.addEventListener('pc:corruption_resolved', handleClearSelection as EventListener);
+    window.addEventListener('pc:clear_pending_selection', handleClearSelection as EventListener);
+    return () => {
+      window.removeEventListener('pc:corruption_target_selected', handleTargetSelected as EventListener);
+      window.removeEventListener('pc:maulwurf_select_target', handleMaulwurfSelect as EventListener);
+      window.removeEventListener('pc:corruption_resolved', handleClearSelection as EventListener);
+      window.removeEventListener('pc:clear_pending_selection', handleClearSelection as EventListener);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (maulwurfActive) {
+      awaitingMaulwurfRollRef.current = true;
+    }
+  }, [maulwurfActive]);
+
+  useEffect(() => {
+    const handleDiceResult = () => {
+      const pending = pendingAbilityRef.current as any;
+      if (!pending?.type) return;
+
+      if (pending.type === 'corruption_steal') {
+        const targetUid = corruptionTargetUidRef.current;
+        if (!awaitingCorruptionRollRef.current || !targetUid) return;
+        awaitingCorruptionRollRef.current = false;
+        window.dispatchEvent(new CustomEvent('pc:corruption_request_roll', {
+          detail: { player: pending.actorPlayer ?? gameState.current, targetUid },
+        }));
+      }
+
+      if (pending.type === 'maulwurf_steal') {
+        const targetUid = pending.targetUid as number | undefined;
+        if (!awaitingMaulwurfRollRef.current || !targetUid) return;
+        awaitingMaulwurfRollRef.current = false;
+        window.dispatchEvent(new CustomEvent('pc:maulwurf_request_roll', {
+          detail: { player: pending.actorPlayer ?? gameState.current, targetUid },
+        }));
+      }
+    };
+
+    window.addEventListener('pc:dice_result', handleDiceResult as EventListener);
+    return () => {
+      window.removeEventListener('pc:dice_result', handleDiceResult as EventListener);
+    };
+  }, [gameState.current]);
 
   useEffect(() => {
     const handleCorruptionResolved = (event: Event) => {
@@ -134,7 +208,7 @@ function AppContent() {
       title: 'Handkarte auswählen',
       body: 'Wähle eine Karte aus deiner Hand, um eine Aktion zu starten.',
     };
-  }, [deckBuilderOpen, corruptionActive, selectedHandIndex]);
+  }, [deckBuilderOpen, corruptionActive, maulwurfActive, selectedHandIndex]);
 
   // No global image preloading required
 
@@ -214,6 +288,25 @@ function AppContent() {
 
     // Handle game control buttons
 
+
+    if (data.type === 'board_card' && corruptionActive) {
+      const opponent = gameState.current === 1 ? 2 : 1;
+      if (data.player === opponent && data.lane === 'aussen') {
+        const targetUid = data.card?.uid ?? data.card?.id;
+        if (targetUid) {
+          log(`🎯 Corruption: Ziel gewählt (${data.card.name}).`);
+          corruptionTargetUidRef.current = targetUid;
+          awaitingCorruptionRollRef.current = true;
+          window.dispatchEvent(new CustomEvent('pc:corruption_pick_target', {
+            detail: { player: gameState.current, targetUid },
+          }));
+          window.dispatchEvent(new CustomEvent('pc:corruption_target_selected', {
+            detail: { player: gameState.current, targetUid },
+          }));
+        }
+        return;
+      }
+    }
 
     if (data.type === 'button_pass_turn') {
       const currentPlayer = gameState.current;
@@ -407,7 +500,7 @@ function AppContent() {
       } catch (e) {}
       return;
     }
-  }, [gameState, selectedHandIndex, playCard, selectHandCard, passTurn, nextTurn, log]);
+  }, [gameState, selectedHandIndex, playCard, selectHandCard, passTurn, nextTurn, log, corruptionActive]);
 
   const handleCardHover = useCallback((data: any) => {
     setHoveredCard(data);

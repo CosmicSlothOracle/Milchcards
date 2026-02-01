@@ -56,6 +56,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
   const [corruptionSuccessUids, setCorruptionSuccessUids] = useState<Set<number>>(new Set());
   const [corruptionFailUids, setCorruptionFailUids] = useState<Set<number>>(new Set());
   const corruptionResultTimers = useRef<Map<number, number>>(new Map());
+  const [corruptionTargetUid, setCorruptionTargetUid] = useState<number | null>(null);
 
   useEffect(() => {
     const currentUids = new Set<number>();
@@ -110,6 +111,37 @@ const GameBoard: React.FC<GameBoardProps> = ({
       removalTimers.current.clear();
     }
   ), []);
+
+  useEffect(() => {
+    const handleTargetSelected = (event: Event) => {
+      const detail = (event as CustomEvent).detail as { targetUid?: number };
+      setCorruptionTargetUid(detail?.targetUid ?? null);
+    };
+
+    const handleMaulwurfTarget = (event: Event) => {
+      const detail = (event as CustomEvent).detail as { targetUid?: number };
+      setCorruptionTargetUid(detail?.targetUid ?? null);
+    };
+
+    const clearTarget = () => setCorruptionTargetUid(null);
+
+    window.addEventListener('pc:corruption_target_selected', handleTargetSelected as EventListener);
+    window.addEventListener('pc:maulwurf_select_target', handleMaulwurfTarget as EventListener);
+    window.addEventListener('pc:corruption_resolved', clearTarget as EventListener);
+    window.addEventListener('pc:clear_pending_selection', clearTarget as EventListener);
+    return () => {
+      window.removeEventListener('pc:corruption_target_selected', handleTargetSelected as EventListener);
+      window.removeEventListener('pc:maulwurf_select_target', handleMaulwurfTarget as EventListener);
+      window.removeEventListener('pc:corruption_resolved', clearTarget as EventListener);
+      window.removeEventListener('pc:clear_pending_selection', clearTarget as EventListener);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!corruptionActive && !maulwurfTargetUid) {
+      setCorruptionTargetUid(null);
+    }
+  }, [corruptionActive, maulwurfTargetUid]);
 
   useEffect(() => {
     const handleCorruptionRoll = (event: Event) => {
@@ -184,31 +216,35 @@ const GameBoard: React.FC<GameBoardProps> = ({
     style: React.CSSProperties,
     data: any,
     options?: { selected?: boolean; showActivate?: boolean; onActivate?: () => void; highlight?: boolean }
-  ) => (
-    <div
-      key={card.uid}
-      className={`game-board__card${options?.selected ? ' game-board__card--selected' : ''}${options?.highlight ? ' game-board__card--corruption' : ''}`}
-      style={style}
-      onClick={() => onCardClick(data)}
-      onMouseEnter={(event) => handleHover(card, event)}
-      onMouseMove={(event) => handleHover(card, event)}
-      onMouseLeave={() => handleHover(null)}
-    >
-      <img src={getCardImagePath(card, 'ui')} alt={card.name} />
-      {options?.showActivate && options.onActivate && (
-        <button
-          type="button"
-          className="game-board__activate"
-          onClick={(event) => {
-            event.stopPropagation();
-            options.onActivate?.();
-          }}
-        >
-          Aktivieren
-        </button>
-      )}
-    </div>
-  );
+  ) => {
+    const isSuccess = corruptionSuccessUids.has(card.uid);
+    const isFail = corruptionFailUids.has(card.uid);
+    return (
+      <div
+        key={card.uid}
+        className={`game-board__card${options?.selected ? ' game-board__card--selected' : ''}${options?.highlight ? ' game-board__card--corruption' : ''}${isSuccess ? ' game-board__card--corruption-success' : ''}${isFail ? ' game-board__card--corruption-fail' : ''}`}
+        style={style}
+        onClick={() => onCardClick(data)}
+        onMouseEnter={(event) => handleHover(card, event)}
+        onMouseMove={(event) => handleHover(card, event)}
+        onMouseLeave={() => handleHover(null)}
+      >
+        <img src={getCardImagePath(card, 'ui')} alt={card.name} />
+        {options?.showActivate && options.onActivate && (
+          <button
+            type="button"
+            className="game-board__activate"
+            onClick={(event) => {
+              event.stopPropagation();
+              options.onActivate?.();
+            }}
+          >
+            Aktivieren
+          </button>
+        )}
+      </div>
+    );
+  };
 
   const renderSlot = (
     key: string,
@@ -234,13 +270,15 @@ const GameBoard: React.FC<GameBoardProps> = ({
     lane: 'aussen' | 'innen',
     label: string,
   ) => {
-    const shouldHighlightCorruption = (
+    const shouldHighlightCorruption = Boolean(
       lane === 'aussen'
-      && (
-        (corruptionActive && player === corruptionTargetPlayer)
-        || (corruptionHold.player && player === corruptionHold.player)
-      )
+        && (
+          (corruptionActive && player === corruptionTargetPlayer)
+          || (corruptionHold.player && player === corruptionHold.player)
+        ),
     );
+    const targetUid = maulwurfTargetUid ?? corruptionTargetUid;
+    const canSelectTarget = corruptionActive && player === corruptionTargetPlayer && lane === 'aussen' && !targetUid;
     const rects = lane === 'aussen'
       ? getGovernmentRects(player === 1 ? 'player' : 'opponent')
       : getPublicRects(player === 1 ? 'player' : 'opponent');
@@ -249,20 +287,21 @@ const GameBoard: React.FC<GameBoardProps> = ({
     return rects.map((rect, index) => {
       const style = { left: rect.x, top: rect.y, width: rect.w, height: rect.h } as React.CSSProperties;
       const card = cards[index];
+      const isTargetCard = Boolean(targetUid && card?.uid === targetUid);
       if (!card) {
         return renderSlot(
           `${player}-${lane}-${index}`,
           style,
           label,
           () => onCardClick({ type: 'row_slot', player, lane, index }),
-          isCorruptionTarget,
+          shouldHighlightCorruption || canSelectTarget,
         );
       }
       return renderCard(
         card,
         style,
         { type: 'board_card', player, lane, index, card },
-        { highlight: isCorruptionTarget },
+        { highlight: shouldHighlightCorruption || canSelectTarget || isTargetCard },
       );
     });
   };
