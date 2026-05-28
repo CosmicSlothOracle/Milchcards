@@ -54,30 +54,11 @@ temp/
 .cache/
 node_modules/.cache/
 
-# Large simulation files
-*.json
-!package.json
-!package-lock.json
-!tsconfig.json
-!ui-layout.json
-!ui_layout_1920x1080.json
+# Large simulation output at repo root
+/test-results-*.json
+/test-results-*.csv
 
-# Test results
-test-results-*.json
-test-results-*.csv
-
-# Analysis files
-*_analysis.md
-*_mapping*.md
-*_complete.md
-*_results.md
-*_mismatches.md
-
-# Validation scripts
-validate_*.js
-analyze_*.js
-
-# Documentation that's not essential
+# Legacy translated docs (not part of the app)
 English_Docs_Translated/
 
 # Netlify

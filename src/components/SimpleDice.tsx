@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 
 export interface SimpleDiceProps {
   size?: number;
@@ -7,27 +7,29 @@ export interface SimpleDiceProps {
 }
 
 /**
- * SimpleDice - A fallback 2D CSS-based dice component
- * Used when WebGL/Three.js is not available or fails
+ * SimpleDice - A highly polished 2D CSS-based premium dice component.
+ * Integrates beautifully with the dark-futuristic Milchcards aesthetic.
  */
 const SimpleDice: React.FC<SimpleDiceProps> = ({
-  size = 120,
+  size = 110,
   onRoll,
   className
 }) => {
   const [currentFace, setCurrentFace] = useState(1);
   const [isRolling, setIsRolling] = useState(false);
+  const [rotation, setRotation] = useState(0);
 
   const roll = useCallback(() => {
     if (isRolling) return;
 
     setIsRolling(true);
 
-    // Animate through random faces
+    // Animate through random faces and spin rotation
     let rollCount = 0;
-    const maxRolls = 8;
+    const maxRolls = 10;
     const rollInterval = setInterval(() => {
       setCurrentFace(1 + Math.floor(Math.random() * 6));
+      setRotation(prev => prev + 45);
       rollCount++;
 
       if (rollCount >= maxRolls) {
@@ -35,13 +37,24 @@ const SimpleDice: React.FC<SimpleDiceProps> = ({
         const finalFace = 1 + Math.floor(Math.random() * 6);
         setCurrentFace(finalFace);
         setIsRolling(false);
+        setRotation(prev => prev + 180);
         onRoll?.(finalFace);
       }
-    }, 100);
+    }, 90);
   }, [isRolling, onRoll]);
 
+  // Listen for programmatic roll requests (e.g. from the game engine / corruption resolved)
+  useEffect(() => {
+    const handleRequestRoll = () => {
+      roll();
+    };
+    window.addEventListener('pc:ui_request_dice_roll', handleRequestRoll);
+    return () => {
+      window.removeEventListener('pc:ui_request_dice_roll', handleRequestRoll);
+    };
+  }, [roll]);
+
   const getDiceDots = (face: number) => {
-    const dots = [];
     const positions = {
       1: [[0, 0]],
       2: [[-1, -1], [1, 1]],
@@ -58,14 +71,15 @@ const SimpleDice: React.FC<SimpleDiceProps> = ({
         key={index}
         style={{
           position: 'absolute',
-          width: '12px',
-          height: '12px',
-          backgroundColor: '#333',
+          width: '10px',
+          height: '10px',
+          backgroundColor: '#3b82f6',
           borderRadius: '50%',
           left: '50%',
           top: '50%',
-          transform: `translate(calc(-50% + ${x * 20}px), calc(-50% + ${y * 20}px))`,
-          transition: 'all 0.1s ease'
+          transform: `translate(calc(-50% + ${x * 22}px), calc(-50% + ${y * 22}px))`,
+          boxShadow: '0 0 8px #3b82f6, 0 0 16px rgba(59, 130, 246, 0.4)',
+          transition: 'all 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
         }}
       />
     ));
@@ -76,21 +90,18 @@ const SimpleDice: React.FC<SimpleDiceProps> = ({
       style={{
         width: size,
         height: size,
-        backgroundColor: '#fff',
-        border: '3px solid #333',
-        borderRadius: '12px',
+        background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
+        border: '2px solid rgba(148, 163, 184, 0.2)',
+        borderRadius: '16px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         cursor: isRolling ? 'wait' : 'pointer',
-        position: 'fixed',
-        right: '20px',
-        bottom: '20px',
-        zIndex: 1200,
-        boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-        transform: isRolling ? 'scale(1.1)' : 'scale(1)',
-        transition: 'transform 0.2s ease',
-        userSelect: 'none'
+        position: 'relative',
+        boxShadow: '0 8px 24px rgba(0,0,0,0.6), inset 0 0 12px rgba(255,255,255,0.05)',
+        transform: `scale(${isRolling ? 1.05 : 1}) rotate(${rotation}deg)`,
+        transition: 'all 0.5s cubic-bezier(0.19, 1, 0.22, 1)',
+        userSelect: 'none',
       }}
       onClick={roll}
       className={className}
@@ -99,21 +110,36 @@ const SimpleDice: React.FC<SimpleDiceProps> = ({
         {getDiceDots(currentFace)}
       </div>
 
-      {/* Rolling indicator */}
+      {/* Glass reflection overlay */}
+      <div style={{
+        position: 'absolute',
+        top: '2px',
+        left: '2px',
+        right: '2px',
+        height: '40%',
+        background: 'linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0) 100%)',
+        borderRadius: '14px 14px 0 0',
+        pointerEvents: 'none'
+      }} />
+
+      {/* Text label underneath */}
       {isRolling && (
         <div
           style={{
             position: 'absolute',
-            top: '-30px',
+            top: '-28px',
             left: '50%',
             transform: 'translateX(-50%)',
-            fontSize: '12px',
-            color: '#666',
-            fontWeight: 'bold',
-            whiteSpace: 'nowrap'
+            fontSize: '11px',
+            color: '#3b82f6',
+            textShadow: '0 0 8px rgba(59, 130, 246, 0.4)',
+            fontWeight: 800,
+            whiteSpace: 'nowrap',
+            letterSpacing: '1px',
+            textTransform: 'uppercase',
           }}
         >
-          Rolling...
+          🎲 WÜRFELT...
         </div>
       )}
     </div>

@@ -424,29 +424,13 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
 
   // Component to render cards with visual separation
   const CardList = ({ cards }: { cards: Array<{ kind: 'pol' | 'spec'; base: BasePolitician | BaseSpecial }> }) => {
-    const { active, disabled } = separateActiveAndDisabled(cards);
+    const { active } = separateActiveAndDisabled(cards);
 
     return (
       <>
         {/* Active cards */}
         {active.map(({ kind, base }) => (
           <CardTile key={`active-${kind}-${base.id}`} kind={kind} base={base} onClick={() => handleCardClick(kind, base)} />
-        ))}
-
-        {/* Visual separator if there are both active and disabled cards */}
-        {active.length > 0 && disabled.length > 0 && (
-          <div style={{
-            gridColumn: '1 / -1',
-            height: '2px',
-            background: 'linear-gradient(90deg, transparent, #374151, transparent)',
-            margin: '8px 0',
-            borderRadius: '1px',
-          }} />
-        )}
-
-        {/* Disabled cards */}
-        {disabled.map(({ kind, base }) => (
-          <CardTile key={`disabled-${kind}-${base.id}`} kind={kind} base={base} onClick={() => handleCardClick(kind, base)} />
         ))}
       </>
     );
@@ -822,125 +806,221 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
 
   return (
     <div style={{
-      position: 'absolute',
+      position: 'fixed',
       inset: 0,
       display: 'flex',
-      background: 'rgba(4,8,12,.8)',
-      backdropFilter: 'blur(2px)',
+      background: 'radial-gradient(circle, #0e1626 0%, #050912 100%)',
       zIndex: 40,
     }}>
       <div style={{
         position: 'absolute',
-        inset: '12px',
-        background: '#0d1621',
-        border: '1px solid #1f3042',
-        borderRadius: '12px',
-        padding: '12px',
+        inset: 0,
+        background: 'transparent',
+        padding: '30px',
         display: 'flex',
         flexDirection: 'column',
-        gap: '10px',
+        gap: '16px',
       }}>
         {/* Header */}
+        {/* Main Header */}
         <div style={{
           display: 'flex',
-          gap: '10px',
+          gap: '20px',
           alignItems: 'center',
           justifyContent: 'space-between',
+          borderBottom: '1px solid rgba(148, 163, 184, 0.1)',
+          paddingBottom: '20px',
         }}>
-          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-            <div style={{ fontWeight: 600, fontSize: '14px', letterSpacing: '.4px' }}>
-              Deckbuilder
+          <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+            <div style={{
+              fontWeight: 800,
+              fontSize: '24px',
+              letterSpacing: '2px',
+              background: 'linear-gradient(135deg, #10b981 0%, #3b82f6 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              textTransform: 'uppercase',
+              fontFamily: '"Montserrat", sans-serif'
+            }}>
+              Deck-Manager
             </div>
             <span style={{
-              padding: '4px 8px',
-              borderRadius: '8px',
-              background: '#0f1a26',
-              border: '1px solid #203043',
-              fontSize: '12px',
+              padding: '6px 12px',
+              borderRadius: '20px',
+              background: 'rgba(15, 26, 38, 0.6)',
+              border: budget > 105 || budget < 75 ? '1px solid rgba(239, 68, 68, 0.5)' : '1px solid rgba(16, 185, 129, 0.5)',
+              fontSize: '13px',
+              fontWeight: 600,
+              color: budget > 105 || budget < 75 ? '#fca5a5' : '#10b981',
             }}>
-              Budget (BP): {budget} / 105 (Min: 75)
+              💰 Budget (BP): {budget} / 105 (Min: 75)
             </span>
             <span style={{
-              padding: '4px 8px',
-              borderRadius: '8px',
-              background: '#0f1a26',
-              border: '1px solid #203043',
-              fontSize: '12px',
+              padding: '6px 12px',
+              borderRadius: '20px',
+              background: 'rgba(15, 26, 38, 0.6)',
+              border: count > 15 || count < 10 ? '1px solid rgba(239, 68, 68, 0.5)' : '1px solid rgba(59, 130, 246, 0.5)',
+              fontSize: '13px',
+              fontWeight: 600,
+              color: count > 15 || count < 10 ? '#fca5a5' : '#3b82f6',
             }}>
-              Deck: {count}/15
+              🃏 Deck: {count}/15 (Min: 10)
             </span>
+            {underMinGovernment && (
+              <span style={{
+                padding: '6px 12px',
+                borderRadius: '20px',
+                background: 'rgba(239, 68, 68, 0.1)',
+                border: '1px solid rgba(239, 68, 68, 0.3)',
+                fontSize: '12px',
+                fontWeight: 500,
+                color: '#fca5a5',
+              }}>
+                ⚠️ Benötigt mind. 6 Regierungskarten (Aktuell: {governmentCount})
+              </span>
+            )}
           </div>
 
-          {/* Start vs AI Button */}
-          {onStartVsAI && (
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+            {onStartVsAI && (
+              <button
+                onClick={handleStartVsAI}
+                style={{
+                  background: isValid ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : '#475569',
+                  color: 'white',
+                  border: 'none',
+                  padding: '10px 24px',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: 700,
+                  letterSpacing: '1px',
+                  textTransform: 'uppercase',
+                  cursor: isValid ? 'pointer' : 'not-allowed',
+                  opacity: isValid ? 1 : 0.6,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  boxShadow: isValid ? '0 4px 12px rgba(16, 185, 129, 0.25)' : 'none',
+                  transition: 'all 0.2s',
+                }}
+                disabled={!isValid}
+                title={!isValid ? `Deck muss gültig sein: 10-15 Karten, ≥6 Government, 75-105 BP (aktuell: ${budget} BP)` : 'Spiel gegen KI starten'}
+              >
+                🎮 Match Starten (vs KI)
+              </button>
+            )}
             <button
-              onClick={handleStartVsAI}
+              onClick={onClose}
               style={{
-                background: isValid ? '#10b981' : '#6b7280',
-                color: 'white',
-                border: 'none',
-                padding: '8px 16px',
-                borderRadius: '6px',
-                fontSize: '12px',
+                background: 'rgba(30, 41, 59, 0.8)',
+                color: '#94a3b8',
+                border: '1px solid rgba(148, 163, 184, 0.2)',
+                padding: '10px 20px',
+                borderRadius: '8px',
+                fontSize: '14px',
                 fontWeight: 600,
-                cursor: isValid ? 'pointer' : 'not-allowed',
-                opacity: isValid ? 1 : 0.5,
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
               }}
-              disabled={!isValid}
-              title={!isValid ? `Deck muss gültig sein: 10-15 Karten, ≥6 Government, 75-105 BP (aktuell: ${budget} BP)` : 'Starte Spiel gegen KI'}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = '#f8fafc';
+                e.currentTarget.style.background = 'rgba(30, 41, 59, 1)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = '#94a3b8';
+                e.currentTarget.style.background = 'rgba(30, 41, 59, 0.8)';
+              }}
             >
-              🤖 Start vs KI
+              Abbrechen
             </button>
-          )}
+          </div>
+        </div>
+
+        {/* Filters & Presets Sub-Header Bar */}
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          gap: '20px',
+          background: 'rgba(15, 23, 42, 0.3)',
+          padding: '12px 20px',
+          borderRadius: '10px',
+          border: '1px solid rgba(148, 163, 184, 0.05)',
+        }}>
           <div style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '8px',
-            flex: '0 0 220px',
+            gap: '12px',
+            background: 'rgba(15, 26, 38, 0.6)',
+            border: '1px solid rgba(148, 163, 184, 0.1)',
+            borderRadius: '8px',
+            padding: '4px 16px',
+            width: '320px',
           }}>
-            <Icon name="search" size={14} />
+            <Icon name="search" size={16} />
             <input
               type="text"
-              placeholder="Suche (Name, Tag)"
+              placeholder="Suche (Name, Tag)..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               style={{
                 flex: 1,
                 outline: 'none',
-                padding: '4px 8px',
-                borderRadius: '8px',
-                background: '#0f1a26',
-                border: '1px solid #203043',
-                fontSize: '12px',
+                background: 'transparent',
+                border: 'none',
+                fontSize: '14px',
                 color: '#e8f0f8',
+                padding: '6px 0',
               }}
             />
           </div>
-          <div style={{ flex: 1 }}></div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <select value={presetIndex} onChange={(e) => setPresetIndex(Number(e.target.value))} style={{ background: '#0f1a26', color: '#eaf3ff', borderRadius: 8, padding: '6px 8px', border: '1px solid #203043' }}>
-              {PRESETS.map((p, i) => <option key={p.name} value={i}>{p.name}</option>)}
-            </select>
-            <button onClick={() => applyPreset(presetIndex)} style={{ background: '#0f2a1f', color: '#eaf3ff', borderRadius: 8, padding: '6px 8px', border: '1px solid #27425b' }}>Apply Preset</button>
-          </div>
 
-          <button
-            onClick={onClose}
-            style={{
-              background: '#162436',
-              color: '#eaf3ff',
-              border: '1px solid #27425b',
-              borderRadius: '8px',
-              padding: '6px 10px',
-              fontSize: '12px',
-              cursor: 'pointer',
-            }}
-          >
-            Schließen
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{ fontSize: '13px', fontWeight: 600, color: '#94a3b8' }}>PRESET-DECKS:</span>
+            <select
+              value={presetIndex}
+              onChange={(e) => setPresetIndex(Number(e.target.value))}
+              style={{
+                background: 'rgba(15, 26, 38, 0.8)',
+                color: '#eaf3ff',
+                borderRadius: '6px',
+                padding: '8px 16px',
+                border: '1px solid rgba(148, 163, 184, 0.15)',
+                fontSize: '13px',
+                fontWeight: 500,
+                cursor: 'pointer',
+                outline: 'none',
+              }}
+            >
+              {PRESETS.map((p, i) => (
+                <option key={p.name} value={i}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={() => applyPreset(presetIndex)}
+              style={{
+                background: 'rgba(16, 185, 129, 0.15)',
+                color: '#10b981',
+                borderRadius: '6px',
+                padding: '8px 16px',
+                border: '1px solid rgba(16, 185, 129, 0.3)',
+                fontSize: '13px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(16, 185, 129, 0.25)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'rgba(16, 185, 129, 0.15)';
+              }}
+            >
+              Preset Laden
+            </button>
+          </div>
         </div>
 
         {/* Body */}

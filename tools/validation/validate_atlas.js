@@ -29,7 +29,7 @@ function detectCollision(rect1, rect2) {
   );
 }
 
-fs.readFile("ui-layout.json", "utf8", (err, data) => {
+fs.readFile("src/ui/ui_layout_1920x1080.json", "utf8", (err, data) => {
   if (err) {
     console.error("Error reading the file:", err);
     return;

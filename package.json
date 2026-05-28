@@ -1,6 +1,7 @@
 {
   "name": "mandate-game",
   "version": "0.1.0",
+  "homepage": ".",
   "private": true,
   "dependencies": {
     "@testing-library/jest-dom": "^5.17.0",
@@ -9,17 +10,13 @@
     "@types/node": "^16.18.68",
     "@types/react": "^18.2.42",
     "@types/react-dom": "^18.2.17",
-    "@types/three": "^0.179.0",
-    "canvas": "^3.2.0",
     "gsap": "^3.13.0",
     "howler": "^2.2.4",
     "konva": "^9.3.22",
-    "maxrects-packer": "^2.7.3",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-konva": "^19.0.7",
     "react-scripts": "5.0.1",
-    "three": "^0.179.1",
     "typescript": "^4.9.5",
     "use-image": "^1.1.4",
     "web-vitals": "^2.1.4"
@@ -29,18 +26,7 @@
     "dev": "node node_modules/react-scripts/bin/react-scripts.js start",
     "build": "node node_modules/react-scripts/bin/react-scripts.js build",
     "test": "node node_modules/react-scripts/bin/react-scripts.js test",
-    "eject": "node node_modules/react-scripts/bin/react-scripts.js eject",
-    "test:ui": "node tools/ui_automator.js",
-    "validate:effects": "ts-node src/utils/effectKeyValidator.ts",
-    "sim": "node tools/run_ai_simulations_wrapper.js",
-    "balance:test": "node scripts/run_balance_test.js",
-    "balance:test:quick": "node scripts/run_balance_test.js 50",
-    "balance:test:full": "node scripts/run_balance_test.js 500",
-    "balance:proper": "node scripts/run_proper_balance_test.js",
-    "balance:proper:quick": "node scripts/run_proper_balance_test.js 50",
-    "balance:proper:full": "node scripts/run_proper_balance_test.js 500",
-    "atlas:ninja": "node tools/buildAtlas.js public/qte/ninja",
-    "atlas:cyboard": "node tools/buildAtlas.js public/qte/cyboard"
+    "eject": "node node_modules/react-scripts/bin/react-scripts.js eject"
   },
   "eslintConfig": {
     "extends": [

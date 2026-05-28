@@ -56,6 +56,14 @@ const GameBoard: React.FC<GameBoardProps> = ({
   const [corruptionSuccessUids, setCorruptionSuccessUids] = useState<Set<number>>(new Set());
   const [corruptionFailUids, setCorruptionFailUids] = useState<Set<number>>(new Set());
   const corruptionResultTimers = useRef<Map<number, number>>(new Map());
+  const [isLogOpen, setIsLogOpen] = useState(false);
+  const logEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (isLogOpen && logEndRef.current) {
+      logEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [gameState.log, isLogOpen]);
 
   useEffect(() => {
     const currentUids = new Set<number>();
@@ -280,11 +288,75 @@ const GameBoard: React.FC<GameBoardProps> = ({
         return renderSlot(
           `${player}-hand-${index}`,
           style,
-          player === 1 ? 'Hand' : 'Opponent',
+          player === 1 ? 'Hand' : 'Gegner',
         );
       }
       const originalIndex = gameState.hands[player].findIndex((c) => c.uid === card.uid);
       const selected = isCurrent && selectedHandIndex !== null && originalIndex === selectedHandIndex;
+
+      // If it is opponent's hand (player 2) and not in devMode, hide card and show back
+      if (player === 2 && !devMode) {
+        return (
+          <div
+            key={card.uid}
+            className="game-board__card"
+            style={{
+              ...style,
+              background: 'linear-gradient(135deg, #0e1726 0%, #050912 100%)',
+              border: '2px solid rgba(59, 130, 246, 0.4)',
+              boxShadow: '0 8px 16px rgba(0,0,0,0.5), inset 0 0 15px rgba(59, 130, 246, 0.15)',
+              cursor: 'default',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              position: 'absolute',
+            }}
+          >
+            {/* Geometric Design for Card Back */}
+            <div style={{
+              width: '80%',
+              height: '90%',
+              border: '1px dashed rgba(59, 130, 246, 0.25)',
+              borderRadius: '8px',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              position: 'relative',
+            }}>
+              {/* Glowing Seal */}
+              <div style={{
+                width: '40px',
+                height: '40px',
+                borderRadius: '50%',
+                background: 'rgba(59, 130, 246, 0.08)',
+                border: '2px solid #3b82f6',
+                boxShadow: '0 0 12px rgba(59, 130, 246, 0.4)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '18px',
+                fontWeight: 900,
+                color: '#3b82f6',
+                fontFamily: '"Montserrat", sans-serif',
+                marginBottom: '10px',
+              }}>
+                M
+              </div>
+              <div style={{
+                fontSize: '9px',
+                fontWeight: 800,
+                color: '#475569',
+                letterSpacing: '1.5px',
+                textTransform: 'uppercase',
+              }}>
+                MILCHCARDS
+              </div>
+            </div>
+          </div>
+        );
+      }
+
       return renderCard(
         card,
         style,
@@ -356,8 +428,152 @@ const GameBoard: React.FC<GameBoardProps> = ({
     return renderCard(card, style, { type: player === 1 ? 'trap_p1' : 'trap_p2', index: 0, card });
   };
 
+  const calculatePlayerInfluence = useCallback((player: 1 | 2): number => {
+    let totalInfluence = 0;
+    const playerBoard = gameState.board[player];
+    
+    // Board cards
+    [...playerBoard.innen, ...playerBoard.aussen].forEach(card => {
+      if (card && card.kind === 'pol') {
+        const base = (card as any).influence || 0;
+        const buffs = (card as any).tempBuffs || 0;
+        const debuffs = (card as any).tempDebuffs || 0;
+        totalInfluence += base + buffs - debuffs;
+      }
+    });
+
+    // Permanent slots
+    const permanentSlots = gameState.permanentSlots[player];
+    if (permanentSlots.government && permanentSlots.government.kind === 'pol') {
+      const c = permanentSlots.government as any;
+      totalInfluence += (c.influence || 0) + (c.tempBuffs || 0) - (c.tempDebuffs || 0);
+    }
+    if (permanentSlots.public && permanentSlots.public.kind === 'pol') {
+      const c = permanentSlots.public as any;
+      totalInfluence += (c.influence || 0) + (c.tempBuffs || 0) - (c.tempDebuffs || 0);
+    }
+
+    return totalInfluence;
+  }, [gameState]);
+
+  const p1Influence = calculatePlayerInfluence(1);
+  const p2Influence = calculatePlayerInfluence(2);
+
   return (
     <div className="game-board" ref={boardRef}>
+      {/* Top HUD Bar */}
+      <div style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: '60px',
+        background: 'linear-gradient(180deg, rgba(15,23,42,0.95) 0%, rgba(15,23,42,0.8) 100%)',
+        borderBottom: '1px solid rgba(148, 163, 184, 0.15)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '0 30px',
+        zIndex: 100,
+        backdropFilter: 'blur(10px)',
+        boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
+      }}>
+        {/* Rounds won */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <span style={{ fontSize: '11px', fontWeight: 800, color: '#64748b', letterSpacing: '1px' }}>RUNDENSPEICHER</span>
+          <div style={{ display: 'flex', gap: '6px' }}>
+            <div style={{
+              width: '12px',
+              height: '12px',
+              borderRadius: '50%',
+              background: gameState.roundsWon[1] >= 1 ? '#10b981' : '#334155',
+              boxShadow: gameState.roundsWon[1] >= 1 ? '0 0 10px rgba(16, 185, 129, 0.6)' : 'none',
+              border: '1px solid rgba(255,255,255,0.1)',
+            }} />
+            <div style={{
+              width: '12px',
+              height: '12px',
+              borderRadius: '50%',
+              background: gameState.roundsWon[1] >= 2 ? '#10b981' : '#334155',
+              boxShadow: gameState.roundsWon[1] >= 2 ? '0 0 10px rgba(16, 185, 129, 0.6)' : 'none',
+              border: '1px solid rgba(255,255,255,0.1)',
+            }} />
+          </div>
+          <span style={{ fontSize: '13px', fontWeight: 600, color: '#94a3b8', margin: '0 4px' }}>vs</span>
+          <div style={{ display: 'flex', gap: '6px' }}>
+            <div style={{
+              width: '12px',
+              height: '12px',
+              borderRadius: '50%',
+              background: gameState.roundsWon[2] >= 1 ? '#ef4444' : '#334155',
+              boxShadow: gameState.roundsWon[2] >= 1 ? '0 0 10px rgba(239, 68, 68, 0.6)' : 'none',
+              border: '1px solid rgba(255,255,255,0.1)',
+            }} />
+            <div style={{
+              width: '12px',
+              height: '12px',
+              borderRadius: '50%',
+              background: gameState.roundsWon[2] >= 2 ? '#ef4444' : '#334155',
+              boxShadow: gameState.roundsWon[2] >= 2 ? '0 0 10px rgba(239, 68, 68, 0.6)' : 'none',
+              border: '1px solid rgba(255,255,255,0.1)',
+            }} />
+          </div>
+        </div>
+
+        {/* Central scoreboard */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: '10px', color: '#10b981', fontWeight: 700, letterSpacing: '1px' }}>SPIELER 1 (DU)</div>
+            <div style={{ fontSize: '24px', fontWeight: 900, color: '#f8fafc', textShadow: '0 0 10px rgba(16, 185, 129, 0.3)' }}>{p1Influence}</div>
+          </div>
+          <div style={{
+            fontSize: '11px',
+            fontWeight: 800,
+            background: 'rgba(51, 65, 85, 0.5)',
+            padding: '4px 10px',
+            borderRadius: '4px',
+            color: '#94a3b8',
+            border: '1px solid rgba(148, 163, 184, 0.1)',
+            letterSpacing: '1px',
+          }}>
+            EINFLUSS
+          </div>
+          <div style={{ textAlign: 'left' }}>
+            <div style={{ fontSize: '10px', color: '#ef4444', fontWeight: 700, letterSpacing: '1px' }}>KI GEGNER</div>
+            <div style={{ fontSize: '24px', fontWeight: 900, color: '#f8fafc', textShadow: '0 0 10px rgba(239, 68, 68, 0.3)' }}>{p2Influence}</div>
+          </div>
+        </div>
+
+        {/* AP display */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div style={{
+            background: 'rgba(16, 185, 129, 0.1)',
+            border: '1px solid rgba(16, 185, 129, 0.2)',
+            padding: '6px 12px',
+            borderRadius: '6px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+          }}>
+            <span style={{ fontSize: '11px', fontWeight: 700, color: '#10b981', letterSpacing: '0.5px' }}>P1 AP</span>
+            <strong style={{ fontSize: '14px', fontWeight: 800, color: '#10b981' }}>{gameState.actionPoints[1]}</strong>
+          </div>
+          <div style={{
+            background: 'rgba(239, 68, 68, 0.1)',
+            border: '1px solid rgba(239, 68, 68, 0.2)',
+            padding: '6px 12px',
+            borderRadius: '6px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+          }}>
+            <span style={{ fontSize: '11px', fontWeight: 700, color: '#ef4444', letterSpacing: '0.5px' }}>KI AP</span>
+            <strong style={{ fontSize: '14px', fontWeight: 800, color: '#ef4444' }}>{gameState.actionPoints[2]}</strong>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Board Surface */}
       <div
         className="game-board__surface"
         style={{
@@ -386,6 +602,231 @@ const GameBoard: React.FC<GameBoardProps> = ({
         {renderInterventionSlot(1)}
         {renderHand(1)}
         {renderHand(2)}
+      </div>
+
+      {/* Bottom HUD Bar */}
+      <div style={{
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        height: '70px',
+        background: 'linear-gradient(0deg, rgba(15,23,42,0.95) 0%, rgba(15,23,42,0.8) 100%)',
+        borderTop: '1px solid rgba(148, 163, 184, 0.15)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '0 30px',
+        zIndex: 100,
+        backdropFilter: 'blur(10px)',
+        boxShadow: '0 -4px 20px rgba(0,0,0,0.5)',
+      }}>
+        {/* Turn indicator */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{
+            width: '10px',
+            height: '10px',
+            borderRadius: '50%',
+            background: gameState.current === 1 ? '#10b981' : '#ef4444',
+            boxShadow: gameState.current === 1 ? '0 0 10px #10b981' : '0 0 10px #ef4444',
+          }} />
+          <span style={{
+            fontSize: '14px',
+            fontWeight: 800,
+            letterSpacing: '1px',
+            color: gameState.current === 1 ? '#10b981' : '#fca5a5',
+            textTransform: 'uppercase',
+          }}>
+            {gameState.current === 1 ? '🟢 DEIN ZUG' : '🔴 GEGNER ZUG (DENKT...)'}
+          </span>
+        </div>
+
+        {/* Action Buttons */}
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <button
+            onClick={() => onCardClick({ type: 'button_pass_turn' })}
+            disabled={gameState.current !== 1 || gameState.passed[1]}
+            style={{
+              background: gameState.passed[1] ? 'rgba(51, 65, 85, 0.4)' : (gameState.current === 1 ? 'rgba(245, 158, 11, 0.2)' : 'rgba(51, 65, 85, 0.2)'),
+              color: gameState.passed[1] ? '#64748b' : (gameState.current === 1 ? '#f59e0b' : '#94a3b8'),
+              border: gameState.passed[1] ? '1px solid rgba(51, 65, 85, 0.3)' : (gameState.current === 1 ? '1px solid rgba(245, 158, 11, 0.4)' : '1px solid rgba(148, 163, 184, 0.1)'),
+              padding: '10px 24px',
+              borderRadius: '8px',
+              fontSize: '13px',
+              fontWeight: 700,
+              cursor: (gameState.current === 1 && !gameState.passed[1]) ? 'pointer' : 'not-allowed',
+              textTransform: 'uppercase',
+              letterSpacing: '1px',
+              transition: 'all 0.2s',
+            }}
+            onMouseEnter={(e) => {
+              if (gameState.current === 1 && !gameState.passed[1]) {
+                e.currentTarget.style.background = 'rgba(245, 158, 11, 0.3)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (gameState.current === 1 && !gameState.passed[1]) {
+                e.currentTarget.style.background = 'rgba(245, 158, 11, 0.2)';
+              }
+            }}
+          >
+            {gameState.passed[1] ? 'Gepasst ✓' : 'Passen'}
+          </button>
+
+          <button
+            onClick={() => onCardClick({ type: 'button_end_turn' })}
+            disabled={gameState.current !== 1}
+            style={{
+              background: gameState.current === 1 ? 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)' : 'rgba(51, 65, 85, 0.2)',
+              color: gameState.current === 1 ? 'white' : '#64748b',
+              border: 'none',
+              padding: '10px 24px',
+              borderRadius: '8px',
+              fontSize: '13px',
+              fontWeight: 700,
+              cursor: gameState.current === 1 ? 'pointer' : 'not-allowed',
+              textTransform: 'uppercase',
+              letterSpacing: '1px',
+              boxShadow: gameState.current === 1 ? '0 4px 12px rgba(59, 130, 246, 0.25)' : 'none',
+              transition: 'all 0.2s',
+            }}
+            onMouseEnter={(e) => {
+              if (gameState.current === 1) {
+                e.currentTarget.style.transform = 'translateY(-1px)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (gameState.current === 1) {
+                e.currentTarget.style.transform = 'translateY(0)';
+              }
+            }}
+          >
+            Zug beenden
+          </button>
+        </div>
+      </div>
+
+      {/* Collapsible Intelligence Feed (Sleek Tactical Log) */}
+      <div style={{
+        position: 'absolute',
+        top: '80px',
+        left: isLogOpen ? '0' : '-320px',
+        bottom: '90px',
+        width: '320px',
+        background: 'rgba(15, 23, 42, 0.95)',
+        borderRight: '1px solid rgba(148, 163, 184, 0.15)',
+        boxShadow: '4px 0 20px rgba(0,0,0,0.5)',
+        zIndex: 150,
+        display: 'flex',
+        flexDirection: 'column',
+        transition: 'left 0.3s cubic-bezier(0.19, 1, 0.22, 1)',
+        backdropFilter: 'blur(15px)',
+      }}>
+        {/* Toggle Tab */}
+        <button
+          onClick={() => setIsLogOpen(!isLogOpen)}
+          style={{
+            position: 'absolute',
+            top: '40px',
+            right: '-42px',
+            width: '42px',
+            height: '140px',
+            background: 'rgba(15, 23, 42, 0.95)',
+            border: '1px solid rgba(148, 163, 184, 0.15)',
+            borderLeft: 'none',
+            borderRadius: '0 8px 8px 0',
+            color: '#3b82f6',
+            cursor: 'pointer',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+            padding: '10px 0',
+            boxShadow: '4px 0 10px rgba(0,0,0,0.2)',
+            zIndex: 140,
+          }}
+        >
+          <span style={{
+            writingMode: 'vertical-lr',
+            textTransform: 'uppercase',
+            letterSpacing: '2px',
+            fontSize: '11px',
+            fontWeight: 800,
+            transform: 'rotate(180deg)',
+          }}>
+            {isLogOpen ? 'Schließen ◀' : 'Tactical Feed ▶'}
+          </span>
+        </button>
+
+        {/* Feed Header */}
+        <div style={{
+          padding: '16px 20px',
+          borderBottom: '1px solid rgba(148, 163, 184, 0.1)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}>
+          <span style={{
+            fontSize: '13px',
+            fontWeight: 800,
+            letterSpacing: '1px',
+            color: '#e2e8f0',
+            textTransform: 'uppercase',
+          }}>
+            📡 Intelligence Feed
+          </span>
+          <span style={{
+            fontSize: '10px',
+            background: 'rgba(59, 130, 246, 0.15)',
+            color: '#3b82f6',
+            padding: '2px 8px',
+            borderRadius: '10px',
+            fontWeight: 700,
+          }}>
+            LIVE
+          </span>
+        </div>
+
+        {/* Feed Messages */}
+        <div style={{
+          flex: 1,
+          overflowY: 'auto',
+          padding: '16px 20px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '12px',
+          fontSize: '12px',
+          fontFamily: '"Courier New", Courier, monospace',
+          lineHeight: '1.4',
+        }}>
+          {gameState.log && gameState.log.length > 0 ? (
+            gameState.log.map((entry, index) => {
+              // Highlight errors and warnings
+              let color = '#94a3b8';
+              if (entry.includes('❌') || entry.includes('ERROR')) color = '#fca5a5';
+              else if (entry.includes('🟢') || entry.includes('✓') || entry.includes('gelungen')) color = '#a7f3d0';
+              else if (entry.includes('🎯') || entry.includes('UI:')) color = '#cbd5e1';
+              else if (entry.includes('🤖')) color = '#93c5fd';
+              
+              return (
+                <div key={index} style={{
+                  color,
+                  borderBottom: '1px solid rgba(148, 163, 184, 0.05)',
+                  paddingBottom: '8px',
+                  wordBreak: 'break-word'
+                }}>
+                  {entry}
+                </div>
+              );
+            })
+          ) : (
+            <div style={{ color: '#475569', fontStyle: 'italic', textAlign: 'center', marginTop: '20px' }}>
+              Keine Logdaten vorhanden.
+            </div>
+          )}
+          <div ref={logEndRef} />
+        </div>
       </div>
     </div>
   );
