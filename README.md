@@ -90,13 +90,28 @@ Filename-to-card mapping is defined in `FILENAME_MAPPING` inside [`src/data/game
 
 ## AI Transparency & Compliance
 
-Transparency is key when working with generative models. **All visual assets in this project are AI-generated.**
+**AI-assisted content disclosure:** Portions of this game's visual assets were created with generative AI tools and were reviewed, edited, and integrated by human creators.
 
-To ensure reproducibility and compliance:
+Certain artwork used in this project originated from images generated with **Midjourney** under a paid commercial subscription and was subsequently modified, refined, and incorporated into the game's visual design by the developer. Commercial usage is subject to [Midjourney's Terms of Service](https://docs.midjourney.com/docs/terms-of-service) and applicable law.
+
+> Artwork created with Midjourney and modified by the developer.
+
+To ensure reproducibility and auditability:
 
 - Core prompt structures are documented in [`docs/ai-pipeline.md`](docs/ai-pipeline.md)
-- Generation seeds are stored in a structured format (see `docs/ai-pipeline.md`) so base images can be traced back to their Midjourney origin
-- Manual curation steps are noted where AI output required human refinement
+- Generation seeds are stored in a structured format so base images can be traced back to their Midjourney origin
+- Prompts, source generations, and edited versions are archived by the developer
+- Manual curation was applied wherever AI output required human refinement
+- No copyrighted characters, brands, or franchise IP were intentionally reproduced; figures are stylized editorial illustrations
+
+**Example initiative prompt** (Spin Doctor card):
+
+```
+Spin Doctoring one forecourt tile with two faint light rings, a distant tile with one;
+sunlit modernist courtyard; rule-of-thirds; ultramarine, white, cherry-red accents;
+long shadows; clean geometry; ultra-sharp; smooth stone;
+mood: selective persuasion; style: mid-century poster blended with contemporary realism
+```
 
 ---
 

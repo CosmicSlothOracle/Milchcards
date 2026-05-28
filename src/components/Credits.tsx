@@ -121,6 +121,31 @@ export const Credits: React.FC<CreditsProps> = ({ onBack }) => {
           </ul>
 
           <h3 style={{ color: '#f1f5f9', fontSize: '18px', borderBottom: '1px solid rgba(148, 163, 184, 0.15)', paddingBottom: '8px', marginTop: '30px' }}>
+            🤖 AI-Assisted Content Disclosure
+          </h3>
+          <p style={{ marginBottom: '12px' }}>
+            Portions of this game&apos;s visual assets were created with generative AI tools and were
+            reviewed, edited, and integrated by human creators.
+          </p>
+          <p style={{ marginBottom: '12px', fontSize: '14px' }}>
+            Certain artwork originated from images generated with <strong style={{ color: '#e2e8f0' }}>Midjourney</strong> under
+            a paid commercial subscription. Assets were subsequently curated, refined, and incorporated
+            into the game&apos;s visual design by the developer. Commercial usage is subject to{' '}
+            <a
+              href="https://docs.midjourney.com/docs/terms-of-service"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: '#60a5fa', textDecoration: 'none' }}
+            >
+              Midjourney&apos;s Terms of Service
+            </a>{' '}
+            and applicable law.
+          </p>
+          <p style={{ margin: '0 0 24px 0', fontSize: '13px', color: '#64748b', fontStyle: 'italic' }}>
+            Artwork created with Midjourney and modified by the developer.
+          </p>
+
+          <h3 style={{ color: '#f1f5f9', fontSize: '18px', borderBottom: '1px solid rgba(148, 163, 184, 0.15)', paddingBottom: '8px', marginTop: '30px' }}>
             📊 Spiel-Engine & Balance-Verifikation
           </h3>
           <p style={{ marginBottom: '30px' }}>

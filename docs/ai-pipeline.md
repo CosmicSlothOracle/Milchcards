@@ -143,6 +143,51 @@ The external ComfyUI workspace contains many other experiments (sprite sheets, G
 
 ---
 
+## Commercial Use & Public Disclosure
+
+### In-game (Credits screen)
+
+The game includes an **AI-Assisted Content Disclosure** section in the Credits screen (`src/components/Credits.tsx`) with the following statement:
+
+> Portions of this game's visual assets were created with generative AI tools and were reviewed, edited, and integrated by human creators.
+
+> Certain artwork originated from images generated with Midjourney under a paid commercial subscription and was subsequently curated, refined, and incorporated by the developer. Commercial usage is subject to Midjourney's Terms of Service and applicable law.
+
+### README / store page / publisher submission
+
+For external documentation (GitHub, Steam, itch.io, portfolio):
+
+```
+AI-assisted content disclosure: Portions of the game's visual assets were created
+with generative AI tools and were reviewed, edited, and integrated by human creators.
+
+Artwork created with Midjourney and modified by the developer.
+```
+
+### Practical compliance checklist
+
+| Step | Action |
+|------|--------|
+| Subscription proof | Keep records that a paid Midjourney plan was active when assets were generated |
+| Prompt archive | Store prompts (see example below) alongside each card |
+| Seed archive | Record Midjourney seeds per generation for traceability |
+| Edit trail | Keep raw generations and post-processed versions |
+| IP safety | Avoid recognizable copyrighted characters, brands, or franchise content |
+| Legal review | For commercial release at scale, have a lawyer review asset pipeline and disclosures |
+
+Paid Midjourney subscribers generally own assets they generate and may use them commercially, subject to Midjourney's current Terms of Service and applicable law.
+
+### Example prompt (Spin Doctor initiative)
+
+```
+Spin Doctoring one forecourt tile with two faint light rings, a distant tile with one;
+sunlit modernist courtyard; rule-of-thirds; ultramarine, white, cherry-red accents;
+long shadows; clean geometry; ultra-sharp; smooth stone;
+mood: selective persuasion; style: mid-century poster blended with contemporary realism
+```
+
+---
+
 ## Transparency Statement
 
 - All card artwork in Milchcards is **AI-generated** via Midjourney
