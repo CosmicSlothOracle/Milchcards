@@ -633,8 +633,8 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
 
     console.log('🔧 DEBUG: Starting match with decks:', { p1Cards: p1Deck.length, p2Cards: p2Deck.length });
     onStartMatch(p1Deck, p2Deck);
-    onClose();
-  }, [deck, onStartMatch, onClose]);
+    // Parent switches appState to 'game' — do not call onClose() (would reset to menu)
+  }, [deck, onStartMatch]);
 
   const handleStartVsAI = useCallback(() => {
     const isDeckValid = count >= 10 && governmentCount >= 6 && count <= 15 && budget >= 75 && budget <= 105;
@@ -643,8 +643,8 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
     const p1Deck: BuilderEntry[] = deck.length ? deck : [];
     console.log('🔧 DEBUG: Starting vs AI with deck:', { p1Cards: p1Deck.length });
     onStartVsAI(p1Deck);
-    onClose();
-  }, [deck, count, governmentCount, budget, onStartVsAI, onClose]);
+    // Parent switches appState to 'game' — do not call onClose() (would reset to menu)
+  }, [deck, count, governmentCount, budget, onStartVsAI]);
 
   // Card Tile Component
   const CardTile = React.memo(({ kind, base, onClick }: {
