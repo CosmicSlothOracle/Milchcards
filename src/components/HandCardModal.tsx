@@ -99,12 +99,16 @@ export const HandCardModal: React.FC<HandCardModalProps> = ({
     return hand.findIndex(c => (c as any).uid === uid);
   }, []);
 
-  const targetSlotFromCard = useCallback((c: Card): 'innen' | 'aussen' => {
+  const targetSlotFromCard = useCallback((c: Card): string => {
     const any = c as any;
-    // Heuristik wie in useGameActions: Diplomaten/Regierungschefs außen
-    if (c.kind === 'pol' && ['Staatsoberhaupt','Regierungschef','Diplomat'].includes(any.tag)) return 'aussen';
+    if (c.kind === 'pol' && ['Staatsoberhaupt', 'Regierungschef', 'Diplomat'].includes(any.tag)) return 'aussen';
     if (c.kind === 'pol') return 'aussen';
-    if (c.kind === 'spec' && any.type === 'Öffentlichkeitskarte') return 'innen';
+    if (c.kind === 'spec') {
+      if (any.type === 'Öffentlichkeitskarte') return 'innen';
+      if (any.type === 'Sofort-Initiative') return 'instant';
+      if (any.type === 'Dauerhaft-Initiative') return 'permanent_government';
+      if (any.type === 'Intervention') return 'intervention';
+    }
     return 'innen';
   }, []);
 
@@ -382,8 +386,8 @@ export const HandCardModal: React.FC<HandCardModalProps> = ({
             <div style={{ color: '#9ca3af', marginBottom: '4px' }}>Typ & Kosten</div>
             <div style={{ color: '#e5e7eb' }}>
               {currentCard.kind === 'pol'
-                ? `Regierung/Öffentlichkeit • ${convertHPToUSD((currentCard as PoliticianCard).BP || 0)}`
-                : `${(currentCard as SpecialCard).type} • ${convertHPToUSD((currentCard as SpecialCard).bp)}`
+                ? `Regierung/Öffentlichkeit • ${ convertHPToUSD((currentCard as PoliticianCard).BP || 0) }`
+                : `${ (currentCard as SpecialCard).type } • ${ convertHPToUSD((currentCard as SpecialCard).bp) }`
               }
             </div>
             {/* Show subcategories for public cards */}
@@ -437,7 +441,7 @@ export const HandCardModal: React.FC<HandCardModalProps> = ({
               marginTop: '8px',
               padding: '6px 8px',
               background: net === 0 ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.1)',
-              border: `1px solid ${net === 0 ? '#10b981' : '#f59e0b'}`,
+              border: `1px solid ${ net === 0 ? '#10b981' : '#f59e0b' }`,
               borderRadius: '4px',
               fontWeight: '600'
             }}>
@@ -472,10 +476,10 @@ export const HandCardModal: React.FC<HandCardModalProps> = ({
             }}>
               {cardDetails?.gameEffect ? withIcons(cardDetails.gameEffect, 14) : (currentCard.kind === 'spec'
                 ? (() => {
-                    const specCard = currentCard as SpecialCard;
-                    const baseSpecial = Specials.find(s => s.id === specCard.baseId);
-                    return baseSpecial?.effect || 'Keine Beschreibung verfügbar';
-                  })()
+                  const specCard = currentCard as SpecialCard;
+                  const baseSpecial = Specials.find(s => s.id === specCard.baseId);
+                  return baseSpecial?.effect || 'Keine Beschreibung verfügbar';
+                })()
                 : 'Politiker-Fähigkeiten basierend auf Tag')}
             </p>
           </div>
@@ -491,8 +495,8 @@ export const HandCardModal: React.FC<HandCardModalProps> = ({
               background: waitingForReplacement
                 ? 'linear-gradient(45deg, #f59e0b, #f97316)'
                 : canPlay
-                ? 'linear-gradient(45deg, #10b981, #059669)'
-                : 'linear-gradient(45deg, #6b7280, #4b5563)',
+                  ? 'linear-gradient(45deg, #10b981, #059669)'
+                  : 'linear-gradient(45deg, #6b7280, #4b5563)',
               border: 'none',
               borderRadius: '8px',
               padding: '12px 16px',
@@ -507,8 +511,8 @@ export const HandCardModal: React.FC<HandCardModalProps> = ({
             {waitingForReplacement
               ? 'Karte zum Tauschen wählen'
               : canPlay
-              ? `Spielen (Netto ${net} AP)`
-              : 'Nicht spielbar'}
+                ? `Spielen (Netto ${ net } AP)`
+                : 'Nicht spielbar'}
           </button>
 
           {/* Guard-Hinweis für detaillierte Begründung */}
@@ -525,7 +529,7 @@ export const HandCardModal: React.FC<HandCardModalProps> = ({
               ⚠️ {(() => {
                 const currentAP = gameState.actionPoints[currentPlayer] ?? 0;
                 if (currentAP < net) {
-                  return `Zu wenig AP: benötigt ${net}, vorhanden ${currentAP}`;
+                  return `Zu wenig AP: benötigt ${ net }, vorhanden ${ currentAP }`;
                 }
                 if (actionsUsed >= 2 && net > 0) {
                   return 'Nur Netto-0-Züge erlaubt (Aktionslimit erreicht)';

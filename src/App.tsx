@@ -49,9 +49,24 @@ function AppContent() {
     nextTurn,
   } = useGameState();
 
-  const pendingAbility = (gameState as any).pendingAbilitySelect?.type;
+  const pendingAbilitySelect = (gameState as any).pendingAbilitySelect;
+  const pendingAbility = pendingAbilitySelect?.type;
   const corruptionActive = pendingAbility === 'corruption_steal';
   const maulwurfActive = pendingAbility === 'maulwurf_steal';
+
+  const requestPendingDiceRoll = useCallback(() => {
+    const sel = pendingAbilitySelect;
+    if (!sel) return;
+    if (sel.type === 'maulwurf_steal') {
+      window.dispatchEvent(new CustomEvent('pc:maulwurf_request_roll', {
+        detail: { player: sel.actorPlayer, targetUid: sel.targetUid },
+      }));
+    } else if (sel.type === 'corruption_steal' && sel.targetUid) {
+      window.dispatchEvent(new CustomEvent('pc:corruption_request_roll', {
+        detail: { player: sel.actorPlayer, targetUid: sel.targetUid },
+      }));
+    }
+  }, [pendingAbilitySelect]);
 
   useEffect(() => {
     const handleCorruptionResolved = (event: Event) => {
@@ -113,7 +128,7 @@ function AppContent() {
       title: 'Handkarte auswählen',
       body: 'Wähle eine Karte aus deiner Hand, um eine Aktion zu starten.',
     };
-  }, [appState, corruptionActive, selectedHandIndex]);
+  }, [appState, corruptionActive, maulwurfActive, selectedHandIndex]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -122,26 +137,26 @@ function AppContent() {
       if (event.key === 'm' || event.key === 'M') {
         const newDevMode = !devMode;
         setDevMode(newDevMode);
-        log(`🔧 DEV MODE ${newDevMode ? 'AKTIVIERT' : 'DEAKTIVIERT'} - KI ist ${newDevMode ? 'AUS' : 'AN'}`);
+        log(`🔧 DEV MODE ${ newDevMode ? 'AKTIVIERT' : 'DEAKTIVIERT' } - KI ist ${ newDevMode ? 'AUS' : 'AN' }`);
       }
 
       if (devMode) {
         // P for Pass (current player)
         if (event.key === 'p' || event.key === 'P') {
           passTurn(gameState.current);
-          log(`⏭️ Player ${gameState.current} passt`);
+          log(`⏭️ Player ${ gameState.current } passt`);
         }
 
         // E for End Turn (current player)
         if (event.key === 'e' || event.key === 'E') {
           nextTurn();
-          log(`⏭️ Player ${gameState.current} beendet Zug`);
+          log(`⏭️ Player ${ gameState.current } beendet Zug`);
         }
 
         // A for instant initiative activate
         if (event.key === 'a' || event.key === 'A') {
           activateInstantInitiative(gameState.current);
-          log(`🎯 Player ${gameState.current} aktiviert Sofort-Initiative`);
+          log(`🎯 Player ${ gameState.current } aktiviert Sofort-Initiative`);
         }
       }
 
@@ -149,7 +164,7 @@ function AppContent() {
       if ((event.key === 'd' || event.key === 'D') && event.ctrlKey) {
         copyDebugSnapshotToClipboard(gameState).then(() => {
           logger.info('Debug snapshot copied to clipboard');
-        }).catch(() => {});
+        }).catch(() => { });
       }
       if ((event.key === 'd' || event.key === 'D') && event.shiftKey) {
         downloadDebugSnapshot(gameState);
@@ -164,16 +179,28 @@ function AppContent() {
     logger.info('🔧 DEBUG: handleCardClick called with:', data);
     if (!data) return;
 
+    const sel = (gameState as any).pendingAbilitySelect;
+    if (sel?.type === 'corruption_steal' && data.type === 'board_card') {
+      const actor = sel.actorPlayer as Player;
+      const victim: Player = actor === 1 ? 2 : 1;
+      if (data.player === victim && data.lane === 'aussen' && data.card?.uid) {
+        window.dispatchEvent(new CustomEvent('pc:corruption_pick_target', {
+          detail: { player: actor, targetUid: data.card.uid },
+        }));
+        return;
+      }
+    }
+
     if (data.type === 'button_pass_turn') {
       const currentPlayer = gameState.current;
-      log(`🎯 UI: Passen-Button geklickt - Spieler ${currentPlayer} passt`);
+      log(`🎯 UI: Passen-Button geklickt - Spieler ${ currentPlayer } passt`);
       passTurn(currentPlayer);
       return;
     }
 
     if (data.type === 'button_end_turn') {
       const currentPlayer = gameState.current;
-      log(`🎯 UI: Zug-beenden-Button geklickt - Spieler ${currentPlayer} beendet Zug`);
+      log(`🎯 UI: Zug-beenden-Button geklickt - Spieler ${ currentPlayer } beendet Zug`);
       nextTurn();
       return;
     }
@@ -196,7 +223,7 @@ function AppContent() {
         // Double click -> Direct play (auto target)
         const card: any = data.card;
         const currentPlayer = gameState.current;
-        const targetLane = card.kind === 'pol' ? (['Staatsoberhaupt','Regierungschef','Diplomat'].includes(card.tag) ? 'aussen' : 'aussen') : 'innen';
+        const targetLane = card.kind === 'pol' ? (['Staatsoberhaupt', 'Regierungschef', 'Diplomat'].includes(card.tag) ? 'aussen' : 'aussen') : 'innen';
         log('🎯 UI: Handkarte doppelgeklickt → direkt spielen - ' + card.name + ' in ' + targetLane);
         playCard(currentPlayer, data.index, targetLane);
         selectHandCard(null);
@@ -297,6 +324,18 @@ function AppContent() {
       return;
     }
 
+    if (data.type === 'slot_card' && data.slot === 'instant') {
+      const player = data.player as Player;
+      if (gameState.current !== player && !devMode) return;
+      log('🎯 UI: Sofort-Initiative aus Slot aktiviert - ' + data.card.name);
+      activateInstantInitiative(player);
+      try {
+        const trig = (window as any).__pc_triggerInstantAnim || (window as any).pc_triggerInstantAnim;
+        if (typeof trig === 'function') trig(`${ player }.instant.0`);
+      } catch (e) { }
+      return;
+    }
+
     if (data.type === 'activate_instant') {
       const player = data.player as Player;
       const card = data.card;
@@ -304,11 +343,11 @@ function AppContent() {
       activateInstantInitiative(player);
       try {
         const trig = (window as any).__pc_triggerInstantAnim || (window as any).pc_triggerInstantAnim;
-        if (typeof trig === 'function') trig(`${player}.instant.0`);
-      } catch (e) {}
+        if (typeof trig === 'function') trig(`${ player }.instant.0`);
+      } catch (e) { }
       return;
     }
-  }, [gameState, selectedHandIndex, playCard, selectHandCard, passTurn, nextTurn, log]);
+  }, [gameState, selectedHandIndex, playCard, selectHandCard, passTurn, nextTurn, log, devMode, activateInstantInitiative]);
 
   const handleCardHover = useCallback((data: any) => {
     setHoveredCard(data);
@@ -353,12 +392,11 @@ function AppContent() {
       const { resolveEffectKey } = require('./effects/resolveEffectKey');
       const k = resolveEffectKey(card.name, (card as any).effectKey);
       if (k) (card as any).effectKey = k;
-    } catch {}
+    } catch { }
 
     if (targetSlot === 'aussen' || targetSlot === 'innen') {
       playCard(currentPlayer, index, targetSlot as any);
     } else {
-      log(`🃏 Player ${currentPlayer}: ${card.name} gespielt`);
       playCard(currentPlayer, index);
     }
 
@@ -487,13 +525,14 @@ function AppContent() {
               <CardHoverInfoPanel hovered={hoveredCard} />
 
               {/* Dice Roller centered for events */}
-              <div className={`game-dice${corruptionActive || maulwurfActive ? ' game-dice--highlight' : ''}${diceOutcome === 'success' ? ' game-dice--success' : ''}${diceOutcome === 'fail' ? ' game-dice--fail' : ''}${diceRolling ? ' game-dice--rolling' : ''}`}>
+              <div className={`game-dice${ corruptionActive || maulwurfActive ? ' game-dice--highlight' : '' }${ diceOutcome === 'success' ? ' game-dice--success' : '' }${ diceOutcome === 'fail' ? ' game-dice--fail' : '' }${ diceRolling ? ' game-dice--rolling' : '' }`}>
                 <SimpleDice
                   size={120}
+                  onClick={corruptionActive || maulwurfActive ? requestPendingDiceRoll : undefined}
                   onRoll={(f) => {
                     try {
                       window.dispatchEvent(new CustomEvent('pc:dice_result', { detail: { roll: f } }));
-                    } catch(e) {
+                    } catch (e) {
                       console.error('Error dispatching dice result:', e);
                     }
                   }}

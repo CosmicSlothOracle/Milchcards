@@ -46,8 +46,46 @@ const GameBoard: React.FC<GameBoardProps> = ({
   const transform = useMemo(() => getUiTransform(size.width, size.height), [size.height, size.width]);
   const pendingAbility = (gameState as any).pendingAbilitySelect;
   const corruptionActive = pendingAbility?.type === 'corruption_steal';
-  const maulwurfTargetUid = pendingAbility?.type === 'maulwurf_steal' ? pendingAbility?.targetUid : null;
+  const corruptionPending = pendingAbility?.type === 'corruption_steal' ? pendingAbility : null;
+  const corruptionTargetUid = corruptionPending?.targetUid ?? null;
+  const maulwurfPending = pendingAbility?.type === 'maulwurf_steal' ? pendingAbility : null;
+  const maulwurfTargetUid = maulwurfPending?.targetUid ?? null;
+  const maulwurfRequiredRoll = maulwurfPending?.requiredRoll ?? null;
   const corruptionTargetPlayer = gameState.current === 1 ? 2 : 1;
+
+  const maulwurfTargetName = useMemo(() => {
+    if (!maulwurfTargetUid || !maulwurfPending) return null;
+    const victim: 1 | 2 = maulwurfPending.actorPlayer === 1 ? 2 : 1;
+    return gameState.board[victim].aussen.find((c) => c.uid === maulwurfTargetUid)?.name ?? null;
+  }, [gameState.board, maulwurfPending, maulwurfTargetUid]);
+
+  const corruptionTargetName = useMemo(() => {
+    if (!corruptionTargetUid || !corruptionPending) return null;
+    const victim: 1 | 2 = corruptionPending.actorPlayer === 1 ? 2 : 1;
+    return gameState.board[victim].aussen.find((c) => c.uid === corruptionTargetUid)?.name ?? null;
+  }, [gameState.board, corruptionPending, corruptionTargetUid]);
+
+  const requestMaulwurfRoll = useCallback(() => {
+    if (!maulwurfPending) return;
+    window.dispatchEvent(new CustomEvent('pc:maulwurf_request_roll', {
+      detail: { player: maulwurfPending.actorPlayer, targetUid: maulwurfPending.targetUid },
+    }));
+  }, [maulwurfPending]);
+
+  const cancelMaulwurf = useCallback(() => {
+    window.dispatchEvent(new CustomEvent('pc:maulwurf_cancel'));
+  }, []);
+
+  const requestCorruptionRoll = useCallback(() => {
+    if (!corruptionPending?.targetUid) return;
+    window.dispatchEvent(new CustomEvent('pc:corruption_request_roll', {
+      detail: { player: corruptionPending.actorPlayer, targetUid: corruptionPending.targetUid },
+    }));
+  }, [corruptionPending]);
+
+  const cancelCorruption = useCallback(() => {
+    window.dispatchEvent(new CustomEvent('pc:corruption_cancel'));
+  }, []);
   const [recentlyPlayed, setRecentlyPlayed] = useState<Set<number>>(new Set());
   const previousBoardUids = useRef<Set<number>>(new Set());
   const removalTimers = useRef<Map<number, number>>(new Map());
@@ -195,7 +233,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
   ) => (
     <div
       key={card.uid}
-      className={`game-board__card${options?.selected ? ' game-board__card--selected' : ''}${options?.highlight ? ' game-board__card--corruption' : ''}`}
+      className={`game-board__card${ options?.selected ? ' game-board__card--selected' : '' }${ options?.highlight ? ' game-board__card--corruption' : '' }`}
       style={style}
       onClick={() => onCardClick(data)}
       onMouseEnter={(event) => handleHover(card, event)}
@@ -228,7 +266,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
     <button
       key={key}
       type="button"
-      className={`game-board__slot${highlight ? ' game-board__slot--corruption' : ''}`}
+      className={`game-board__slot${ highlight ? ' game-board__slot--corruption' : '' }`}
       style={style}
       onClick={onClick}
       onMouseLeave={() => onCardHover(null)}
@@ -244,10 +282,10 @@ const GameBoard: React.FC<GameBoardProps> = ({
   ) => {
     const shouldHighlightCorruption = Boolean(
       lane === 'aussen'
-        && (
-          (corruptionActive && player === corruptionTargetPlayer)
-          || (corruptionHold.player && player === corruptionHold.player)
-        ),
+      && (
+        (corruptionActive && player === corruptionTargetPlayer)
+        || (corruptionHold.player && player === corruptionHold.player)
+      ),
     );
     const rects = lane === 'aussen'
       ? getGovernmentRects(player === 1 ? 'player' : 'opponent')
@@ -259,7 +297,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
       const card = cards[index];
       if (!card) {
         return renderSlot(
-          `${player}-${lane}-${index}`,
+          `${ player }-${ lane }-${ index }`,
           style,
           label,
           () => onCardClick({ type: 'row_slot', player, lane, index }),
@@ -270,7 +308,9 @@ const GameBoard: React.FC<GameBoardProps> = ({
         card,
         style,
         { type: 'board_card', player, lane, index, card },
-        { highlight: shouldHighlightCorruption },
+        {
+          highlight: shouldHighlightCorruption || (maulwurfTargetUid != null && card.uid === maulwurfTargetUid),
+        },
       );
     });
   };
@@ -286,7 +326,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
       const card = sortedHand[index];
       if (!card) {
         return renderSlot(
-          `${player}-hand-${index}`,
+          `${ player }-hand-${ index }`,
           style,
           player === 1 ? 'Hand' : 'Gegner',
         );
@@ -371,7 +411,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
     type: 'government' | 'public',
     label: string,
   ) => {
-    const zone = getZone(`slot.permanent.${type}.${player === 1 ? 'player' : 'opponent'}`);
+    const zone = getZone(`slot.permanent.${ type }.${ player === 1 ? 'player' : 'opponent' }`);
     const rect = computeSlotRects(zone)[0];
     const style = { left: rect.x, top: rect.y, width: rect.w, height: rect.h } as React.CSSProperties;
     const card = type === 'government' ? gameState.permanentSlots[player].government : gameState.permanentSlots[player].public;
@@ -379,7 +419,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
 
     if (!card) {
       return renderSlot(
-        `${player}-permanent-${type}`,
+        `${ player }-permanent-${ type }`,
         style,
         label,
         () => onCardClick({ type: 'empty_slot', slot: slotType, player }),
@@ -395,7 +435,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
 
     if (!card) {
       return renderSlot(
-        `${player}-instant`,
+        `${ player }-instant`,
         style,
         'Sofort',
         () => onCardClick({ type: 'empty_slot', slot: 'instant', player }),
@@ -413,14 +453,14 @@ const GameBoard: React.FC<GameBoardProps> = ({
   };
 
   const renderInterventionSlot = (player: 1 | 2) => {
-    const zone = getZone(`interventions.${player === 1 ? 'player' : 'opponent'}`);
+    const zone = getZone(`interventions.${ player === 1 ? 'player' : 'opponent' }`);
     const rect = computeSlotRects(zone)[0];
     const style = { left: rect.x, top: rect.y, width: rect.w, height: rect.h } as React.CSSProperties;
     const card = (gameState.traps[player] || [])[0];
 
     if (!card) {
       return renderSlot(
-        `${player}-intervention`,
+        `${ player }-intervention`,
         style,
         'Intervention',
       );
@@ -431,7 +471,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
   const calculatePlayerInfluence = useCallback((player: 1 | 2): number => {
     let totalInfluence = 0;
     const playerBoard = gameState.board[player];
-    
+
     // Board cards
     [...playerBoard.innen, ...playerBoard.aussen].forEach(card => {
       if (card && card.kind === 'pol') {
@@ -579,13 +619,13 @@ const GameBoard: React.FC<GameBoardProps> = ({
         style={{
           width: UI_BASE.width,
           height: UI_BASE.height,
-          transform: `translate(${transform.offsetX}px, ${transform.offsetY}px) scale(${transform.scale})`,
+          transform: `translate(${ transform.offsetX }px, ${ transform.offsetY }px) scale(${ transform.scale })`,
         }}
         onMouseLeave={() => onCardHover(null)}
       >
         <div
           className="game-board__background"
-          style={{ backgroundImage: LAYOUT.background?.src ? `url(${LAYOUT.background.src})` : undefined }}
+          style={{ backgroundImage: LAYOUT.background?.src ? `url(${ LAYOUT.background.src })` : undefined }}
         />
 
         {renderRow(2, 'innen', 'Öffentlichkeit')}
@@ -808,7 +848,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
               else if (entry.includes('🟢') || entry.includes('✓') || entry.includes('gelungen')) color = '#a7f3d0';
               else if (entry.includes('🎯') || entry.includes('UI:')) color = '#cbd5e1';
               else if (entry.includes('🤖')) color = '#93c5fd';
-              
+
               return (
                 <div key={index} style={{
                   color,
@@ -828,6 +868,126 @@ const GameBoard: React.FC<GameBoardProps> = ({
           <div ref={logEndRef} />
         </div>
       </div>
+
+      {corruptionPending && corruptionTargetUid && (
+        <div
+          style={{
+            position: 'fixed',
+            left: '50%',
+            top: '38%',
+            transform: 'translate(-50%, -50%)',
+            padding: '16px 20px',
+            background: 'rgba(6,10,15,0.95)',
+            border: '1px solid rgba(255,255,255,0.12)',
+            borderRadius: '10px',
+            zIndex: 2000,
+            color: '#e5e7eb',
+            fontFamily: 'monospace',
+            fontSize: '14px',
+            minWidth: '300px',
+            boxShadow: '0 12px 40px rgba(0,0,0,0.5)',
+          }}
+        >
+          <div style={{ fontWeight: 700, marginBottom: '8px' }}>Bestechungsskandal 2.0 — Ziel gewählt</div>
+          <div style={{ marginBottom: '6px' }}>
+            Ziel: <strong>{corruptionTargetName ?? 'Unbekannt'}</strong>
+          </div>
+          <div style={{ marginBottom: '12px', color: '#94a3b8' }}>
+            Probe: W6 ≥ Einfluss der Karte (inkl. Oligarch-Bonus)
+          </div>
+          <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+            <button
+              type="button"
+              onClick={requestCorruptionRoll}
+              style={{
+                background: '#2563eb',
+                color: 'white',
+                border: 'none',
+                padding: '8px 14px',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontWeight: 700,
+              }}
+            >
+              Würfeln
+            </button>
+            <button
+              type="button"
+              onClick={cancelCorruption}
+              style={{
+                background: '#374151',
+                color: 'white',
+                border: 'none',
+                padding: '8px 14px',
+                borderRadius: '6px',
+                cursor: 'pointer',
+              }}
+            >
+              Abbrechen
+            </button>
+          </div>
+        </div>
+      )}
+
+      {maulwurfPending && (
+        <div
+          style={{
+            position: 'fixed',
+            left: '50%',
+            top: '38%',
+            transform: 'translate(-50%, -50%)',
+            padding: '16px 20px',
+            background: 'rgba(6,10,15,0.95)',
+            border: '1px solid rgba(255,255,255,0.12)',
+            borderRadius: '10px',
+            zIndex: 2000,
+            color: '#e5e7eb',
+            fontFamily: 'monospace',
+            fontSize: '14px',
+            minWidth: '300px',
+            boxShadow: '0 12px 40px rgba(0,0,0,0.5)',
+          }}
+        >
+          <div style={{ fontWeight: 700, marginBottom: '8px' }}>Maulwurf — Ziel gewählt</div>
+          <div style={{ marginBottom: '6px' }}>
+            Schwächste Regierungskarte: <strong>{maulwurfTargetName ?? 'Unbekannt'}</strong>
+          </div>
+          <div style={{ marginBottom: '12px', color: '#94a3b8' }}>
+            Benötigter Wurf: W6 ≥ {maulwurfRequiredRoll ?? '?'} (2 + Anzahl gegnerischer Regierungskarten)
+          </div>
+          <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+            <button
+              type="button"
+              onClick={requestMaulwurfRoll}
+              style={{
+                background: '#2563eb',
+                color: 'white',
+                border: 'none',
+                padding: '8px 14px',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontWeight: 700,
+              }}
+            >
+              Würfeln
+            </button>
+            <button
+              type="button"
+              onClick={cancelMaulwurf}
+              style={{
+                background: '#374151',
+                color: 'white',
+                border: 'none',
+                padding: '8px 14px',
+                borderRadius: '6px',
+                cursor: 'pointer',
+              }}
+            >
+              Abbrechen
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

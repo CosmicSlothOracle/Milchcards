@@ -3,6 +3,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 export interface SimpleDiceProps {
   size?: number;
   onRoll?: (face: number) => void;
+  onClick?: () => void;
   className?: string;
 }
 
@@ -13,6 +14,7 @@ export interface SimpleDiceProps {
 const SimpleDice: React.FC<SimpleDiceProps> = ({
   size = 110,
   onRoll,
+  onClick,
   className
 }) => {
   const [currentFace, setCurrentFace] = useState(1);
@@ -54,6 +56,38 @@ const SimpleDice: React.FC<SimpleDiceProps> = ({
     };
   }, [roll]);
 
+  // Show engine-authoritative roll results (corruption / maulwurf resolve)
+  useEffect(() => {
+    const handleEngineResult = (ev: Event) => {
+      const roll = (ev as CustomEvent).detail?.roll;
+      if (typeof roll !== 'number' || roll < 1 || roll > 6) return;
+      setIsRolling(true);
+      let tick = 0;
+      const interval = window.setInterval(() => {
+        setCurrentFace(1 + Math.floor(Math.random() * 6));
+        setRotation(prev => prev + 45);
+        tick += 1;
+        if (tick >= 8) {
+          window.clearInterval(interval);
+          setCurrentFace(roll);
+          setRotation(prev => prev + 180);
+          setIsRolling(false);
+          onRoll?.(roll);
+        }
+      }, 70);
+    };
+    window.addEventListener('pc:engine_dice_result', handleEngineResult as EventListener);
+    return () => window.removeEventListener('pc:engine_dice_result', handleEngineResult as EventListener);
+  }, [onRoll]);
+
+  const handleClick = useCallback(() => {
+    if (onClick) {
+      onClick();
+      return;
+    }
+    roll();
+  }, [onClick, roll]);
+
   const getDiceDots = (face: number) => {
     const positions = {
       1: [[0, 0]],
@@ -77,7 +111,7 @@ const SimpleDice: React.FC<SimpleDiceProps> = ({
           borderRadius: '50%',
           left: '50%',
           top: '50%',
-          transform: `translate(calc(-50% + ${x * 22}px), calc(-50% + ${y * 22}px))`,
+          transform: `translate(calc(-50% + ${ x * 22 }px), calc(-50% + ${ y * 22 }px))`,
           boxShadow: '0 0 8px #3b82f6, 0 0 16px rgba(59, 130, 246, 0.4)',
           transition: 'all 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
         }}
@@ -99,11 +133,11 @@ const SimpleDice: React.FC<SimpleDiceProps> = ({
         cursor: isRolling ? 'wait' : 'pointer',
         position: 'relative',
         boxShadow: '0 8px 24px rgba(0,0,0,0.6), inset 0 0 12px rgba(255,255,255,0.05)',
-        transform: `scale(${isRolling ? 1.05 : 1}) rotate(${rotation}deg)`,
+        transform: `scale(${ isRolling ? 1.05 : 1 }) rotate(${ rotation }deg)`,
         transition: 'all 0.5s cubic-bezier(0.19, 1, 0.22, 1)',
         userSelect: 'none',
       }}
-      onClick={roll}
+      onClick={handleClick}
       className={className}
     >
       <div style={{ position: 'relative', width: '100%', height: '100%' }}>

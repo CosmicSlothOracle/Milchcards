@@ -22,6 +22,7 @@ import { useGameAI } from './useGameAI';
 import { useGameEffects } from './useGameEffects';
 import { applyStartOfTurnHooks } from '../utils/startOfTurnHooks';
 import { emptyBoard, emptyBoardSide, ensureSofortBoard } from '../state/board';
+import { formatLogEntry, isLogBufferActive, pushToLogBuffer } from '../utils/logBuffer';
 
 const initialGameState: GameState = {
   round: 1,
@@ -60,14 +61,13 @@ export function useGameState() {
   const [selectedHandIndex, setSelectedHandIndex] = useState<number | null>(null);
 
   const log = useCallback((msg: string) => {
-    const timestamp = new Date().toLocaleTimeString('de-DE', {
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    });
-    const logEntry = `[${timestamp}] ${msg}`;
+    const logEntry = formatLogEntry(msg);
+    console.log(logEntry);
 
-    console.log(logEntry); // Also log to console for debugging
+    if (isLogBufferActive()) {
+      pushToLogBuffer(logEntry);
+      return;
+    }
 
     setGameState(prev => ({
       ...prev,
@@ -77,46 +77,46 @@ export function useGameState() {
 
   // Enhanced logging functions for different types of events
   const logUIInteraction = useCallback((action: string, details: string) => {
-    log(`🎯 UI: ${action} - ${details}`);
+    log(`🎯 UI: ${ action } - ${ details }`);
   }, [log]);
 
   const logGameStateChange = useCallback((change: string, details: string) => {
-    log(`🔄 STATE: ${change} - ${details}`);
+    log(`🔄 STATE: ${ change } - ${ details }`);
   }, [log]);
 
   const logAIAction = useCallback((action: string, details: string) => {
-    log(`🤖 KI: ${action} - ${details}`);
+    log(`🤖 KI: ${ action } - ${ details }`);
   }, [log]);
 
   const logCardEffect = useCallback((cardName: string, effect: string) => {
-    log(`✨ EFFEKT: ${cardName} - ${effect}`);
+    log(`✨ EFFEKT: ${ cardName } - ${ effect }`);
   }, [log]);
 
   const logIntervention = useCallback((interventionName: string, trigger: string) => {
-    log(`💥 INTERVENTION: ${interventionName} ausgelöst durch ${trigger}`);
+    log(`💥 INTERVENTION: ${ interventionName } ausgelöst durch ${ trigger }`);
   }, [log]);
 
   // New detailed logging functions for debugging
   const logFunctionCall = useCallback((functionName: string, params: any, context: string) => {
     const paramStr = typeof params === 'object' ? JSON.stringify(params, null, 2) : String(params);
-    log(`🔧 CALL: ${functionName}(${paramStr}) - ${context}`);
+    log(`🔧 CALL: ${ functionName }(${ paramStr }) - ${ context }`);
   }, [log]);
 
   const logDataFlow = useCallback((from: string, to: string, data: any, action: string) => {
     const dataStr = typeof data === 'object' ? JSON.stringify(data, null, 2) : String(data);
-    log(`📊 FLOW: ${from} → ${to} | ${action} | Data: ${dataStr}`);
+    log(`📊 FLOW: ${ from } → ${ to } | ${ action } | Data: ${ dataStr }`);
   }, [log]);
 
   const logConditionCheck = useCallback((condition: string, result: boolean, context: string) => {
-    log(`🔍 CHECK: ${condition} = ${result} - ${context}`);
+    log(`🔍 CHECK: ${ condition } = ${ result } - ${ context }`);
   }, [log]);
 
   const logError = useCallback((error: string, context: string) => {
-    log(`❌ ERROR: ${error} - ${context}`);
+    log(`❌ ERROR: ${ error } - ${ context }`);
   }, [log]);
 
   const logWarning = useCallback((warning: string, context: string) => {
-    log(`⚠️ WARN: ${warning} - ${context}`);
+    log(`⚠️ WARN: ${ warning } - ${ context }`);
   }, [log]);
 
   // Nach Queue-Auflösung: Hand-Arrays immutabel neu zuweisen → Canvas & UI bekommen die neuen UIDs
@@ -235,7 +235,7 @@ export function useGameState() {
     const p2Budget = currentBuilderBudget(p2DeckEntries);
 
     if (p1Count !== 25 || p2Count !== 25 || p1Budget > budgetLimit || p2Budget > budgetLimit) {
-      log(`Deck-Validierung fehlgeschlagen. Deckgröße muss 25 sein, Budget ≤ ${budgetLimit}. P1: ${p1Count} Karten / ${p1Budget} BP, P2: ${p2Count} Karten / ${p2Budget} BP.`);
+      log(`Deck-Validierung fehlgeschlagen. Deckgröße muss 25 sein, Budget ≤ ${ budgetLimit }. P1: ${ p1Count } Karten / ${ p1Budget } BP, P2: ${ p2Count } Karten / ${ p2Budget } BP.`);
       return;
     }
 
@@ -266,7 +266,7 @@ export function useGameState() {
       },
       // instantSlot wird nicht mehr verwendet - Sofort-Initiativen gehen in board[player].sofort
       discard: [],
-      log: [`Match gestartet. P1 und P2 erhalten je ${h1.length}/${h2.length} Startkarten.`],
+      log: [`Match gestartet. P1 und P2 erhalten je ${ h1.length }/${ h2.length } Startkarten.`],
       activeRefresh: { 1: 0, 2: 0 },
     });
     console.log('[DIAG] setGameState called in startMatchWithDecks');
@@ -316,8 +316,8 @@ export function useGameState() {
       };
 
       // Log turn change
-      log(`Spieler ${newCurrent} ist am Zug (2 AP verfügbar)`);
-      logGameStateChange('turn change', `Player ${newCurrent} turn started`);
+      log(`Spieler ${ newCurrent } ist am Zug (2 AP verfügbar)`);
+      logGameStateChange('turn change', `Player ${ newCurrent } turn started`);
 
       logFunctionCall('applyStartOfTurnHooks', { player: newCurrent }, 'Applying start-of-turn effects');
       applyStartOfTurnHooks(newState, newCurrent, log);
@@ -378,7 +378,7 @@ export function useGameState() {
       note = ' (Gleichstand – früherer Pass)';
     }
 
-    log(`Runde ${state.round} endet: P1 ${s1} : P2 ${s2}. Gewinner: P${winner}${note}.`);
+    log(`Runde ${ state.round } endet: P1 ${ s1 } : P2 ${ s2 }. Gewinner: P${ winner }${ note }.`);
 
     // Rundensieg zählen
     const newRoundsWon = { ...state.roundsWon };
@@ -388,10 +388,10 @@ export function useGameState() {
     let gameWinner: 1 | 2 | null = null;
     if (newRoundsWon[1] >= 2) {
       gameWinner = 1;
-      log(`🎉 SPIEL ENDE: Spieler 1 gewinnt das Spiel! (${newRoundsWon[1]}:${newRoundsWon[2]})`);
+      log(`🎉 SPIEL ENDE: Spieler 1 gewinnt das Spiel! (${ newRoundsWon[1] }:${ newRoundsWon[2] })`);
     } else if (newRoundsWon[2] >= 2) {
       gameWinner = 2;
-      log(`🎉 SPIEL ENDE: Spieler 2 gewinnt das Spiel! (${newRoundsWon[2]}:${newRoundsWon[1]})`);
+      log(`🎉 SPIEL ENDE: Spieler 2 gewinnt das Spiel! (${ newRoundsWon[2] }:${ newRoundsWon[1] })`);
     }
 
     // clear board (no carryover)
@@ -403,7 +403,7 @@ export function useGameState() {
 
     // 🔥 PERSISTENT DECK LOGIC: Prüfe ob Spiel durch leere Decks beendet wurde
     if (gameEnded && deckWinner) {
-      log(`🎉 SPIEL ENDE: Spieler ${deckWinner} gewinnt das Spiel durch leere Decks!`);
+      log(`🎉 SPIEL ENDE: Spieler ${ deckWinner } gewinnt das Spiel durch leere Decks!`);
       return {
         ...state,
         gameWinner: deckWinner,
@@ -425,7 +425,7 @@ export function useGameState() {
       };
     }
 
-    log(`Runde ${newRound} beginnt. P${newCurrent} startet.`);
+    log(`Runde ${ newRound } beginnt. P${ newCurrent } startet.`);
 
     // 🔥 CLUSTER 3: Reset temporäre Initiative-Boni am Rundenende
     const newEffectFlags = {
@@ -519,15 +519,15 @@ export function useGameState() {
         if ((details?.name === 'Cancel Culture' || key === 'Cancel_Culture') && event.lane === 'innen') {
           tryApplyNegativeEffect(played, () => { played.deactivated = true; }, prev.round);
           oppTraps.splice(i, 1); i--; trapsChanged = true;
-          log(`Intervention ausgelöst: Cancel Culture → ${played.name} deaktiviert.`);
-          logIntervention('Cancel Culture', `Ausgelöst gegen ${played.name} in Öffentlichkeit`);
+          log(`Intervention ausgelöst: Cancel Culture → ${ played.name } deaktiviert.`);
+          logIntervention('Cancel Culture', `Ausgelöst gegen ${ played.name } in Öffentlichkeit`);
           continue;
         }
         if ((details?.name === 'Fake News-Kampagne' || key === 'Fake_News_Kampagne') && isMedia) {
           tryApplyNegativeEffect(played, () => { played.deactivated = true; }, prev.round);
           oppTraps.splice(i, 1); i--; trapsChanged = true;
-          log(`Intervention ausgelöst: Fake News-Kampagne → ${played.name} deaktiviert.`);
-          logIntervention('Fake News-Kampagne', `Ausgelöst gegen ${played.name} (Medien)`);
+          log(`Intervention ausgelöst: Fake News-Kampagne → ${ played.name } deaktiviert.`);
+          logIntervention('Fake News-Kampagne', `Ausgelöst gegen ${ played.name } (Medien)`);
           continue;
         }
 
@@ -536,7 +536,7 @@ export function useGameState() {
           const amount = Math.min(0, -2 + interventionReduction);
           tryApplyNegativeEffect(played, () => { adjustInfluence(played, amount, 'Whistleblower'); }, prev.round);
           oppTraps.splice(i, 1); i--; trapsChanged = true;
-          log(`Intervention ausgelöst: Whistleblower → ${played.name} ${amount} Einfluss.`);
+          log(`Intervention ausgelöst: Whistleblower → ${ played.name } ${ amount } Einfluss.`);
           continue;
         }
 
@@ -545,7 +545,7 @@ export function useGameState() {
           const amount = Math.min(0, -2 + interventionReduction);
           tryApplyNegativeEffect(played, () => { adjustInfluence(played, amount, 'Berater-Affäre'); }, prev.round);
           oppTraps.splice(i, 1); i--; trapsChanged = true;
-          log(`Intervention ausgelöst: Berater-Affäre → ${played.name} ${amount} Einfluss.`);
+          log(`Intervention ausgelöst: Berater-Affäre → ${ played.name } ${ amount } Einfluss.`);
           continue;
         }
 
@@ -554,7 +554,7 @@ export function useGameState() {
           const amount = Math.min(0, -3 + interventionReduction);
           tryApplyNegativeEffect(played, () => { adjustInfluence(played, amount, 'Soft Power-Kollaps'); }, prev.round);
           oppTraps.splice(i, 1); i--; trapsChanged = true;
-          log(`Intervention ausgelöst: Soft Power-Kollaps → ${played.name} ${amount} Einfluss.`);
+          log(`Intervention ausgelöst: Soft Power-Kollaps → ${ played.name } ${ amount } Einfluss.`);
           continue;
         }
         if ((details?.name === 'Deepfake-Skandal' || key === 'Deepfake_Skandal') && isDiplomat) {
@@ -562,7 +562,7 @@ export function useGameState() {
           const newFlags = { ...prev.effectFlags?.[actingPlayer], influenceTransferBlocked: true };
           prev.effectFlags = { ...prev.effectFlags, [actingPlayer]: newFlags } as GameState['effectFlags'];
           oppTraps.splice(i, 1); i--; trapsChanged = true;
-          log(`Intervention ausgelöst: Deepfake-Skandal → ${played.name} kann keinen Einfluss transferieren.`);
+          log(`Intervention ausgelöst: Deepfake-Skandal → ${ played.name } kann keinen Einfluss transferieren.`);
           continue;
         }
 
@@ -576,7 +576,7 @@ export function useGameState() {
             prev.discard = [...prev.discard, discarded];
           }
           oppTraps.splice(i, 1); i--; trapsChanged = true;
-          log(`Intervention ausgelöst: Lobby Leak → P${actingPlayer} wirft 1 Karte ab.`);
+          log(`Intervention ausgelöst: Lobby Leak → P${ actingPlayer } wirft 1 Karte ab.`);
           continue;
         }
 
@@ -589,14 +589,14 @@ export function useGameState() {
             hands[actingPlayer].push(event.card);
             prev.hands = hands;
             oppTraps.splice(i, 1); i--; trapsChanged = true;
-            log(`Intervention ausgelöst: Interne Fraktionskämpfe → ${event.card.name} wird annulliert.`);
+            log(`Intervention ausgelöst: Interne Fraktionskämpfe → ${ event.card.name } wird annulliert.`);
             continue;
           }
         }
         if ((details?.name === 'Boykott-Kampagne' || key === 'Boykott_Kampagne') && (isNGO || ['Greta Thunberg', 'Malala Yousafzai', 'Ai Weiwei', 'Alexei Navalny'].includes(played.name))) {
           tryApplyNegativeEffect(played, () => { played.deactivated = true; }, prev.round);
           oppTraps.splice(i, 1); i--; trapsChanged = true;
-          log(`Intervention ausgelöst: Boykott-Kampagne → ${played.name} deaktiviert.`);
+          log(`Intervention ausgelöst: Boykott-Kampagne → ${ played.name } deaktiviert.`);
           continue;
         }
 
@@ -614,7 +614,7 @@ export function useGameState() {
             } as GameState['board'];
           }
           oppTraps.splice(i, 1); i--; trapsChanged = true;
-          log(`Intervention ausgelöst: Cyber-Attacke → ${played.name} zerstört.`);
+          log(`Intervention ausgelöst: Cyber-Attacke → ${ played.name } zerstört.`);
           continue;
         }
 
@@ -669,7 +669,7 @@ export function useGameState() {
             adjustInfluence(govCards[0], amount, 'Massenproteste');
             adjustInfluence(govCards[1], amount, 'Massenproteste');
             oppTraps.splice(i, 1); i--; trapsChanged = true;
-            log(`Intervention ausgelöst: Massenproteste → ${govCards[0].name} und ${govCards[1].name} ${amount} Einfluss.`);
+            log(`Intervention ausgelöst: Massenproteste → ${ govCards[0].name } und ${ govCards[1].name } ${ amount } Einfluss.`);
             continue;
           }
         }
@@ -683,7 +683,7 @@ export function useGameState() {
             hands[actingPlayer].push(event.card);
             prev.hands = hands;
             oppTraps.splice(i, 1); i--; trapsChanged = true;
-            log(`Intervention ausgelöst: "Unabhängige" Untersuchung → ${event.card.name} wird annulliert.`);
+            log(`Intervention ausgelöst: "Unabhängige" Untersuchung → ${ event.card.name } wird annulliert.`);
             continue;
           }
         }
@@ -702,7 +702,7 @@ export function useGameState() {
             hands[opponent].push(copyCard);
             prev.hands = hands;
             oppTraps.splice(i, 1); i--; trapsChanged = true;
-            log(`Intervention ausgelöst: Maulwurf → Kopie von ${weakestCard.name} auf Hand.`);
+            log(`Intervention ausgelöst: Maulwurf → Kopie von ${ weakestCard.name } auf Hand.`);
             continue;
           }
         }
@@ -741,7 +741,7 @@ export function useGameState() {
               const amount = Math.min(0, -2 + interventionReduction);
               adjustInfluence(oppGovCards[0], amount, 'Satire-Show');
               oppTraps.splice(i, 1); i--; trapsChanged = true;
-              log(`Intervention ausgelöst: Satire-Show → ${oppGovCards[0].name} ${amount} Einfluss.`);
+              log(`Intervention ausgelöst: Satire-Show → ${ oppGovCards[0].name } ${ amount } Einfluss.`);
               continue;
             }
           }
@@ -763,8 +763,8 @@ export function useGameState() {
     let total = 0;
 
     // 🔍 DEBUG: Log welche Regierungskarten gefunden wurden
-    console.log(`🔍 sumRowWithAuras P${player}: Gefunden ${govCards.length} Regierungskarten:`,
-      govCards.map(c => `${c.name}[${c.influence}I]`).join(', '));
+    console.log(`🔍 sumRowWithAuras P${ player }: Gefunden ${ govCards.length } Regierungskarten:`,
+      govCards.map(c => `${ c.name }[${ c.influence }I]`).join(', '));
 
     govCards.forEach(card => {
       let influence = card.influence;
@@ -830,7 +830,7 @@ export function useGameState() {
     });
 
     // 🔍 DEBUG: Final influence calculation
-    console.log(`🎯 sumRowWithAuras P${player}: Gesamt-Einfluss = ${total}`);
+    console.log(`🎯 sumRowWithAuras P${ player }: Gesamt-Einfluss = ${ total }`);
     return total;
   };
 
@@ -843,13 +843,13 @@ export function useGameState() {
 
     const pool = [...state.board[player].innen, ...state.board[player].aussen];
     pool.forEach(c => {
-        if (c.kind === 'pol') {
+      if (c.kind === 'pol') {
         const polCard = c as PoliticianCard;
         if (polCard._pledgeDown && polCard._pledgeDown.round === state.round) {
           const oldInfluence = polCard.influence;
           adjustInfluence(polCard, polCard._pledgeDown.amount, 'Wahlversprechen');
           const newInfluence = polCard.influence;
-          log(`Wahlversprechen Abzug auf ${polCard.name}: ${oldInfluence} → ${newInfluence}`);
+          log(`Wahlversprechen Abzug auf ${ polCard.name }: ${ oldInfluence } → ${ newInfluence }`);
           polCard._pledgeDown = null;
         }
         // reset once-per-round flags
@@ -883,11 +883,11 @@ export function useGameState() {
           adjustInfluence(card, 1, 'Alternative Fakten');
           const newInfluence = card.influence;
           totalInfluenceGained += 1;
-          logCardEffect('Alternative Fakten', `${card.name} erhält +1 Einfluss (${oldInfluence} → ${newInfluence})`);
+          logCardEffect('Alternative Fakten', `${ card.name } erhält +1 Einfluss (${ oldInfluence } → ${ newInfluence })`);
         });
 
         if (oligarchCards.length > 0) {
-          logCardEffect('Alternative Fakten', `${oligarchCards.length} Oligarchen gefunden - ${totalInfluenceGained} Punkte zum Gesamteinfluss hinzugefügt`);
+          logCardEffect('Alternative Fakten', `${ oligarchCards.length } Oligarchen gefunden - ${ totalInfluenceGained } Punkte zum Gesamteinfluss hinzugefügt`);
         } else {
           logWarning('No oligarch cards found', 'Alternative Fakten effect has no targets');
         }
@@ -916,11 +916,11 @@ export function useGameState() {
           adjustInfluence(card, 1, 'Algorithmischer Diskurs');
           const newInfluence = card.influence;
           totalInfluenceGained += 1;
-          logCardEffect('Algorithmischer Diskurs', `${card.name} erhält +1 Einfluss (${oldInfluence} → ${newInfluence})`);
+          logCardEffect('Algorithmischer Diskurs', `${ card.name } erhält +1 Einfluss (${ oldInfluence } → ${ newInfluence })`);
         });
 
         if (mediaCards.length > 0) {
-          logCardEffect('Algorithmischer Diskurs', `${mediaCards.length} Medien-Karten gefunden - ${totalInfluenceGained} Punkte zum Gesamteinfluss hinzugefügt`);
+          logCardEffect('Algorithmischer Diskurs', `${ mediaCards.length } Medien-Karten gefunden - ${ totalInfluenceGained } Punkte zum Gesamteinfluss hinzugefügt`);
         } else {
           logWarning('No media cards found', 'Algorithmischer Diskurs effect has no targets');
         }
@@ -983,7 +983,7 @@ export function useGameState() {
       if (prev.current !== player) return prev;
 
       const newState = { ...prev, passed: { ...prev.passed, [player]: true } };
-      log(`Spieler ${player} passt.`);
+      log(`Spieler ${ player } passt.`);
 
       // If both players have passed, resolve the round
       if (newState.passed[1] && newState.passed[2]) {
