@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Card, GameState } from '../types/game';
 import { getCardImagePath } from '../data/gameData';
-import { LAYOUT, UI_BASE, computeSlotRects, getGovernmentRects, getPublicRects, getSofortRect, getUiTransform, getZone, setMobileBoardLayout } from '../ui/layout';
+import { LAYOUT, UI_BASE, computeSlotRects, getGovernmentRects, getPublicRects, getSofortRect, getUiTransform, getZone } from '../ui/layout';
 import { sortHandCards } from '../utils/gameUtils';
 import { MOBILE_HUD_BOTTOM, MOBILE_HUD_TOP, useMobileLayout } from '../hooks/useMobileLayout';
 
@@ -50,10 +50,6 @@ const GameBoard: React.FC<GameBoardProps> = ({
   const { ref: boardRef, size } = useBoardSize();
   const mobile = useMobileLayout();
   const useCompactHud = mobile.isMobile && mobile.isLandscape;
-  const useHandStrips = useCompactHud;
-
-  setMobileBoardLayout(useHandStrips);
-  useEffect(() => () => setMobileBoardLayout(false), []);
 
   const transform = useMemo(() => {
     const hudTop = useCompactHud ? MOBILE_HUD_TOP : 0;
@@ -465,7 +461,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
   const p2Influence = calculatePlayerInfluence(2);
 
   return (
-    <div className={`game-board${ useCompactHud ? ' game-board--mobile-landscape' : '' }${ useHandStrips ? ' game-board--mobile-strips' : '' }`} ref={boardRef}>
+    <div className={`game-board${ useCompactHud ? ' game-board--mobile-landscape' : '' }`} ref={boardRef}>
       {/* Top HUD Bar */}
       <div className={`game-board__hud game-board__hud--top${ useCompactHud ? ' game-board__hud--compact' : '' }`} style={{
         position: 'absolute',
@@ -593,27 +589,13 @@ const GameBoard: React.FC<GameBoardProps> = ({
           style={{ backgroundImage: LAYOUT.background?.src ? `url(${ LAYOUT.background.src })` : undefined }}
         />
 
-        {/* Side hand columns (desktop); mobile uses horizontal strips + labels below */}
-        {!useHandStrips && (
-          <>
-            <div className="game-board__hand-panel" style={{ left: 0, top: 0, width: 224, height: 1080 }}>
-              <span>{localPlayer === 1 ? 'DEINE HAND' : 'GEGNER HAND'}</span>
-            </div>
-            <div className="game-board__hand-panel game-board__hand-panel--opponent" style={{ left: 1696, top: 0, width: 224, height: 1080 }}>
-              <span>{localPlayer === 2 ? 'DEINE HAND' : 'GEGNER HAND'}</span>
-            </div>
-          </>
-        )}
-        {useHandStrips && (
-          <>
-            <div className="game-board__hand-strip-label game-board__hand-strip-label--opp">
-              {localPlayer === 2 ? 'DEINE HAND' : 'GEGNER HAND'}
-            </div>
-            <div className="game-board__hand-strip-label game-board__hand-strip-label--player">
-              {localPlayer === 1 ? 'DEINE HAND' : 'GEGNER HAND'}
-            </div>
-          </>
-        )}
+        {/* Mirrored hand columns (player left, opponent right) */}
+        <div className="game-board__hand-panel" style={{ left: 0, top: 0, width: 224, height: 1080 }}>
+          <span>{localPlayer === 1 ? 'DEINE HAND' : 'GEGNER HAND'}</span>
+        </div>
+        <div className="game-board__hand-panel game-board__hand-panel--opponent" style={{ left: 1696, top: 0, width: 224, height: 1080 }}>
+          <span>{localPlayer === 2 ? 'DEINE HAND' : 'GEGNER HAND'}</span>
+        </div>
 
         {renderRow(2, 'innen', 'Öffentlichkeit')}
         {renderRow(2, 'aussen', 'Regierung')}
@@ -732,42 +714,6 @@ const GameBoard: React.FC<GameBoardProps> = ({
           </button>
         </div>
       </div>
-
-      {/* Mobile chrome: slim floating status + thumb-zone actions.
-          Replaces the full-width HUD bars so the board owns the whole screen. */}
-      {useHandStrips && (
-        <div className="mboard-chrome" role="group" aria-label="Spielsteuerung">
-          <div className="mboard-chrome__info">
-            <span className={`mboard-chrome__turn${ isMyTurn ? ' is-mine' : ' is-foe' }`}>
-              {isMyTurn ? 'Dein Zug' : 'Gegner'}
-            </span>
-            <span className="mboard-chrome__score" aria-label={`Einfluss ${ p1Influence } zu ${ p2Influence }`}>
-              <b className="is-p1">{p1Influence}</b>
-              <span aria-hidden="true">:</span>
-              <b className="is-p2">{p2Influence}</b>
-            </span>
-            <span className="mboard-chrome__ap">
-              AP <b>{gameState.actionPoints[localPlayer]}</b>
-            </span>
-          </div>
-          <button
-            type="button"
-            className="mboard-fab mboard-fab--primary"
-            onClick={() => onCardClick({ type: 'button_end_turn' })}
-            disabled={!isMyTurn}
-          >
-            Zug beenden
-          </button>
-          <button
-            type="button"
-            className="mboard-fab"
-            onClick={() => onCardClick({ type: 'button_pass_turn' })}
-            disabled={!isMyTurn || gameState.passed[localPlayer]}
-          >
-            {gameState.passed[localPlayer] ? 'Gepasst' : 'Passen'}
-          </button>
-        </div>
-      )}
 
       {/* Collapsible Intelligence Feed — hidden on mobile (use action hint instead) */}
       <div className={`game-board__log-panel${ isLogOpen ? ' game-board__log-panel--open' : '' }`} style={{

@@ -805,14 +805,14 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
   const isValid = !overBudget && !underBudget && !overCount && !underMinGovernment && !underMinCards;
 
   return (
-    <div style={{
+    <div className="deckbuilder" style={{
       position: 'fixed',
       inset: 0,
       display: 'flex',
       background: 'radial-gradient(circle, #0e1626 0%, #050912 100%)',
       zIndex: 40,
     }}>
-      <div style={{
+      <div className="deckbuilder__inner" style={{
         position: 'absolute',
         inset: 0,
         background: 'transparent',
@@ -823,7 +823,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
       }}>
         {/* Header */}
         {/* Main Header */}
-        <div style={{
+        <div className="deckbuilder__header" style={{
           display: 'flex',
           gap: '20px',
           alignItems: 'center',
@@ -831,7 +831,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
           borderBottom: '1px solid rgba(148, 163, 184, 0.1)',
           paddingBottom: '20px',
         }}>
-          <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+          <div className="deckbuilder__status" style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
             <div style={{
               fontWeight: 800,
               fontSize: '24px',
@@ -937,7 +937,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
         </div>
 
         {/* Filters & Presets Sub-Header Bar */}
-        <div style={{
+        <div className="deckbuilder__filters" style={{
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
@@ -947,7 +947,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
           borderRadius: '10px',
           border: '1px solid rgba(148, 163, 184, 0.05)',
         }}>
-          <div style={{
+          <div className="deckbuilder__search" style={{
             display: 'flex',
             alignItems: 'center',
             gap: '12px',
@@ -1024,7 +1024,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
         </div>
 
         {/* Body */}
-        <div style={{
+        <div className="deckbuilder__body" style={{
           display: 'grid',
           gridTemplateColumns: '1fr 360px',
           gap: '12px',
@@ -1032,7 +1032,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
           flex: 1,
         }}>
           {/* Categorized Card Columns */}
-          <div style={{
+          <div className="deckbuilder__cards" style={{
             overflow: 'auto',
             border: '1px solid #1f2c3a',
             borderRadius: '10px',
@@ -1356,7 +1356,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
           </div>
 
           {/* Sidebar */}
-          <div style={{
+          <div className="deckbuilder__sidebar" style={{
             overflow: 'auto',
             border: '1px solid #1f2c3a',
             borderRadius: '10px',
@@ -1542,7 +1542,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
       {selectedCard && (() => {
         const cardDetails = getCardDetails(selectedCard.base.name);
         return (
-        <div style={{
+        <div className="deckbuilder__detail" style={{
           position: 'fixed',
           top: 0,
           left: 0,
@@ -1555,7 +1555,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
           paddingLeft: '20px',
           zIndex: 50,
         }}>
-          <div style={{
+          <div className="deckbuilder__detail-panel" style={{
             background: '#0d1621',
             border: '3px solid #ffffff',
             borderRadius: '16px',
@@ -1568,7 +1568,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
               position: 'relative',
           }}>
               {/* Card Image - Full 1024x1024 size with custom corners */}
-            <div style={{
+            <div className="deckbuilder__detail-art" style={{
               flex: '0 0 1024px',
               height: '1024px',
               background: '#0b1118',
@@ -1580,6 +1580,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
               {/* Navigation Arrows */}
               <button
                 onClick={handlePreviousCard}
+                aria-label="Vorherige Karte"
                 style={{
                   position: 'absolute',
                   left: '16px',
@@ -1614,6 +1615,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
 
               <button
                 onClick={handleNextCard}
+                aria-label="Nächste Karte"
                 style={{
                   position: 'absolute',
                   right: '16px',
@@ -1675,7 +1677,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
             </div>
 
               {/* Card Information Panel */}
-            <div style={{
+            <div className="deckbuilder__detail-info" style={{
               flex: '1',
                 minWidth: '400px',
               display: 'flex',
@@ -1794,6 +1796,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
 
                 <button
                   onClick={handleCloseCardDetail}
+                  aria-label="Schließen"
                   style={{
                     background: 'none',
                     border: 'none',

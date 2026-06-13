@@ -314,7 +314,7 @@ export const HandCardModal: React.FC<HandCardModalProps> = ({
         </div>
 
         {/* Card Information */}
-        <div style={{
+        <div className="hand-card-modal__info" style={{
           flex: '1',
           minWidth: '200px',
           display: 'flex',
@@ -395,6 +395,36 @@ export const HandCardModal: React.FC<HandCardModalProps> = ({
                 : `${ (currentCard as SpecialCard).type } • ${ convertHPToUSD((currentCard as SpecialCard).bp) }`
               }
             </div>
+            {currentCard.kind === 'pol' && (
+              <div style={{
+                color: '#e5e7eb',
+                marginTop: '8px',
+                display: 'flex',
+                gap: '8px',
+                flexWrap: 'wrap',
+                fontWeight: 700,
+                fontVariantNumeric: 'tabular-nums',
+              }}>
+                <span style={{
+                  background: 'rgba(16, 185, 129, 0.15)',
+                  border: '1px solid rgba(16, 185, 129, 0.4)',
+                  color: '#34d399',
+                  borderRadius: '6px',
+                  padding: '3px 8px',
+                }}>
+                  Einfluss {(currentCard as any).influence ?? '—'}
+                </span>
+                <span style={{
+                  background: 'rgba(59, 130, 246, 0.15)',
+                  border: '1px solid rgba(59, 130, 246, 0.4)',
+                  color: '#93c5fd',
+                  borderRadius: '6px',
+                  padding: '3px 8px',
+                }}>
+                  Stufe {(currentCard as any).T ?? '—'}
+                </span>
+              </div>
+            )}
             {/* Show subcategories for public cards */}
             {cardDetails?.subcategories && cardDetails.subcategories.length > 0 && (
               <div style={{ marginTop: '8px' }}>

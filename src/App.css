@@ -935,15 +935,38 @@
     padding: 4px !important;
   }
 
+  /* Landscape phone: artwork left, scrollable details right, play button pinned */
   .hand-card-modal__panel {
-    flex-direction: column !important;
-    width: min(96vw, 520px) !important;
-    height: min(92vh, 640px) !important;
-    max-height: calc(100dvh - 16px) !important;
+    flex-direction: row !important;
+    width: min(97vw, 880px) !important;
+    height: auto !important;
+    max-height: calc(100dvh - 12px) !important;
     padding: 12px !important;
     gap: 12px !important;
+    overflow: hidden !important;
+  }
+
+  .hand-card-modal__art {
+    flex: 0 0 38% !important;
+    width: 38% !important;
+    height: auto !important;
+    max-height: calc(100dvh - 36px) !important;
+    aspect-ratio: 1 / 1 !important;
+    align-self: center !important;
+  }
+
+  .hand-card-modal__art canvas {
+    width: 100% !important;
+    height: 100% !important;
+  }
+
+  .hand-card-modal__info {
+    min-width: 0 !important;
+    flex: 1 1 auto !important;
     overflow-y: auto !important;
     overscroll-behavior: contain !important;
+    gap: 8px !important;
+    padding-right: 4px !important;
   }
 
   /* Keep the play action pinned in the thumb zone while card text scrolls */
@@ -954,21 +977,97 @@
     margin-top: auto !important;
   }
 
-  .hand-card-modal__art {
+  .hand-card-modal__panel button {
+    min-height: 44px;
+  }
+
+  /* --- DeckBuilder: collapse to a single scrollable column on phones --- */
+  .deckbuilder__inner {
+    padding: 10px !important;
+    padding-top: max(10px, env(safe-area-inset-top)) !important;
+    gap: 8px !important;
+  }
+
+  .deckbuilder__header {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+    padding-bottom: 8px !important;
+  }
+
+  .deckbuilder__status {
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+  }
+
+  .deckbuilder__filters {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+    padding: 8px 10px !important;
+  }
+
+  .deckbuilder__search {
+    width: auto !important;
+  }
+
+  .deckbuilder__body {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+  }
+
+  .deckbuilder__cards {
+    grid-template-columns: 1fr !important;
+    flex: 1 1 auto !important;
+  }
+
+  /* Each category lane's card grid (last child) fills the width fluidly.
+     Min track matches the fixed tile box (124 + padding + border) to avoid overflow. */
+  .deckbuilder__cards > div > div:last-child {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)) !important;
+    justify-content: center !important;
+  }
+
+  .deckbuilder__sidebar {
+    flex: 0 0 auto !important;
+    max-height: 40vh !important;
+  }
+
+  /* DeckBuilder card detail modal → single column, responsive artwork */
+  .deckbuilder__detail {
+    justify-content: center !important;
+    padding: 8px !important;
+    padding-left: 8px !important;
+  }
+
+  .deckbuilder__detail-panel {
+    flex-direction: column !important;
+    width: 96vw !important;
+    height: auto !important;
+    max-height: calc(100dvh - 16px) !important;
+    padding: 12px !important;
+    gap: 12px !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain !important;
+  }
+
+  .deckbuilder__detail-art {
     flex: 0 0 auto !important;
     width: 100% !important;
     height: auto !important;
-    max-height: 42vh !important;
+    max-width: min(100%, 56vh) !important;
     aspect-ratio: 1 / 1 !important;
+    align-self: center !important;
   }
 
-  .hand-card-modal__art canvas {
+  .deckbuilder__detail-art canvas {
     width: 100% !important;
     height: auto !important;
-    max-height: 42vh !important;
   }
 
-  .hand-card-modal__panel button {
-    min-height: 44px;
+  .deckbuilder__detail-info {
+    min-width: 0 !important;
+    gap: 12px !important;
   }
 }
