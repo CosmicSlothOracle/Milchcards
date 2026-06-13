@@ -23,12 +23,15 @@ export const MainMenu: React.FC<MainMenuProps> = ({
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        height: '100vh',
+        minHeight: '100dvh',
         width: '100vw',
         background: 'radial-gradient(circle, #111a2e 0%, #070c16 100%)',
         color: '#e8f0f8',
         position: 'relative',
-        overflow: 'hidden',
+        overflowX: 'hidden',
+        overflowY: 'auto',
+        padding: '24px 16px',
+        boxSizing: 'border-box',
       }}
     >
       {/* Glow Effects */}
@@ -75,15 +78,15 @@ export const MainMenu: React.FC<MainMenuProps> = ({
       <div
         style={{
           textAlign: 'center',
-          marginBottom: '50px',
+          marginBottom: 'clamp(24px, 6vh, 50px)',
           zIndex: 2,
         }}
       >
         <h1
           style={{
-            fontSize: '72px',
+            fontSize: 'clamp(40px, 12vw, 72px)',
             fontWeight: 900,
-            letterSpacing: '12px',
+            letterSpacing: 'clamp(6px, 2vw, 12px)',
             margin: 0,
             background: 'linear-gradient(135deg, #10b981 0%, #3b82f6 100%)',
             WebkitBackgroundClip: 'text',
@@ -96,10 +99,10 @@ export const MainMenu: React.FC<MainMenuProps> = ({
         </h1>
         <p
           style={{
-            fontSize: '18px',
+            fontSize: 'clamp(13px, 3.5vw, 18px)',
             fontWeight: 500,
             color: '#94a3b8',
-            letterSpacing: '4px',
+            letterSpacing: 'clamp(2px, 1vw, 4px)',
             marginTop: '10px',
             textTransform: 'uppercase',
           }}

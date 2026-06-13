@@ -50,17 +50,20 @@ export const PvpLobby: React.FC<PvpLobbyProps> = ({
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        height: '100vh',
+        minHeight: '100dvh',
         width: '100vw',
         background: 'radial-gradient(circle, #111a2e 0%, #070c16 100%)',
         color: '#e8f0f8',
-        gap: '24px',
+        gap: 'clamp(16px, 4vh, 24px)',
+        overflowY: 'auto',
+        padding: '24px 16px',
+        boxSizing: 'border-box',
       }}
     >
       <h2 style={{
-        fontSize: '36px',
+        fontSize: 'clamp(26px, 8vw, 36px)',
         fontWeight: 900,
-        letterSpacing: '6px',
+        letterSpacing: 'clamp(3px, 1.5vw, 6px)',
         margin: 0,
         background: 'linear-gradient(135deg, #10b981 0%, #3b82f6 100%)',
         WebkitBackgroundClip: 'text',
@@ -108,6 +111,12 @@ export const PvpLobby: React.FC<PvpLobbyProps> = ({
               onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
               placeholder="RAUMCODE"
               maxLength={6}
+              aria-label="Raumcode eingeben"
+              name="room-code"
+              inputMode="text"
+              autoComplete="off"
+              autoCapitalize="characters"
+              spellCheck={false}
               style={{
                 background: 'rgba(15, 23, 42, 0.8)',
                 border: '1px solid rgba(148, 163, 184, 0.3)',

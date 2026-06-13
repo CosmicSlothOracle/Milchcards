@@ -30,6 +30,7 @@ type AppState = 'intro' | 'menu' | 'deckbuilder' | 'game' | 'credits' | 'pvp-lob
 function AppContent() {
   const [appState, setAppState] = useState<AppState>('intro');
   const [handCardModalOpen, setHandCardModalOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [hoveredCard, setHoveredCard] = useState<any>(null);
   const [tutorialOpen, setTutorialOpen] = useState(false);
   const [devMode, setDevMode] = useState(false);
@@ -672,44 +673,76 @@ function AppContent() {
               </div>
 
               {/* In-Game Music & Back to Menu buttons */}
-              <div style={{
-                position: 'fixed',
-                top: '20px',
-                right: '20px',
-                zIndex: 1000,
-                display: 'flex',
-                gap: '12px',
-                alignItems: 'center'
-              }}>
-                <button
-                  onClick={() => {
-                    if (window.confirm('Möchtest du das Spiel wirklich beenden und zum Hauptmenü zurückkehren?')) {
-                      if (pvpRole) pvp.leaveRoom();
-                      setAppState('menu');
-                    }
-                  }}
-                  style={{
-                    background: 'rgba(239, 68, 68, 0.2)',
-                    color: '#fca5a5',
-                    border: '1px solid rgba(239, 68, 68, 0.3)',
-                    padding: '8px 16px',
-                    borderRadius: '6px',
-                    fontSize: '12px',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    transition: 'all 0.2s',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'rgba(239, 68, 68, 0.4)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)';
-                  }}
-                >
-                  🚪 Spiel beenden
-                </button>
-                <MusicToggle size="medium" />
-              </div>
+              {mobile.isMobile ? (
+                <div className="mobile-menu" style={{ position: 'fixed', top: 'max(8px, env(safe-area-inset-top))', left: 'max(8px, env(safe-area-inset-left))', zIndex: 1000 }}>
+                  <button
+                    type="button"
+                    className="mobile-menu__toggle"
+                    aria-label={mobileMenuOpen ? 'Menü schließen' : 'Menü öffnen'}
+                    aria-expanded={mobileMenuOpen}
+                    onClick={() => setMobileMenuOpen((open) => !open)}
+                  >
+                    {mobileMenuOpen ? '✕' : '☰'}
+                  </button>
+                  {mobileMenuOpen && (
+                    <div className="mobile-menu__sheet" role="menu">
+                      <MusicToggle size="medium" />
+                      <button
+                        type="button"
+                        role="menuitem"
+                        className="mobile-menu__exit"
+                        onClick={() => {
+                          if (window.confirm('Möchtest du das Spiel wirklich beenden und zum Hauptmenü zurückkehren?')) {
+                            if (pvpRole) pvp.leaveRoom();
+                            setAppState('menu');
+                          }
+                        }}
+                      >
+                        Spiel beenden
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div style={{
+                  position: 'fixed',
+                  top: '20px',
+                  right: '20px',
+                  zIndex: 1000,
+                  display: 'flex',
+                  gap: '12px',
+                  alignItems: 'center'
+                }}>
+                  <button
+                    onClick={() => {
+                      if (window.confirm('Möchtest du das Spiel wirklich beenden und zum Hauptmenü zurückkehren?')) {
+                        if (pvpRole) pvp.leaveRoom();
+                        setAppState('menu');
+                      }
+                    }}
+                    style={{
+                      background: 'rgba(239, 68, 68, 0.2)',
+                      color: '#fca5a5',
+                      border: '1px solid rgba(239, 68, 68, 0.3)',
+                      padding: '8px 16px',
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = 'rgba(239, 68, 68, 0.4)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)';
+                    }}
+                  >
+                    🚪 Spiel beenden
+                  </button>
+                  <MusicToggle size="medium" />
+                </div>
+              )}
 
               {/* DEV MODE Indicator */}
               {devMode && (

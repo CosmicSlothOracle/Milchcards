@@ -240,6 +240,7 @@ export const HandCardModal: React.FC<HandCardModalProps> = ({
           <button
             onClick={() => setCurrentIndex(prev => Math.max(0, prev - 1))}
             disabled={currentIndex === 0}
+            aria-label="Vorherige Karte"
             style={{
               position: 'absolute',
               left: '16px',
@@ -267,6 +268,7 @@ export const HandCardModal: React.FC<HandCardModalProps> = ({
           <button
             onClick={() => setCurrentIndex(prev => Math.min(sortedHand.length - 1, prev + 1))}
             disabled={currentIndex === sortedHand.length - 1}
+            aria-label="Nächste Karte"
             style={{
               position: 'absolute',
               right: '16px',
@@ -361,13 +363,16 @@ export const HandCardModal: React.FC<HandCardModalProps> = ({
 
             <button
               onClick={onClose}
+              aria-label="Schließen"
               style={{
                 background: 'none',
                 border: 'none',
                 color: '#8faecc',
-                fontSize: '20px',
+                fontSize: '24px',
                 cursor: 'pointer',
-                padding: '4px',
+                padding: '8px',
+                minWidth: '40px',
+                minHeight: '40px',
                 borderRadius: '4px',
               }}
             >
@@ -486,6 +491,7 @@ export const HandCardModal: React.FC<HandCardModalProps> = ({
 
           {/* Auto-Play Button */}
           <button
+            className="hand-card-modal__play"
             disabled={!canPlay}
             onClick={() => {
               console.log('🔧 DEBUG: Button clicked!');

@@ -733,6 +733,42 @@ const GameBoard: React.FC<GameBoardProps> = ({
         </div>
       </div>
 
+      {/* Mobile chrome: slim floating status + thumb-zone actions.
+          Replaces the full-width HUD bars so the board owns the whole screen. */}
+      {useHandStrips && (
+        <div className="mboard-chrome" role="group" aria-label="Spielsteuerung">
+          <div className="mboard-chrome__info">
+            <span className={`mboard-chrome__turn${ isMyTurn ? ' is-mine' : ' is-foe' }`}>
+              {isMyTurn ? 'Dein Zug' : 'Gegner'}
+            </span>
+            <span className="mboard-chrome__score" aria-label={`Einfluss ${ p1Influence } zu ${ p2Influence }`}>
+              <b className="is-p1">{p1Influence}</b>
+              <span aria-hidden="true">:</span>
+              <b className="is-p2">{p2Influence}</b>
+            </span>
+            <span className="mboard-chrome__ap">
+              AP <b>{gameState.actionPoints[localPlayer]}</b>
+            </span>
+          </div>
+          <button
+            type="button"
+            className="mboard-fab mboard-fab--primary"
+            onClick={() => onCardClick({ type: 'button_end_turn' })}
+            disabled={!isMyTurn}
+          >
+            Zug beenden
+          </button>
+          <button
+            type="button"
+            className="mboard-fab"
+            onClick={() => onCardClick({ type: 'button_pass_turn' })}
+            disabled={!isMyTurn || gameState.passed[localPlayer]}
+          >
+            {gameState.passed[localPlayer] ? 'Gepasst' : 'Passen'}
+          </button>
+        </div>
+      )}
+
       {/* Collapsible Intelligence Feed — hidden on mobile (use action hint instead) */}
       <div className={`game-board__log-panel${ isLogOpen ? ' game-board__log-panel--open' : '' }`} style={{
         position: 'absolute',

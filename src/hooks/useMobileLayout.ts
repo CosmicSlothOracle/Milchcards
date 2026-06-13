@@ -48,6 +48,7 @@ export function useMobileLayout(): MobileLayout {
   return layout;
 }
 
-/** Vertical space reserved for fixed HUD bars (px). */
-export const MOBILE_HUD_TOP = 48;
-export const MOBILE_HUD_BOTTOM = 56;
+// Mobile chrome floats over the board (right-edge thumb column) instead of
+// stealing full-width HUD bars, so the board claims the entire viewport height.
+export const MOBILE_HUD_TOP = 0;
+export const MOBILE_HUD_BOTTOM = 0;
