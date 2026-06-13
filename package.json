@@ -10,6 +10,7 @@
     "@types/node": "^16.18.68",
     "@types/react": "^18.2.42",
     "@types/react-dom": "^18.2.17",
+    "firebase": "^12.14.0",
     "gsap": "^3.13.0",
     "howler": "^2.2.4",
     "konva": "^9.3.22",

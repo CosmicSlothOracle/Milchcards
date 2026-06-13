@@ -3,12 +3,14 @@ import { GameState, Card, Player, BuilderEntry, PoliticianCard } from '../types/
 import { createDefaultEffectFlags } from '../types/game';
 import { buildDeckFromEntries, sumGovernmentInfluenceWithAuras, removeCardFromDeck, drawCardsAtRoundEnd } from '../utils/gameUtils';
 import { Pols, Specials } from '../data/gameData';
+import { presetToBuilderEntries, randomPresetDeck } from '../data/presetDecks';
 import { getCardActionPointCost, getNetApCost, canPlayCard, isInitiativeCard, isGovernmentCard } from '../utils/ap';
 import { triggerCardEffects } from '../effects/cards';
 import { ensureTestBaselineAP } from '../utils/testCompat';
 import { resolveQueue } from '../utils/queue';
 import { beginLogBuffer, flushLogBuffer } from '../utils/logBuffer';
 import { cloneStateForMutation } from '../utils/stateClone';
+import { isPvpGuest } from '../pvp/pvpRole';
 import { applyStartOfTurnFlags } from '../utils/startOfTurnHooks';
 import { registerTrap, applyTrapsOnCardPlayed } from '../utils/traps';
 import { recomputeAuraFlags } from '../state/effects';
@@ -394,6 +396,13 @@ export function useGameActions(
   // Guard against duplicate concurrent playCard calls for the same card UID — removed (broke React Strict Mode)
   // Listen for target selection & dice result (global events)
   useEffect(() => {
+    // PvP guests never run the engine; their window events are forwarded
+    // to the host by usePvpSession instead.
+    const guardGuest = (fn: (ev: any) => void) => (ev: any) => {
+      if (isPvpGuest()) return;
+      fn(ev);
+    };
+
     const handlePickTarget = (ev: any) => {
       const uid = ev.detail?.targetUid as number | undefined;
       const player = ev.detail?.player as Player | undefined;
@@ -470,11 +479,17 @@ export function useGameActions(
       } catch (e) { }
     };
 
-    window.addEventListener('pc:corruption_pick_target', handlePickTarget as EventListener);
-    window.addEventListener('pc:corruption_request_roll', handleRequestRoll as EventListener);
-    window.addEventListener('pc:corruption_cancel', handleCorruptionCancel as EventListener);
-    window.addEventListener('pc:maulwurf_request_roll', handleMaulwurfRequestRoll as EventListener);
-    window.addEventListener('pc:maulwurf_cancel', handleMaulwurfCancel as EventListener);
+    const guardedPickTarget = guardGuest(handlePickTarget);
+    const guardedRequestRoll = guardGuest(handleRequestRoll);
+    const guardedCorruptionCancel = guardGuest(handleCorruptionCancel);
+    const guardedMaulwurfRequestRoll = guardGuest(handleMaulwurfRequestRoll);
+    const guardedMaulwurfCancel = guardGuest(handleMaulwurfCancel);
+
+    window.addEventListener('pc:corruption_pick_target', guardedPickTarget as EventListener);
+    window.addEventListener('pc:corruption_request_roll', guardedRequestRoll as EventListener);
+    window.addEventListener('pc:corruption_cancel', guardedCorruptionCancel as EventListener);
+    window.addEventListener('pc:maulwurf_request_roll', guardedMaulwurfRequestRoll as EventListener);
+    window.addEventListener('pc:maulwurf_cancel', guardedMaulwurfCancel as EventListener);
 
     // Listener: when UI/modal requests a tunnelvision probe roll
     const handleTunnelvisionRequestRoll = (ev: any) => {
@@ -506,15 +521,16 @@ export function useGameActions(
         logger.dbg('tunnelvision request roll error', e);
       }
     };
-    window.addEventListener('pc:tunnelvision_request_roll', handleTunnelvisionRequestRoll as EventListener);
+    const guardedTunnelvisionRequestRoll = guardGuest(handleTunnelvisionRequestRoll);
+    window.addEventListener('pc:tunnelvision_request_roll', guardedTunnelvisionRequestRoll as EventListener);
 
     return () => {
-      window.removeEventListener('pc:corruption_pick_target', handlePickTarget as EventListener);
-      window.removeEventListener('pc:corruption_request_roll', handleRequestRoll as EventListener);
-      window.removeEventListener('pc:corruption_cancel', handleCorruptionCancel as EventListener);
-      window.removeEventListener('pc:maulwurf_request_roll', handleMaulwurfRequestRoll as EventListener);
-      window.removeEventListener('pc:maulwurf_cancel', handleMaulwurfCancel as EventListener);
-      window.removeEventListener('pc:tunnelvision_request_roll', handleTunnelvisionRequestRoll as EventListener);
+      window.removeEventListener('pc:corruption_pick_target', guardedPickTarget as EventListener);
+      window.removeEventListener('pc:corruption_request_roll', guardedRequestRoll as EventListener);
+      window.removeEventListener('pc:corruption_cancel', guardedCorruptionCancel as EventListener);
+      window.removeEventListener('pc:maulwurf_request_roll', guardedMaulwurfRequestRoll as EventListener);
+      window.removeEventListener('pc:maulwurf_cancel', guardedMaulwurfCancel as EventListener);
+      window.removeEventListener('pc:tunnelvision_request_roll', guardedTunnelvisionRequestRoll as EventListener);
     };
   }, [setGameState, afterQueueResolved, log]);
   const startMatchWithDecks = useCallback((p1DeckEntries: BuilderEntry[], p2DeckEntries: BuilderEntry[]) => {
@@ -583,76 +599,11 @@ export function useGameActions(
   }, [gameState, setGameState, log]);
 
   const startMatchVsAI = useCallback((p1DeckEntries: BuilderEntry[], presetKey: string = '') => {
-    // Generate random AI deck from presets
-    const AI_PRESETS: { name: string; cards: string[] }[] = [
-      {
-        name: 'Tech Oligarchs',
-        cards: [
-          'Vladimir Putin', 'Xi Jinping', 'Donald Trump', 'Mohammed bin Salman', 'Recep Tayyip Erdoğan',
-          'Elon Musk', 'Bill Gates', 'Mark Zuckerberg', 'Tim Cook', 'Sam Altman'
-        ]
-      },
-      {
-        name: 'Diplomatic Power',
-        cards: [
-          'Jens Stoltenberg', 'Olaf Scholz', 'Rishi Sunak', 'Kamala Harris', 'Helmut Schmidt',
-          'Greta Thunberg', 'Warren Buffett', 'George Soros', 'Spin Doctor', 'Think-tank'
-        ]
-      },
-      {
-        name: 'Activist Movement',
-        cards: [
-          'Benjamin Netanyahu', 'Volodymyr Zelenskyy', 'Ursula von der Leyen', 'Narendra Modi', 'Luiz Inácio Lula da Silva',
-          'Greta Thunberg', 'Malala Yousafzai', 'Ai Weiwei', 'Alexei Navalny', 'Jennifer Doudna'
-        ]
-      },
-      {
-        name: 'Initiative Rush',
-        cards: [
-          'Benjamin Netanyahu', 'Volodymyr Zelenskyy', 'Ursula von der Leyen', 'Olaf Scholz', 'Kamala Harris',
-          'Greta Thunberg', 'Verzoegerungsverfahren', 'Symbolpolitik', 'Shadow Lobbying', 'Opportunist'
-        ]
-      },
-      {
-        name: 'Media Control',
-        cards: [
-          'Vladimir Putin', 'Xi Jinping', 'Donald Trump', 'Mohammed bin Salman', 'Recep Tayyip Erdoğan',
-          'Oprah Winfrey', 'Mark Zuckerberg', 'Tim Cook', 'Influencer-Kampagne', 'Whataboutism'
-        ]
-      },
-      {
-        name: 'Economic Influence',
-        cards: [
-          'Jens Stoltenberg', 'Olaf Scholz', 'Rishi Sunak', 'Kamala Harris', 'Helmut Schmidt',
-          'Warren Buffett', 'George Soros', 'Jeff Bezos', 'Mukesh Ambani', 'Roman Abramovich'
-        ]
-      }
-    ];
-
-    // Select random preset for AI
-    const randomPreset = AI_PRESETS[Math.floor(Math.random() * AI_PRESETS.length)];
+    // Select random premade deck for the AI
+    const randomPreset = randomPresetDeck();
     log(`🤖 KI erhält zufälliges Deck: "${ randomPreset.name }"`);
 
-    // Convert preset to BuilderEntry format
-    const p2DeckEntries: BuilderEntry[] = [];
-    randomPreset.cards.forEach(name => {
-      // Try to find as politician first
-      const pol = Pols.find((p: any) => p.name === name);
-      if (pol) {
-        p2DeckEntries.push({ kind: 'pol', baseId: pol.id, count: 1 });
-        return;
-      }
-
-      // Try to find as special card
-      const spec = Specials.find((s: any) => s.name === name);
-      if (spec) {
-        p2DeckEntries.push({ kind: 'spec', baseId: spec.id, count: 1 });
-        return;
-      }
-
-      log(`⚠️ Karte "${ name }" aus Preset "${ randomPreset.name }" nicht gefunden`);
-    });
-
+    const p2DeckEntries = presetToBuilderEntries(randomPreset, log);
     log(`🤖 KI-Deck erstellt: ${ p2DeckEntries.length } Karten`);
 
     // Enable AI for P2 first so nextTurn/auto-run sees the flag immediately

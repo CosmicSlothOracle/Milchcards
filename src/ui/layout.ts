@@ -1,6 +1,6 @@
 // src/ui/layout.ts
 import baseLayout from './ui_layout_1920x1080.json';
-import bgImg from '../assets/images/ui_layout_background_ingame.png';
+import mobileLayout from './ui_layout_mobile_landscape.json';
 
 export const UI_BASE = { width: 1920, height: 1080 } as const;
 
@@ -38,17 +38,38 @@ export type UiLayout = {
   background?: { enabled: boolean; src?: string };
 };
 
-// attach background so GameCanvas can read LAYOUT.background
+// Background image disabled: the painted slot artwork no longer matches the
+// symmetric v5 layout. Slots are styled via CSS instead (see App.css).
 export const LAYOUT: UiLayout = {
   ...(baseLayout as UiLayout),
-  background: { enabled: true, src: bgImg }
+  background: { enabled: false }
 };
+
+const MOBILE_LAYOUT: UiLayout = {
+  ...(mobileLayout as UiLayout),
+  background: { enabled: false }
+};
+
+/** When true, getZone() reads from the mobile-landscape layout (horizontal hand strips). */
+let mobileBoardLayoutActive = false;
+
+export function setMobileBoardLayout(active: boolean): void {
+  mobileBoardLayoutActive = active;
+}
+
+export function isMobileBoardLayout(): boolean {
+  return mobileBoardLayoutActive;
+}
+
+function activeLayout(): UiLayout {
+  return mobileBoardLayoutActive ? MOBILE_LAYOUT : LAYOUT;
+}
 
 // ---------- helpers ----------
 
 export function getZone(id: string): UiZone {
-  const z = LAYOUT.zones.find(z => z.id === id);
-  if (!z) throw new Error(`UI zone not found: ${id}`);
+  const z = activeLayout().zones.find(z => z.id === id);
+  if (!z) throw new Error(`UI zone not found: ${ id }`);
   return z;
 }
 

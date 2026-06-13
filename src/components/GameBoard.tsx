@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Card, GameState } from '../types/game';
 import { getCardImagePath } from '../data/gameData';
-import { LAYOUT, UI_BASE, computeSlotRects, getGovernmentRects, getPublicRects, getSofortRect, getUiTransform, getZone } from '../ui/layout';
+import { LAYOUT, UI_BASE, computeSlotRects, getGovernmentRects, getPublicRects, getSofortRect, getUiTransform, getZone, setMobileBoardLayout } from '../ui/layout';
 import { sortHandCards } from '../utils/gameUtils';
+import { MOBILE_HUD_BOTTOM, MOBILE_HUD_TOP, useMobileLayout } from '../hooks/useMobileLayout';
 
 interface GameBoardProps {
   gameState: GameState;
@@ -10,6 +11,8 @@ interface GameBoardProps {
   onCardClick: (data: any) => void;
   onCardHover: (data: any) => void;
   devMode?: boolean;
+  /** Which player this client controls (1 = host/solo, 2 = PvP guest). */
+  localPlayer?: 1 | 2;
 }
 
 const useBoardSize = () => {
@@ -41,9 +44,27 @@ const GameBoard: React.FC<GameBoardProps> = ({
   onCardClick,
   onCardHover,
   devMode = false,
+  localPlayer = 1,
 }) => {
+  const isMyTurn = gameState.current === localPlayer;
   const { ref: boardRef, size } = useBoardSize();
-  const transform = useMemo(() => getUiTransform(size.width, size.height), [size.height, size.width]);
+  const mobile = useMobileLayout();
+  const useCompactHud = mobile.isMobile && mobile.isLandscape;
+  const useHandStrips = useCompactHud;
+
+  setMobileBoardLayout(useHandStrips);
+  useEffect(() => () => setMobileBoardLayout(false), []);
+
+  const transform = useMemo(() => {
+    const hudTop = useCompactHud ? MOBILE_HUD_TOP : 0;
+    const hudBottom = useCompactHud ? MOBILE_HUD_BOTTOM : 0;
+    const playHeight = Math.max(180, size.height - hudTop - hudBottom);
+    const t = getUiTransform(size.width, playHeight);
+    if (useCompactHud) {
+      return { ...t, offsetY: t.offsetY + hudTop };
+    }
+    return t;
+  }, [size.height, size.width, useCompactHud]);
   const pendingAbility = (gameState as any).pendingAbilitySelect;
   const corruptionActive = pendingAbility?.type === 'corruption_steal';
   const corruptionPending = pendingAbility?.type === 'corruption_steal' ? pendingAbility : null;
@@ -216,13 +237,14 @@ const GameBoard: React.FC<GameBoardProps> = ({
 
   const handleHover = useCallback(
     (card: Card | null, event?: React.MouseEvent) => {
+      if (mobile.isTouch) return;
       if (!card || !event) {
         onCardHover(null);
         return;
       }
       onCardHover({ card, x: event.clientX, y: event.clientY });
     },
-    [onCardHover],
+    [onCardHover, mobile.isTouch],
   );
 
   const renderCard = (
@@ -262,11 +284,12 @@ const GameBoard: React.FC<GameBoardProps> = ({
     label: string,
     onClick?: () => void,
     highlight?: boolean,
+    variant?: 'government' | 'public' | 'permanent' | 'instant' | 'intervention',
   ) => (
     <button
       key={key}
       type="button"
-      className={`game-board__slot${ highlight ? ' game-board__slot--corruption' : '' }`}
+      className={`game-board__slot${ variant ? ` game-board__slot--${ variant }` : '' }${ highlight ? ' game-board__slot--corruption' : '' }`}
       style={style}
       onClick={onClick}
       onMouseLeave={() => onCardHover(null)}
@@ -302,6 +325,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
           label,
           () => onCardClick({ type: 'row_slot', player, lane, index }),
           shouldHighlightCorruption,
+          lane === 'aussen' ? 'government' : 'public',
         );
       }
       return renderCard(
@@ -315,6 +339,8 @@ const GameBoard: React.FC<GameBoardProps> = ({
     });
   };
 
+  // Open-hand game: both hands are rendered face-up in mirrored side columns
+  // (player left, opponent right) so a future 1v1 PvP mode shares one board view.
   const renderHand = (player: 1 | 2) => {
     const zone = getZone(player === 1 ? 'hand.player' : 'hand.opponent');
     const rects = computeSlotRects(zone);
@@ -322,80 +348,12 @@ const GameBoard: React.FC<GameBoardProps> = ({
     const isCurrent = gameState.current === player;
 
     return rects.map((rect, index) => {
-      const style = { left: rect.x, top: rect.y, width: rect.w, height: rect.h } as React.CSSProperties;
       const card = sortedHand[index];
-      if (!card) {
-        return renderSlot(
-          `${ player }-hand-${ index }`,
-          style,
-          player === 1 ? 'Hand' : 'Gegner',
-        );
-      }
+      if (!card) return null;
+
+      const style = { left: rect.x, top: rect.y, width: rect.w, height: rect.h } as React.CSSProperties;
       const originalIndex = gameState.hands[player].findIndex((c) => c.uid === card.uid);
       const selected = isCurrent && selectedHandIndex !== null && originalIndex === selectedHandIndex;
-
-      // If it is opponent's hand (player 2) and not in devMode, hide card and show back
-      if (player === 2 && !devMode) {
-        return (
-          <div
-            key={card.uid}
-            className="game-board__card"
-            style={{
-              ...style,
-              background: 'linear-gradient(135deg, #0e1726 0%, #050912 100%)',
-              border: '2px solid rgba(59, 130, 246, 0.4)',
-              boxShadow: '0 8px 16px rgba(0,0,0,0.5), inset 0 0 15px rgba(59, 130, 246, 0.15)',
-              cursor: 'default',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              position: 'absolute',
-            }}
-          >
-            {/* Geometric Design for Card Back */}
-            <div style={{
-              width: '80%',
-              height: '90%',
-              border: '1px dashed rgba(59, 130, 246, 0.25)',
-              borderRadius: '8px',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              position: 'relative',
-            }}>
-              {/* Glowing Seal */}
-              <div style={{
-                width: '40px',
-                height: '40px',
-                borderRadius: '50%',
-                background: 'rgba(59, 130, 246, 0.08)',
-                border: '2px solid #3b82f6',
-                boxShadow: '0 0 12px rgba(59, 130, 246, 0.4)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '18px',
-                fontWeight: 900,
-                color: '#3b82f6',
-                fontFamily: '"Montserrat", sans-serif',
-                marginBottom: '10px',
-              }}>
-                M
-              </div>
-              <div style={{
-                fontSize: '9px',
-                fontWeight: 800,
-                color: '#475569',
-                letterSpacing: '1.5px',
-                textTransform: 'uppercase',
-              }}>
-                MILCHCARDS
-              </div>
-            </div>
-          </div>
-        );
-      }
 
       return renderCard(
         card,
@@ -423,6 +381,8 @@ const GameBoard: React.FC<GameBoardProps> = ({
         style,
         label,
         () => onCardClick({ type: 'empty_slot', slot: slotType, player }),
+        false,
+        'permanent',
       );
     }
     return renderCard(card, style, { type: 'slot_card', slot: slotType, player, card });
@@ -439,6 +399,8 @@ const GameBoard: React.FC<GameBoardProps> = ({
         style,
         'Sofort',
         () => onCardClick({ type: 'empty_slot', slot: 'instant', player }),
+        false,
+        'instant',
       );
     }
     return renderCard(
@@ -463,6 +425,9 @@ const GameBoard: React.FC<GameBoardProps> = ({
         `${ player }-intervention`,
         style,
         'Intervention',
+        undefined,
+        false,
+        'intervention',
       );
     }
     return renderCard(card, style, { type: player === 1 ? 'trap_p1' : 'trap_p2', index: 0, card });
@@ -500,9 +465,9 @@ const GameBoard: React.FC<GameBoardProps> = ({
   const p2Influence = calculatePlayerInfluence(2);
 
   return (
-    <div className="game-board" ref={boardRef}>
+    <div className={`game-board${ useCompactHud ? ' game-board--mobile-landscape' : '' }${ useHandStrips ? ' game-board--mobile-strips' : '' }`} ref={boardRef}>
       {/* Top HUD Bar */}
-      <div style={{
+      <div className={`game-board__hud game-board__hud--top${ useCompactHud ? ' game-board__hud--compact' : '' }`} style={{
         position: 'absolute',
         top: 0,
         left: 0,
@@ -563,7 +528,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
         {/* Central scoreboard */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
           <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: '10px', color: '#10b981', fontWeight: 700, letterSpacing: '1px' }}>SPIELER 1 (DU)</div>
+            <div style={{ fontSize: '10px', color: '#10b981', fontWeight: 700, letterSpacing: '1px' }}>{localPlayer === 1 ? 'SPIELER 1 (DU)' : 'SPIELER 1 (GEGNER)'}</div>
             <div style={{ fontSize: '24px', fontWeight: 900, color: '#f8fafc', textShadow: '0 0 10px rgba(16, 185, 129, 0.3)' }}>{p1Influence}</div>
           </div>
           <div style={{
@@ -579,7 +544,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
             EINFLUSS
           </div>
           <div style={{ textAlign: 'left' }}>
-            <div style={{ fontSize: '10px', color: '#ef4444', fontWeight: 700, letterSpacing: '1px' }}>KI GEGNER</div>
+            <div style={{ fontSize: '10px', color: '#ef4444', fontWeight: 700, letterSpacing: '1px' }}>{localPlayer === 2 ? 'SPIELER 2 (DU)' : 'SPIELER 2 (GEGNER)'}</div>
             <div style={{ fontSize: '24px', fontWeight: 900, color: '#f8fafc', textShadow: '0 0 10px rgba(239, 68, 68, 0.3)' }}>{p2Influence}</div>
           </div>
         </div>
@@ -607,7 +572,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
             alignItems: 'center',
             gap: '8px',
           }}>
-            <span style={{ fontSize: '11px', fontWeight: 700, color: '#ef4444', letterSpacing: '0.5px' }}>KI AP</span>
+            <span style={{ fontSize: '11px', fontWeight: 700, color: '#ef4444', letterSpacing: '0.5px' }}>P2 AP</span>
             <strong style={{ fontSize: '14px', fontWeight: 800, color: '#ef4444' }}>{gameState.actionPoints[2]}</strong>
           </div>
         </div>
@@ -628,6 +593,28 @@ const GameBoard: React.FC<GameBoardProps> = ({
           style={{ backgroundImage: LAYOUT.background?.src ? `url(${ LAYOUT.background.src })` : undefined }}
         />
 
+        {/* Side hand columns (desktop); mobile uses horizontal strips + labels below */}
+        {!useHandStrips && (
+          <>
+            <div className="game-board__hand-panel" style={{ left: 0, top: 0, width: 224, height: 1080 }}>
+              <span>{localPlayer === 1 ? 'DEINE HAND' : 'GEGNER HAND'}</span>
+            </div>
+            <div className="game-board__hand-panel game-board__hand-panel--opponent" style={{ left: 1696, top: 0, width: 224, height: 1080 }}>
+              <span>{localPlayer === 2 ? 'DEINE HAND' : 'GEGNER HAND'}</span>
+            </div>
+          </>
+        )}
+        {useHandStrips && (
+          <>
+            <div className="game-board__hand-strip-label game-board__hand-strip-label--opp">
+              {localPlayer === 2 ? 'DEINE HAND' : 'GEGNER HAND'}
+            </div>
+            <div className="game-board__hand-strip-label game-board__hand-strip-label--player">
+              {localPlayer === 1 ? 'DEINE HAND' : 'GEGNER HAND'}
+            </div>
+          </>
+        )}
+
         {renderRow(2, 'innen', 'Öffentlichkeit')}
         {renderRow(2, 'aussen', 'Regierung')}
         {renderPermanentSlot(2, 'government', 'Dauerhaft')}
@@ -645,7 +632,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
       </div>
 
       {/* Bottom HUD Bar */}
-      <div style={{
+      <div className={`game-board__hud game-board__hud--bottom${ useCompactHud ? ' game-board__hud--compact' : '' }`} style={{
         position: 'absolute',
         bottom: 0,
         left: 0,
@@ -667,17 +654,17 @@ const GameBoard: React.FC<GameBoardProps> = ({
             width: '10px',
             height: '10px',
             borderRadius: '50%',
-            background: gameState.current === 1 ? '#10b981' : '#ef4444',
-            boxShadow: gameState.current === 1 ? '0 0 10px #10b981' : '0 0 10px #ef4444',
+            background: isMyTurn ? '#10b981' : '#ef4444',
+            boxShadow: isMyTurn ? '0 0 10px #10b981' : '0 0 10px #ef4444',
           }} />
           <span style={{
             fontSize: '14px',
             fontWeight: 800,
             letterSpacing: '1px',
-            color: gameState.current === 1 ? '#10b981' : '#fca5a5',
+            color: isMyTurn ? '#10b981' : '#fca5a5',
             textTransform: 'uppercase',
           }}>
-            {gameState.current === 1 ? '🟢 DEIN ZUG' : '🔴 GEGNER ZUG (DENKT...)'}
+            {isMyTurn ? '🟢 DEIN ZUG' : '🔴 GEGNER AM ZUG'}
           </span>
         </div>
 
@@ -685,58 +672,58 @@ const GameBoard: React.FC<GameBoardProps> = ({
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
           <button
             onClick={() => onCardClick({ type: 'button_pass_turn' })}
-            disabled={gameState.current !== 1 || gameState.passed[1]}
+            disabled={!isMyTurn || gameState.passed[localPlayer]}
             style={{
-              background: gameState.passed[1] ? 'rgba(51, 65, 85, 0.4)' : (gameState.current === 1 ? 'rgba(245, 158, 11, 0.2)' : 'rgba(51, 65, 85, 0.2)'),
-              color: gameState.passed[1] ? '#64748b' : (gameState.current === 1 ? '#f59e0b' : '#94a3b8'),
-              border: gameState.passed[1] ? '1px solid rgba(51, 65, 85, 0.3)' : (gameState.current === 1 ? '1px solid rgba(245, 158, 11, 0.4)' : '1px solid rgba(148, 163, 184, 0.1)'),
+              background: gameState.passed[localPlayer] ? 'rgba(51, 65, 85, 0.4)' : (isMyTurn ? 'rgba(245, 158, 11, 0.2)' : 'rgba(51, 65, 85, 0.2)'),
+              color: gameState.passed[localPlayer] ? '#64748b' : (isMyTurn ? '#f59e0b' : '#94a3b8'),
+              border: gameState.passed[localPlayer] ? '1px solid rgba(51, 65, 85, 0.3)' : (isMyTurn ? '1px solid rgba(245, 158, 11, 0.4)' : '1px solid rgba(148, 163, 184, 0.1)'),
               padding: '10px 24px',
               borderRadius: '8px',
               fontSize: '13px',
               fontWeight: 700,
-              cursor: (gameState.current === 1 && !gameState.passed[1]) ? 'pointer' : 'not-allowed',
+              cursor: (isMyTurn && !gameState.passed[localPlayer]) ? 'pointer' : 'not-allowed',
               textTransform: 'uppercase',
               letterSpacing: '1px',
               transition: 'all 0.2s',
             }}
             onMouseEnter={(e) => {
-              if (gameState.current === 1 && !gameState.passed[1]) {
+              if (isMyTurn && !gameState.passed[localPlayer]) {
                 e.currentTarget.style.background = 'rgba(245, 158, 11, 0.3)';
               }
             }}
             onMouseLeave={(e) => {
-              if (gameState.current === 1 && !gameState.passed[1]) {
+              if (isMyTurn && !gameState.passed[localPlayer]) {
                 e.currentTarget.style.background = 'rgba(245, 158, 11, 0.2)';
               }
             }}
           >
-            {gameState.passed[1] ? 'Gepasst ✓' : 'Passen'}
+            {gameState.passed[localPlayer] ? 'Gepasst ✓' : 'Passen'}
           </button>
 
           <button
             onClick={() => onCardClick({ type: 'button_end_turn' })}
-            disabled={gameState.current !== 1}
+            disabled={!isMyTurn}
             style={{
-              background: gameState.current === 1 ? 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)' : 'rgba(51, 65, 85, 0.2)',
-              color: gameState.current === 1 ? 'white' : '#64748b',
+              background: isMyTurn ? 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)' : 'rgba(51, 65, 85, 0.2)',
+              color: isMyTurn ? 'white' : '#64748b',
               border: 'none',
               padding: '10px 24px',
               borderRadius: '8px',
               fontSize: '13px',
               fontWeight: 700,
-              cursor: gameState.current === 1 ? 'pointer' : 'not-allowed',
+              cursor: isMyTurn ? 'pointer' : 'not-allowed',
               textTransform: 'uppercase',
               letterSpacing: '1px',
-              boxShadow: gameState.current === 1 ? '0 4px 12px rgba(59, 130, 246, 0.25)' : 'none',
+              boxShadow: isMyTurn ? '0 4px 12px rgba(59, 130, 246, 0.25)' : 'none',
               transition: 'all 0.2s',
             }}
             onMouseEnter={(e) => {
-              if (gameState.current === 1) {
+              if (isMyTurn) {
                 e.currentTarget.style.transform = 'translateY(-1px)';
               }
             }}
             onMouseLeave={(e) => {
-              if (gameState.current === 1) {
+              if (isMyTurn) {
                 e.currentTarget.style.transform = 'translateY(0)';
               }
             }}
@@ -746,8 +733,8 @@ const GameBoard: React.FC<GameBoardProps> = ({
         </div>
       </div>
 
-      {/* Collapsible Intelligence Feed (Sleek Tactical Log) */}
-      <div style={{
+      {/* Collapsible Intelligence Feed — hidden on mobile (use action hint instead) */}
+      <div className={`game-board__log-panel${ isLogOpen ? ' game-board__log-panel--open' : '' }`} style={{
         position: 'absolute',
         top: '80px',
         left: isLogOpen ? '0' : '-320px',

@@ -6,6 +6,7 @@ interface MainMenuProps {
   onOpenDeckBuilder: () => void;
   onShowCredits: () => void;
   onStartTutorial: () => void;
+  onStartPvp?: () => void;
 }
 
 export const MainMenu: React.FC<MainMenuProps> = ({
@@ -13,6 +14,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
   onOpenDeckBuilder,
   onShowCredits,
   onStartTutorial,
+  onStartPvp,
 }) => {
   return (
     <div
@@ -143,6 +145,36 @@ export const MainMenu: React.FC<MainMenuProps> = ({
         >
           🎮 Spiel Starten (vs KI)
         </button>
+
+        {onStartPvp && (
+          <button
+            onClick={onStartPvp}
+            style={{
+              background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+              color: 'white',
+              border: 'none',
+              padding: '16px 32px',
+              borderRadius: '8px',
+              fontSize: '16px',
+              fontWeight: 700,
+              letterSpacing: '2px',
+              textTransform: 'uppercase',
+              cursor: 'pointer',
+              boxShadow: '0 4px 15px rgba(59, 130, 246, 0.25)',
+              transition: 'transform 0.2s, box-shadow 0.2s',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'scale(1.03)';
+              e.currentTarget.style.boxShadow = '0 6px 20px rgba(59, 130, 246, 0.35)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'scale(1)';
+              e.currentTarget.style.boxShadow = '0 4px 15px rgba(59, 130, 246, 0.25)';
+            }}
+          >
+            🌐 1v1 Online (PvP)
+          </button>
+        )}
 
         <button
           onClick={onOpenDeckBuilder}

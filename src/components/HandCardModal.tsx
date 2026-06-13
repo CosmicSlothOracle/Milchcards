@@ -202,7 +202,7 @@ export const HandCardModal: React.FC<HandCardModalProps> = ({
 
 
   return (
-    <div style={{
+    <div className="hand-card-modal" style={{
       position: 'fixed',
       top: 0,
       left: 0,
@@ -214,20 +214,20 @@ export const HandCardModal: React.FC<HandCardModalProps> = ({
       justifyContent: 'center',
       zIndex: 1500,
     }}>
-      <div style={{
+      <div className="hand-card-modal__panel" style={{
         background: '#0d1621',
         border: '3px solid #ffffff',
         borderRadius: '16px',
         padding: '24px',
         display: 'flex',
         gap: '24px',
-        width: 'calc(35vw)', // 50% smaller than deckbuilder
+        width: 'calc(35vw)',
         height: 'calc(45vh)',
         overflow: 'hidden',
         position: 'relative',
       }}>
         {/* Card Image */}
-        <div style={{
+        <div className="hand-card-modal__art" style={{
           flex: '0 0 512px', // 50% of 1024px
           height: '512px',
           background: '#0b1118',

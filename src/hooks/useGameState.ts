@@ -1054,5 +1054,8 @@ export function useGameState() {
     executeCardEffect: gameEffects.executeCardEffect,
     processEffectQueue: gameEffects.processEffectQueue,
     afterQueueResolved,
+
+    // PvP: guests replace their local state with the host's authoritative state
+    applyRemoteGameState: setGameState,
   };
 }

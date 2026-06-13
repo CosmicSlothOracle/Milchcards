@@ -18,8 +18,14 @@ import { TutorialModal } from './components/TutorialModal';
 import SimpleDice from './components/SimpleDice';
 import { MainMenu } from './components/MainMenu';
 import { Credits } from './components/Credits';
+import { RotateDeviceOverlay } from './components/RotateDeviceOverlay';
+import { PvpLobby } from './components/PvpLobby';
+import { useMobileLayout } from './hooks/useMobileLayout';
+import { usePvpSession } from './hooks/usePvpSession';
+import { PvpAction, RELAYED_ENGINE_EVENTS } from './pvp/types';
+import { presetToBuilderEntries, randomPresetDeck } from './data/presetDecks';
 
-type AppState = 'intro' | 'menu' | 'deckbuilder' | 'game' | 'credits';
+type AppState = 'intro' | 'menu' | 'deckbuilder' | 'game' | 'credits' | 'pvp-lobby';
 
 function AppContent() {
   const [appState, setAppState] = useState<AppState>('intro');
@@ -27,6 +33,9 @@ function AppContent() {
   const [hoveredCard, setHoveredCard] = useState<any>(null);
   const [tutorialOpen, setTutorialOpen] = useState(false);
   const [devMode, setDevMode] = useState(false);
+  const mobile = useMobileLayout();
+  const showRotateOverlay = appState === 'game' && mobile.isMobile && mobile.isPortrait;
+  const diceSize = mobile.isMobile && mobile.isLandscape ? 72 : 120;
 
   // Simple dice logic
   const [diceOutcome, setDiceOutcome] = useState<'success' | 'fail' | null>(null);
@@ -47,7 +56,71 @@ function AppContent() {
     selectHandCard,
     passTurn,
     nextTurn,
+    setAiEnabled,
+    applyRemoteGameState,
   } = useGameState();
+
+  // ----- PvP (1v1 online) -----
+  // Host (P1) runs the engine and publishes state; guest (P2) renders the
+  // synced state and forwards actions.
+  const gameStateRef = useRef(gameState);
+  useEffect(() => { gameStateRef.current = gameState; }, [gameState]);
+
+  const handleRemoteAction = useCallback((action: PvpAction) => {
+    switch (action.t) {
+      case 'play_card':
+        playCard(2, action.index, action.lane);
+        break;
+      case 'pass':
+        passTurn(2);
+        break;
+      case 'end_turn':
+        if (gameStateRef.current.current === 2) nextTurn();
+        break;
+      case 'activate_instant':
+        activateInstantInitiative(2);
+        break;
+      case 'event':
+        if ((RELAYED_ENGINE_EVENTS as readonly string[]).includes(action.name)) {
+          window.dispatchEvent(new CustomEvent(action.name, { detail: action.detail ?? undefined }));
+        }
+        break;
+    }
+  }, [playCard, passTurn, nextTurn, activateInstantInitiative]);
+
+  const pvp = usePvpSession({
+    onRemoteAction: handleRemoteAction,
+    onRemoteState: applyRemoteGameState,
+    onPhaseChange: (phase) => {
+      if (phase === 'started') {
+        setAppState('game');
+      } else if (phase === 'closed') {
+        setAppState('menu');
+      }
+    },
+  });
+  const pvpRole = pvp.role;
+  const { sendAction: pvpSendAction, publishState: pvpPublishState } = pvp;
+
+  // Host: publish authoritative state after every change while playing
+  useEffect(() => {
+    if (pvpRole === 'host' && pvp.status === 'playing') {
+      pvpPublishState(gameState);
+    }
+  }, [gameState, pvpRole, pvp.status, pvpPublishState]);
+
+  const handleStartPvpMatch = useCallback(() => {
+    const p1Preset = randomPresetDeck();
+    const p2Preset = randomPresetDeck();
+    log(`🌐 PvP: P1 erhält "${ p1Preset.name }", P2 erhält "${ p2Preset.name }"`);
+    setAiEnabled(false);
+    startMatchWithDecks(
+      presetToBuilderEntries(p1Preset, log),
+      presetToBuilderEntries(p2Preset, log),
+    );
+    pvp.markStarted();
+    setAppState('game');
+  }, [log, setAiEnabled, startMatchWithDecks, pvp]);
 
   const pendingAbilitySelect = (gameState as any).pendingAbilitySelect;
   const pendingAbility = pendingAbilitySelect?.type;
@@ -193,6 +266,10 @@ function AppContent() {
 
     if (data.type === 'button_pass_turn') {
       const currentPlayer = gameState.current;
+      if (pvpRole === 'guest') {
+        if (currentPlayer === 2) pvpSendAction({ t: 'pass' });
+        return;
+      }
       log(`🎯 UI: Passen-Button geklickt - Spieler ${ currentPlayer } passt`);
       passTurn(currentPlayer);
       return;
@@ -200,12 +277,18 @@ function AppContent() {
 
     if (data.type === 'button_end_turn') {
       const currentPlayer = gameState.current;
+      if (pvpRole === 'guest') {
+        if (currentPlayer === 2) pvpSendAction({ t: 'end_turn' });
+        return;
+      }
       log(`🎯 UI: Zug-beenden-Button geklickt - Spieler ${ currentPlayer } beendet Zug`);
       nextTurn();
       return;
     }
 
     if (data.type === 'hand_p1') {
+      // In PvP the guest never controls player 1's hand
+      if (pvpRole === 'guest') return;
       if (gameState.current !== 1) {
         log('❌ ERROR: Handkarte geklickt aber nicht Spieler-Zug - Current: ' + gameState.current);
         return;
@@ -232,6 +315,8 @@ function AppContent() {
     }
 
     if (data.type === 'hand_p2') {
+      // In PvP the host never controls player 2's hand
+      if (pvpRole === 'host') return;
       if (gameState.current !== 2) {
         log('❌ ERROR: P2 Handkarte geklickt aber nicht P2-Zug - Current: ' + gameState.current);
         return;
@@ -275,6 +360,13 @@ function AppContent() {
       }
 
       const lane = data.lane;
+      if (pvpRole === 'guest') {
+        if (currentPlayer === 2) {
+          pvpSendAction({ t: 'play_card', index: selectedHandIndex, lane });
+          selectHandCard(null);
+        }
+        return;
+      }
       log('🎯 UI: Karte auf Slot gespielt - ' + card.name + ' nach ' + (lane === 'aussen' ? 'Regierungsreihe' : 'Öffentlichkeitsreihe') + ' (Slot ' + (data.index + 1) + ')');
       playCard(currentPlayer, selectedHandIndex, lane);
       selectHandCard(null);
@@ -300,33 +392,36 @@ function AppContent() {
       }
 
       const specCard = card as any;
+      const isPlayableSlot =
+        (slotType === 'permanent_government' && specCard.type === 'Dauerhaft-Initiative')
+        || (slotType === 'permanent_public' && specCard.type === 'Dauerhaft-Initiative')
+        || (slotType === 'instant' && specCard.type === 'Sofort-Initiative');
 
-      if (slotType === 'permanent_government' && specCard.type === 'Dauerhaft-Initiative') {
-        log('🎯 UI: Dauerhafte Initiative in Regierungs-Slot gelegt - ' + card.name);
-        playCard(currentPlayer, selectedHandIndex);
-        selectHandCard(null);
+      if (!isPlayableSlot) return;
+
+      if (pvpRole === 'guest') {
+        if (currentPlayer === 2) {
+          pvpSendAction({ t: 'play_card', index: selectedHandIndex });
+          selectHandCard(null);
+        }
         return;
       }
 
-      if (slotType === 'permanent_public' && specCard.type === 'Dauerhaft-Initiative') {
-        log('🎯 UI: Dauerhafte Initiative in Öffentlichkeits-Slot gelegt - ' + card.name);
-        playCard(currentPlayer, selectedHandIndex);
-        selectHandCard(null);
-        return;
-      }
-
-      if (slotType === 'instant' && specCard.type === 'Sofort-Initiative') {
-        log('🎯 UI: Sofort-Initiative in Slot gelegt - ' + card.name);
-        playCard(currentPlayer, selectedHandIndex);
-        selectHandCard(null);
-        return;
-      }
+      log('🎯 UI: Initiative in Slot gelegt - ' + card.name);
+      playCard(currentPlayer, selectedHandIndex);
+      selectHandCard(null);
       return;
     }
 
     if (data.type === 'slot_card' && data.slot === 'instant') {
       const player = data.player as Player;
       if (gameState.current !== player && !devMode) return;
+      // In PvP each client only activates its own instant slot
+      if (pvpRole === 'host' && player === 2) return;
+      if (pvpRole === 'guest') {
+        if (player === 2) pvpSendAction({ t: 'activate_instant' });
+        return;
+      }
       log('🎯 UI: Sofort-Initiative aus Slot aktiviert - ' + data.card.name);
       activateInstantInitiative(player);
       try {
@@ -339,6 +434,12 @@ function AppContent() {
     if (data.type === 'activate_instant') {
       const player = data.player as Player;
       const card = data.card;
+      // In PvP each client only activates its own instant slot
+      if (pvpRole === 'host' && player === 2) return;
+      if (pvpRole === 'guest') {
+        if (player === 2 && gameState.current === 2) pvpSendAction({ t: 'activate_instant' });
+        return;
+      }
       log('🎯 UI: Sofort-Initiative aus Slot aktiviert - ' + card.name);
       activateInstantInitiative(player);
       try {
@@ -347,7 +448,7 @@ function AppContent() {
       } catch (e) { }
       return;
     }
-  }, [gameState, selectedHandIndex, playCard, selectHandCard, passTurn, nextTurn, log, devMode, activateInstantInitiative]);
+  }, [gameState, selectedHandIndex, playCard, selectHandCard, passTurn, nextTurn, log, devMode, activateInstantInitiative, pvpRole, pvpSendAction]);
 
   const handleCardHover = useCallback((data: any) => {
     setHoveredCard(data);
@@ -388,6 +489,15 @@ function AppContent() {
     const card = playerHand[index];
     if (!card) return;
 
+    if (pvpRole === 'guest') {
+      if (currentPlayer === 2) {
+        const lane = (targetSlot === 'aussen' || targetSlot === 'innen') ? targetSlot : undefined;
+        pvpSendAction({ t: 'play_card', index, lane });
+        selectHandCard(null);
+      }
+      return;
+    }
+
     try {
       const { resolveEffectKey } = require('./effects/resolveEffectKey');
       const k = resolveEffectKey(card.name, (card as any).effectKey);
@@ -401,11 +511,13 @@ function AppContent() {
     }
 
     selectHandCard(null);
-  }, [gameState, playCard, selectHandCard, log]);
+  }, [gameState, playCard, selectHandCard, log, pvpRole, pvpSendAction]);
 
   // Auto-run AI turn when it's AI's turn (if not in Dev Mode)
+  // PvP guests never run game logic locally; the host syncs the state.
   useEffect(() => {
     if (appState !== 'game') return;
+    if (pvpRole === 'guest') return;
 
     if (gameState.current === 2 && !devMode && gameState.aiEnabled?.[2] && !gameState.passed?.[2]) {
       const t = setTimeout(() => {
@@ -420,7 +532,7 @@ function AppContent() {
       }, 120);
       return () => clearTimeout(t2);
     }
-  }, [gameState, runAITurn, devMode, appState]);
+  }, [gameState, runAITurn, devMode, appState, pvpRole, nextTurn]);
 
   return (
     <div style={{
@@ -449,6 +561,25 @@ function AppContent() {
           onOpenDeckBuilder={() => setAppState('deckbuilder')}
           onShowCredits={() => setAppState('credits')}
           onStartTutorial={() => setTutorialOpen(true)}
+          onStartPvp={() => setAppState('pvp-lobby')}
+        />
+      )}
+
+      {/* PvP Lobby State */}
+      {appState === 'pvp-lobby' && (
+        <PvpLobby
+          configured={pvp.configured}
+          role={pvp.role}
+          status={pvp.status}
+          roomCode={pvp.roomCode}
+          error={pvp.error}
+          onCreateRoom={() => { pvp.createRoom(); }}
+          onJoinRoom={(code) => { pvp.joinRoom(code); }}
+          onStartMatch={handleStartPvpMatch}
+          onBack={() => {
+            pvp.leaveRoom();
+            setAppState('menu');
+          }}
         />
       )}
 
@@ -504,6 +635,7 @@ function AppContent() {
                 onCardClick={handleCardClick}
                 onCardHover={handleCardHover}
                 devMode={devMode}
+                localPlayer={pvpRole === 'guest' ? 2 : 1}
               />
 
               {/* HandCardModal is kept for detailed views */}
@@ -516,18 +648,18 @@ function AppContent() {
               />
 
               {actionHint && (
-                <div className="action-hint">
+                <div className={`action-hint${ mobile.isMobile ? ' action-hint--mobile' : '' }`}>
                   <div className="action-hint__title">{actionHint.title}</div>
                   <div className="action-hint__body">{actionHint.body}</div>
                 </div>
               )}
 
-              <CardHoverInfoPanel hovered={hoveredCard} />
+              {!mobile.isTouch && <CardHoverInfoPanel hovered={hoveredCard} />}
 
               {/* Dice Roller centered for events */}
-              <div className={`game-dice${ corruptionActive || maulwurfActive ? ' game-dice--highlight' : '' }${ diceOutcome === 'success' ? ' game-dice--success' : '' }${ diceOutcome === 'fail' ? ' game-dice--fail' : '' }${ diceRolling ? ' game-dice--rolling' : '' }`}>
+              <div className={`game-dice${ corruptionActive || maulwurfActive ? ' game-dice--highlight' : '' }${ diceOutcome === 'success' ? ' game-dice--success' : '' }${ diceOutcome === 'fail' ? ' game-dice--fail' : '' }${ diceRolling ? ' game-dice--rolling' : '' }${ mobile.isMobile ? ' game-dice--mobile' : '' }`}>
                 <SimpleDice
-                  size={120}
+                  size={diceSize}
                   onClick={corruptionActive || maulwurfActive ? requestPendingDiceRoll : undefined}
                   onRoll={(f) => {
                     try {
@@ -552,6 +684,7 @@ function AppContent() {
                 <button
                   onClick={() => {
                     if (window.confirm('Möchtest du das Spiel wirklich beenden und zum Hauptmenü zurückkehren?')) {
+                      if (pvpRole) pvp.leaveRoom();
                       setAppState('menu');
                     }
                   }}
@@ -596,6 +729,7 @@ function AppContent() {
                   🔧 DEV MODE - KI AUS
                 </div>
               )}
+              {showRotateOverlay && <RotateDeviceOverlay />}
             </div>
           </VisualEffectsProvider>
         </div>

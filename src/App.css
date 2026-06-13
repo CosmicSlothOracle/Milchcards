@@ -32,6 +32,7 @@
   from {
     transform: rotate(0deg);
   }
+
   to {
     transform: rotate(360deg);
   }
@@ -57,6 +58,47 @@
   background-size: 100% 100%;
   background-position: center;
   filter: saturate(1.05) contrast(1.05);
+  background-image: radial-gradient(ellipse at 50% 45%, rgba(30, 41, 59, 0.85) 0%, rgba(10, 15, 26, 0.95) 75%);
+}
+
+/* Center divider between opponent (top) and player (bottom) half */
+.game-board__background::after {
+  content: '';
+  position: absolute;
+  left: 244px;
+  right: 244px;
+  top: 539px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent 0%, rgba(148, 163, 184, 0.3) 15%, rgba(148, 163, 184, 0.3) 85%, transparent 100%);
+}
+
+/* Mirrored hand columns (player left, opponent right) */
+.game-board__hand-panel {
+  position: absolute;
+  background: rgba(2, 6, 23, 0.55);
+  border-right: 1px solid rgba(148, 163, 184, 0.15);
+}
+
+.game-board__hand-panel--opponent {
+  border-right: none;
+  border-left: 1px solid rgba(148, 163, 184, 0.15);
+}
+
+.game-board__hand-panel span {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  color: #475569;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.game-board__hand-panel--opponent span {
+  color: #7f5a64;
 }
 
 .game-board__slot,
@@ -91,6 +133,52 @@
   background: rgba(15, 23, 42, 0.7);
   border-radius: 999px;
   padding: 4px 12px;
+}
+
+/* Slot variants (replace the old painted background artwork) */
+.game-board__slot--government {
+  border-color: rgba(56, 189, 248, 0.35);
+  background: rgba(12, 35, 50, 0.45);
+}
+
+.game-board__slot--government span {
+  color: rgba(125, 211, 252, 0.9);
+}
+
+.game-board__slot--public {
+  border-color: rgba(45, 212, 191, 0.35);
+  background: rgba(10, 40, 38, 0.45);
+}
+
+.game-board__slot--public span {
+  color: rgba(94, 234, 212, 0.9);
+}
+
+.game-board__slot--permanent {
+  border-color: rgba(192, 132, 252, 0.4);
+  background: rgba(40, 18, 60, 0.45);
+}
+
+.game-board__slot--permanent span {
+  color: rgba(216, 180, 254, 0.9);
+}
+
+.game-board__slot--instant {
+  border-color: rgba(244, 114, 182, 0.4);
+  background: rgba(55, 15, 38, 0.45);
+}
+
+.game-board__slot--instant span {
+  color: rgba(249, 168, 212, 0.9);
+}
+
+.game-board__slot--intervention {
+  border-color: rgba(248, 113, 113, 0.4);
+  background: rgba(55, 16, 16, 0.45);
+}
+
+.game-board__slot--intervention span {
+  color: rgba(252, 165, 165, 0.9);
 }
 
 .game-board__card {
@@ -187,10 +275,12 @@
     transform: scale(0.96);
     box-shadow: 0 0 0 rgba(59, 130, 246, 0.0);
   }
+
   45% {
     transform: scale(1.02);
     box-shadow: 0 0 30px rgba(59, 130, 246, 0.45);
   }
+
   100% {
     transform: scale(1);
     box-shadow: 0 12px 24px rgba(0, 0, 0, 0.35);
@@ -202,9 +292,11 @@
     opacity: 0;
     transform: scale(0.6);
   }
+
   30% {
     opacity: 1;
   }
+
   100% {
     opacity: 0;
     transform: scale(1.1);
@@ -216,9 +308,11 @@
     transform: scale(0.95) rotate(-1deg);
     filter: brightness(1.4);
   }
+
   40% {
     transform: scale(1.05) rotate(1deg);
   }
+
   100% {
     transform: scale(1);
     filter: brightness(1);
@@ -229,15 +323,19 @@
   0% {
     transform: translateX(0);
   }
+
   25% {
     transform: translateX(-6px);
   }
+
   50% {
     transform: translateX(6px);
   }
+
   75% {
     transform: translateX(-4px);
   }
+
   100% {
     transform: translateX(0);
   }
@@ -275,9 +373,11 @@
   0% {
     transform: scale(1);
   }
+
   45% {
     transform: scale(1.08);
   }
+
   100% {
     transform: scale(1);
   }
@@ -463,4 +563,231 @@
 .tutorial-modal__button--primary {
   background: #2563eb;
   border-color: transparent;
+}
+
+/* ===== Mobile / touch (Phase 1: landscape-first) ===== */
+
+.rotate-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(7, 12, 20, 0.96);
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+.rotate-overlay__card {
+  text-align: center;
+  max-width: 320px;
+  padding: 28px 24px;
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: rgba(15, 23, 42, 0.9);
+  color: #e2e8f0;
+}
+
+.rotate-overlay__icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  animation: rotate-hint 2s ease-in-out infinite;
+}
+
+.rotate-overlay__title {
+  margin: 0 0 8px;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+
+.rotate-overlay__body {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #94a3b8;
+}
+
+@keyframes rotate-hint {
+
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+
+  40% {
+    transform: rotate(90deg);
+  }
+
+  60% {
+    transform: rotate(90deg);
+  }
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .game-board__card:hover {
+    transform: none;
+  }
+
+  .game-board__card:active {
+    transform: scale(0.97);
+    border-color: rgba(56, 189, 248, 0.6);
+  }
+
+  .game-board__slot:hover {
+    box-shadow: none;
+  }
+
+  .game-board__slot:active {
+    border-color: rgba(56, 189, 248, 0.7);
+    background: rgba(15, 23, 42, 0.55);
+  }
+}
+
+.game-board--mobile-landscape {
+  touch-action: manipulation;
+}
+
+/* Mobile landscape: hands as top/bottom horizontal strips (full board width) */
+.game-board--mobile-strips .game-board__hand-panel {
+  display: none;
+}
+
+.game-board--mobile-strips .game-board__background::after {
+  left: 24px;
+  right: 24px;
+  top: 520px;
+}
+
+.game-board__hand-strip-label {
+  position: absolute;
+  left: 32px;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  color: #64748b;
+  text-transform: uppercase;
+  pointer-events: none;
+  z-index: 11;
+}
+
+.game-board__hand-strip-label--opp {
+  top: 4px;
+  color: #7f5a64;
+}
+
+.game-board__hand-strip-label--player {
+  top: 952px;
+}
+
+.game-board__hud--compact {
+  height: 48px !important;
+  padding: 0 12px !important;
+  padding-left: max(12px, env(safe-area-inset-left)) !important;
+  padding-right: max(12px, env(safe-area-inset-right)) !important;
+}
+
+.game-board__hud--bottom.game-board__hud--compact {
+  height: 56px !important;
+  padding-bottom: max(8px, env(safe-area-inset-bottom)) !important;
+}
+
+.game-board__hud--top.game-board__hud--compact {
+  padding-top: max(4px, env(safe-area-inset-top)) !important;
+}
+
+@media (max-height: 500px),
+(max-width: 900px) {
+
+  .game-board__hud--top.game-board__hud--compact span,
+  .game-board__hud--top.game-board__hud--compact div {
+    font-size: 10px !important;
+  }
+
+  .game-board__hud--top.game-board__hud--compact strong {
+    font-size: 12px !important;
+  }
+
+  .game-board__hud--bottom.game-board__hud--compact button {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 10px 16px !important;
+    font-size: 11px !important;
+  }
+
+  .game-board__hand-panel span {
+    font-size: 8px !important;
+    letter-spacing: 1px !important;
+  }
+
+  .game-board__slot {
+    font-size: 9px !important;
+    padding-bottom: 4px !important;
+  }
+
+  .game-board__slot span {
+    padding: 2px 6px !important;
+    font-size: 8px !important;
+  }
+
+  .game-board__activate {
+    min-height: 36px;
+    min-width: 36px;
+    padding: 8px 10px !important;
+    font-size: 10px !important;
+  }
+
+  .game-board__log-panel {
+    display: none !important;
+  }
+
+  .action-hint--mobile {
+    bottom: max(64px, calc(56px + env(safe-area-inset-bottom))) !important;
+    min-width: auto !important;
+    max-width: min(92vw, 420px) !important;
+    padding: 8px 12px !important;
+    font-size: 12px;
+  }
+
+  .action-hint--mobile .action-hint__title {
+    font-size: 12px !important;
+  }
+
+  .action-hint--mobile .action-hint__body {
+    font-size: 11px !important;
+  }
+
+  .game-dice--mobile {
+    left: max(8px, env(safe-area-inset-left)) !important;
+    bottom: max(64px, calc(56px + env(safe-area-inset-bottom))) !important;
+    padding: 4px !important;
+  }
+
+  .hand-card-modal__panel {
+    flex-direction: column !important;
+    width: min(96vw, 520px) !important;
+    height: min(92vh, 640px) !important;
+    max-height: calc(100dvh - 16px) !important;
+    padding: 12px !important;
+    gap: 12px !important;
+    overflow-y: auto !important;
+  }
+
+  .hand-card-modal__art {
+    flex: 0 0 auto !important;
+    width: 100% !important;
+    height: auto !important;
+    max-height: 42vh !important;
+    aspect-ratio: 1 / 1 !important;
+  }
+
+  .hand-card-modal__art canvas {
+    width: 100% !important;
+    height: auto !important;
+    max-height: 42vh !important;
+  }
+
+  .hand-card-modal__panel button {
+    min-height: 44px;
+  }
 }

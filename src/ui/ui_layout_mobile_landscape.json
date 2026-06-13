@@ -1,5 +1,5 @@
 {
-  "version": 5,
+  "version": 6,
   "canvas": {
     "width": 1920,
     "height": 1080,
@@ -11,60 +11,60 @@
   },
   "zones": [
     {
-      "id": "hand.player",
-      "rectPx": [
-        0,
-        0,
-        224,
-        1080
-      ],
-      "layout": {
-        "type": "fixedSlots",
-        "slots": 7,
-        "slotSize": [
-          224,
-          224
-        ],
-        "gap": -96,
-        "alignment": "center",
-        "direction": "vertical"
-      },
-      "z": 10
-    },
-    {
       "id": "hand.opponent",
       "rectPx": [
-        1696,
+        24,
         0,
-        224,
-        1080
+        1872,
+        94
       ],
       "layout": {
         "type": "fixedSlots",
         "slots": 7,
         "slotSize": [
-          224,
-          224
+          132,
+          94
         ],
-        "gap": -96,
+        "gap": -38,
         "alignment": "center",
-        "direction": "vertical"
+        "direction": "horizontal"
       },
-      "z": 10
+      "z": 12
+    },
+    {
+      "id": "hand.player",
+      "rectPx": [
+        24,
+        946,
+        1872,
+        94
+      ],
+      "layout": {
+        "type": "fixedSlots",
+        "slots": 7,
+        "slotSize": [
+          132,
+          94
+        ],
+        "gap": -38,
+        "alignment": "center",
+        "direction": "horizontal"
+      },
+      "z": 12
     },
     {
       "id": "interventions.opponent",
       "rectPx": [
-        244,
-        20,
-        232,
-        232
+        24,
+        98,
+        196,
+        196
       ],
       "layout": {
         "type": "singleSlot",
         "slotSize": [
-          232,
-          232
+          196,
+          196
         ]
       },
       "z": 10
@@ -72,16 +72,16 @@
     {
       "id": "slot.instant.opponent",
       "rectPx": [
-        484,
-        20,
-        232,
-        232
+        226,
+        98,
+        196,
+        196
       ],
       "layout": {
         "type": "singleSlot",
         "slotSize": [
-          232,
-          232
+          196,
+          196
         ]
       },
       "z": 10
@@ -89,19 +89,19 @@
     {
       "id": "row.public.opponent",
       "rectPx": [
-        724,
-        20,
-        712,
-        232
+        428,
+        98,
+        604,
+        196
       ],
       "layout": {
         "type": "fixedSlots",
         "slots": 3,
         "slotSize": [
-          232,
-          232
+          196,
+          196
         ],
-        "gap": 8,
+        "gap": 6,
         "alignment": "left",
         "direction": "horizontal"
       },
@@ -110,16 +110,16 @@
     {
       "id": "slot.permanent.public.opponent",
       "rectPx": [
-        1444,
-        20,
-        232,
-        232
+        1040,
+        98,
+        196,
+        196
       ],
       "layout": {
         "type": "singleSlot",
         "slotSize": [
-          232,
-          232
+          196,
+          196
         ]
       },
       "z": 10
@@ -127,19 +127,19 @@
     {
       "id": "row.government.opponent",
       "rectPx": [
-        244,
-        260,
-        1432,
-        232
+        24,
+        302,
+        1212,
+        196
       ],
       "layout": {
         "type": "fixedSlots",
         "slots": 5,
         "slotSize": [
-          232,
-          232
+          196,
+          196
         ],
-        "gap": 8,
+        "gap": 6,
         "alignment": "left",
         "direction": "horizontal"
       },
@@ -148,16 +148,16 @@
     {
       "id": "slot.permanent.government.opponent",
       "rectPx": [
-        1444,
-        260,
-        232,
-        232
+        1244,
+        302,
+        196,
+        196
       ],
       "layout": {
         "type": "singleSlot",
         "slotSize": [
-          232,
-          232
+          196,
+          196
         ]
       },
       "z": 10
@@ -165,19 +165,19 @@
     {
       "id": "row.government.player",
       "rectPx": [
-        244,
-        588,
-        1432,
-        232
+        24,
+        542,
+        1212,
+        196
       ],
       "layout": {
         "type": "fixedSlots",
         "slots": 5,
         "slotSize": [
-          232,
-          232
+          196,
+          196
         ],
-        "gap": 8,
+        "gap": 6,
         "alignment": "left",
         "direction": "horizontal"
       },
@@ -186,16 +186,16 @@
     {
       "id": "slot.permanent.government.player",
       "rectPx": [
-        1444,
-        588,
-        232,
-        232
+        1244,
+        542,
+        196,
+        196
       ],
       "layout": {
         "type": "singleSlot",
         "slotSize": [
-          232,
-          232
+          196,
+          196
         ]
       },
       "z": 10
@@ -203,16 +203,16 @@
     {
       "id": "interventions.player",
       "rectPx": [
-        244,
-        828,
-        232,
-        232
+        24,
+        746,
+        196,
+        196
       ],
       "layout": {
         "type": "singleSlot",
         "slotSize": [
-          232,
-          232
+          196,
+          196
         ]
       },
       "z": 10
@@ -220,16 +220,16 @@
     {
       "id": "slot.instant.player",
       "rectPx": [
-        484,
-        828,
-        232,
-        232
+        226,
+        746,
+        196,
+        196
       ],
       "layout": {
         "type": "singleSlot",
         "slotSize": [
-          232,
-          232
+          196,
+          196
         ]
       },
       "z": 10
@@ -237,19 +237,19 @@
     {
       "id": "row.public.player",
       "rectPx": [
-        724,
-        828,
-        712,
-        232
+        428,
+        746,
+        604,
+        196
       ],
       "layout": {
         "type": "fixedSlots",
         "slots": 3,
         "slotSize": [
-          232,
-          232
+          196,
+          196
         ],
-        "gap": 8,
+        "gap": 6,
         "alignment": "left",
         "direction": "horizontal"
       },
@@ -258,16 +258,16 @@
     {
       "id": "slot.permanent.public.player",
       "rectPx": [
-        1444,
-        828,
-        232,
-        232
+        1040,
+        746,
+        196,
+        196
       ],
       "layout": {
         "type": "singleSlot",
         "slotSize": [
-          232,
-          232
+          196,
+          196
         ]
       },
       "z": 10
