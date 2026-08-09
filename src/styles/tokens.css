@@ -1,0 +1,216 @@
+/**
+ * Milchcards "Chamber" design tokens
+ * Primitive scales → semantic roles (Obalana / WCAG AA)
+ */
+
+:root {
+  color-scheme: light;
+
+  /* ── Primitives: Ink (#37364e family) ── */
+  --ink-100: #eceaf1;
+  --ink-200: #d4d1de;
+  --ink-300: #b0abbf;
+  --ink-400: #857e99;
+  --ink-500: #5c5672;
+  --ink-600: #47445c;
+  --ink-700: #37364e;
+  --ink-800: #2a293c;
+  --ink-900: #1c1b28;
+  --ink-1000: #12111a;
+  --ink-1100: #000000;
+
+  /* ── Primitives: Teal (#355d69 family) ── */
+  --teal-100: #e8f1f3;
+  --teal-200: #c5dde3;
+  --teal-300: #9ac4ce;
+  --teal-400: #6aa0ae;
+  --teal-500: #4a7d8c;
+  --teal-600: #3a6a78;
+  --teal-700: #355d69;
+  --teal-800: #2a4a54;
+  --teal-900: #1e363e;
+  --teal-1000: #14242a;
+  --teal-1100: #0c1619;
+
+  /* ── Primitives: Sage (#6aae9d / #b9d4b4) ── */
+  --sage-100: #f0f7f4;
+  --sage-200: #d9ebe3;
+  --sage-300: #b9d4b4;
+  --sage-400: #96c4b0;
+  --sage-500: #6aae9d;
+  --sage-600: #559687;
+  --sage-700: #447a6e;
+  --sage-800: #355f55;
+  --sage-900: #274640;
+  --sage-1000: #1a2f2b;
+  --sage-1100: #0f1c19;
+
+  /* ── Primitives: Cream (#f4e9d4) ── */
+  --cream-100: #ffffff;
+  --cream-200: #fbf7ef;
+  --cream-300: #f4e9d4;
+  --cream-400: #ebe0c8;
+  --cream-500: #ddd0b3;
+  --cream-600: #c4b498;
+  --cream-700: #a6967a;
+  --cream-800: #7d715c;
+  --cream-900: #564d3f;
+  --cream-1000: #353028;
+  --cream-1100: #1a1713;
+
+  /* ── Primitives: Sand (#d0baa9) ── */
+  --sand-100: #f7f1ec;
+  --sand-200: #ebe0d6;
+  --sand-300: #d0baa9;
+  --sand-400: #bda38f;
+  --sand-500: #a68b75;
+  --sand-600: #8c7360;
+  --sand-700: #6f5a4b;
+  --sand-800: #544339;
+  --sand-900: #3a2e27;
+  --sand-1000: #241c18;
+  --sand-1100: #120e0c;
+
+  /* ── Primitives: Mauve (#9e8e91 / #5b4a68) ── */
+  --mauve-100: #f3eef2;
+  --mauve-200: #e0d6dc;
+  --mauve-300: #c4b4bb;
+  --mauve-400: #9e8e91;
+  --mauve-500: #7d6d78;
+  --mauve-600: #5b4a68;
+  --mauve-700: #4a3c55;
+  --mauve-800: #3a2f43;
+  --mauve-900: #2a2232;
+  --mauve-1000: #1b161f;
+  --mauve-1100: #0e0b10;
+
+  /* ── Primitives: Rose (calm danger, mauve-derived) ── */
+  --rose-100: #f8ecee;
+  --rose-200: #e9ced3;
+  --rose-300: #d4a3ac;
+  --rose-400: #b87884;
+  --rose-500: #9a5563;
+  --rose-600: #7d3f4d;
+  --rose-700: #663540;
+  --rose-800: #4f2933;
+  --rose-900: #391e25;
+  --rose-1000: #241318;
+  --rose-1100: #12090c;
+
+  /* ── Primitives: Amber (warning / corruption cue) ── */
+  --amber-300: #e8d4a8;
+  --amber-500: #c4a35a;
+  --amber-700: #8a7040;
+
+  /* ── Semantic: Background ── */
+  --bg-app: var(--cream-300);
+  --bg-app-deep: var(--sand-300);
+  --bg-app-wash: radial-gradient(
+    ellipse 120% 80% at 50% 0%,
+    var(--cream-200) 0%,
+    var(--cream-300) 45%,
+    var(--sand-200) 100%
+  );
+
+  /* ── Semantic: Surface ── */
+  --surface-default: var(--cream-100);
+  --surface-raised: var(--cream-200);
+  --surface-sunken: var(--sand-100);
+  --surface-muted: color-mix(in srgb, var(--sand-300) 35%, var(--cream-300));
+  --surface-player: color-mix(in srgb, var(--sage-300) 40%, var(--cream-200));
+  --surface-opponent: color-mix(in srgb, var(--mauve-300) 35%, var(--cream-200));
+  --surface-overlay: color-mix(in srgb, var(--ink-900) 45%, transparent);
+  --surface-panel: color-mix(in srgb, var(--cream-100) 88%, var(--sand-300));
+
+  /* ── Semantic: Content ── */
+  --content-primary: var(--ink-700);
+  --content-secondary: var(--ink-500);
+  --content-muted: var(--sand-600);
+  --content-inverse: var(--cream-100);
+  --content-on-action: var(--cream-100);
+  --content-link: var(--teal-700);
+  --content-brand: var(--ink-700);
+
+  /* ── Semantic: Border ── */
+  --border-subtle: color-mix(in srgb, var(--sand-400) 55%, transparent);
+  --border-default: color-mix(in srgb, var(--sand-500) 70%, var(--mauve-400));
+  --border-strong: var(--ink-500);
+  --border-focus: var(--teal-500);
+  --border-player: var(--sage-500);
+  --border-opponent: var(--mauve-600);
+
+  /* ── Semantic: Action (primary CTA = teal for AA white text) ── */
+  --action-primary: var(--teal-700);
+  --action-primary-hover: var(--teal-800);
+  --action-primary-active: var(--teal-900);
+  --action-primary-focus: var(--teal-500);
+  --action-primary-disabled: color-mix(in srgb, var(--teal-400) 45%, var(--sand-300));
+
+  --action-secondary: var(--sage-300);
+  --action-secondary-hover: var(--sage-400);
+  --action-secondary-text: var(--ink-700);
+
+  --action-ghost-hover: color-mix(in srgb, var(--ink-700) 6%, transparent);
+
+  /* ── Semantic: Feedback ── */
+  --feedback-positive: var(--sage-700);
+  --feedback-positive-subtle: var(--sage-200);
+  --feedback-warning: var(--amber-700);
+  --feedback-warning-subtle: var(--amber-300);
+  --feedback-negative: var(--rose-700);
+  --feedback-negative-subtle: var(--rose-200);
+  --feedback-info: var(--teal-600);
+
+  /* ── Semantic: Player / Opponent ── */
+  --player: var(--sage-500);
+  --player-strong: var(--sage-700);
+  --opponent: var(--mauve-600);
+  --opponent-strong: var(--mauve-700);
+
+  /* ── Semantic: Board slot roles (quiet tints of brand families) ── */
+  --slot-government-border: color-mix(in srgb, var(--teal-500) 55%, transparent);
+  --slot-government-bg: color-mix(in srgb, var(--teal-200) 55%, var(--cream-200));
+  --slot-government-label: var(--teal-800);
+
+  --slot-public-border: color-mix(in srgb, var(--sage-500) 55%, transparent);
+  --slot-public-bg: color-mix(in srgb, var(--sage-200) 55%, var(--cream-200));
+  --slot-public-label: var(--sage-800);
+
+  --slot-permanent-border: color-mix(in srgb, var(--mauve-500) 55%, transparent);
+  --slot-permanent-bg: color-mix(in srgb, var(--mauve-200) 50%, var(--cream-200));
+  --slot-permanent-label: var(--mauve-700);
+
+  --slot-instant-border: color-mix(in srgb, var(--sand-500) 60%, var(--mauve-400));
+  --slot-instant-bg: color-mix(in srgb, var(--sand-200) 60%, var(--cream-200));
+  --slot-instant-label: var(--sand-800);
+
+  --slot-intervention-border: color-mix(in srgb, var(--rose-500) 55%, transparent);
+  --slot-intervention-bg: color-mix(in srgb, var(--rose-200) 50%, var(--cream-200));
+  --slot-intervention-label: var(--rose-800);
+
+  --slot-legal-border: var(--sage-600);
+  --slot-legal-bg: color-mix(in srgb, var(--sage-300) 45%, var(--cream-100));
+  --slot-legal-glow: color-mix(in srgb, var(--sage-500) 28%, transparent);
+
+  /* ── Semantic: Shadow / elevation ── */
+  --shadow-sm: 0 2px 8px color-mix(in srgb, var(--ink-900) 10%, transparent);
+  --shadow-md: 0 8px 24px color-mix(in srgb, var(--ink-900) 14%, transparent);
+  --shadow-lg: 0 16px 40px color-mix(in srgb, var(--ink-900) 18%, transparent);
+
+  /* ── Typography ── */
+  --font-display: 'Syne', 'Segoe UI', sans-serif;
+  --font-ui: 'Source Sans 3', 'Source Sans Pro', 'Segoe UI', sans-serif;
+  --font-mono: 'Source Code Pro', Menlo, Consolas, monospace;
+
+  /* ── Motion ── */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --duration-fast: 140ms;
+  --duration-normal: 220ms;
+  --duration-slow: 420ms;
+
+  /* ── Radius ── */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-pill: 999px;
+}

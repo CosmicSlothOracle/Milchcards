@@ -13,6 +13,8 @@ interface GameBoardProps {
   devMode?: boolean;
   /** Which player this client controls (1 = host/solo, 2 = PvP guest). */
   localPlayer?: 1 | 2;
+  /** Exit to main menu (rendered subtly in the bottom bar). */
+  onExitToMenu?: () => void;
 }
 
 const useBoardSize = () => {
@@ -45,6 +47,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
   onCardHover,
   devMode = false,
   localPlayer = 1,
+  onExitToMenu,
 }) => {
   const isMyTurn = gameState.current === localPlayer;
   const { ref: boardRef, size } = useBoardSize();
@@ -518,54 +521,54 @@ const GameBoard: React.FC<GameBoardProps> = ({
         left: 0,
         right: 0,
         height: '60px',
-        background: 'linear-gradient(180deg, rgba(15,23,42,0.95) 0%, rgba(15,23,42,0.8) 100%)',
-        borderBottom: '1px solid rgba(148, 163, 184, 0.15)',
+        background: 'linear-gradient(180deg, var(--surface-panel) 0%, var(--surface-raised) 100%)',
+        borderBottom: '1px solid var(--border-subtle)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
         padding: '0 30px',
         zIndex: 100,
         backdropFilter: 'blur(10px)',
-        boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
+        boxShadow: '0 4px 20px color-mix(in srgb, var(--ink-900) 28%, transparent)',
       }}>
         {/* Rounds won */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <span style={{ fontSize: '11px', fontWeight: 800, color: '#64748b', letterSpacing: '1px' }}>RUNDENSPEICHER</span>
+          <span style={{ fontSize: '11px', fontWeight: 800, color: 'var(--content-muted)', letterSpacing: '1px' }}>RUNDENSPEICHER</span>
           <div style={{ display: 'flex', gap: '6px' }}>
             <div style={{
               width: '12px',
               height: '12px',
               borderRadius: '50%',
-              background: gameState.roundsWon[1] >= 1 ? '#10b981' : '#334155',
-              boxShadow: gameState.roundsWon[1] >= 1 ? '0 0 10px rgba(16, 185, 129, 0.6)' : 'none',
-              border: '1px solid rgba(255,255,255,0.1)',
+              background: gameState.roundsWon[1] >= 1 ? 'var(--player-strong)' : 'var(--sand-300)',
+              boxShadow: 'none',
+              border: '1px solid var(--border-default)',
             }} />
             <div style={{
               width: '12px',
               height: '12px',
               borderRadius: '50%',
-              background: gameState.roundsWon[1] >= 2 ? '#10b981' : '#334155',
-              boxShadow: gameState.roundsWon[1] >= 2 ? '0 0 10px rgba(16, 185, 129, 0.6)' : 'none',
-              border: '1px solid rgba(255,255,255,0.1)',
+              background: gameState.roundsWon[1] >= 2 ? 'var(--player-strong)' : 'var(--sand-300)',
+              boxShadow: 'none',
+              border: '1px solid var(--border-default)',
             }} />
           </div>
-          <span style={{ fontSize: '13px', fontWeight: 600, color: '#94a3b8', margin: '0 4px' }}>vs</span>
+          <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--content-muted)', margin: '0 4px' }}>vs</span>
           <div style={{ display: 'flex', gap: '6px' }}>
             <div style={{
               width: '12px',
               height: '12px',
               borderRadius: '50%',
-              background: gameState.roundsWon[2] >= 1 ? '#ef4444' : '#334155',
-              boxShadow: gameState.roundsWon[2] >= 1 ? '0 0 10px rgba(239, 68, 68, 0.6)' : 'none',
-              border: '1px solid rgba(255,255,255,0.1)',
+              background: gameState.roundsWon[2] >= 1 ? 'var(--opponent)' : 'var(--sand-300)',
+              boxShadow: 'none',
+              border: '1px solid var(--border-default)',
             }} />
             <div style={{
               width: '12px',
               height: '12px',
               borderRadius: '50%',
-              background: gameState.roundsWon[2] >= 2 ? '#ef4444' : '#334155',
-              boxShadow: gameState.roundsWon[2] >= 2 ? '0 0 10px rgba(239, 68, 68, 0.6)' : 'none',
-              border: '1px solid rgba(255,255,255,0.1)',
+              background: gameState.roundsWon[2] >= 2 ? 'var(--opponent)' : 'var(--sand-300)',
+              boxShadow: 'none',
+              border: '1px solid var(--border-default)',
             }} />
           </div>
         </div>
@@ -573,52 +576,52 @@ const GameBoard: React.FC<GameBoardProps> = ({
         {/* Central scoreboard */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
           <div style={{ textAlign: 'right' }} className={leadPulse === 1 ? 'score-lead-pulse' : undefined}>
-            <div style={{ fontSize: '10px', color: '#10b981', fontWeight: 700, letterSpacing: '1px' }}>{localPlayer === 1 ? 'SPIELER 1 (DU)' : 'SPIELER 1 (GEGNER)'}</div>
-            <div style={{ fontSize: '24px', fontWeight: 900, color: '#f8fafc', textShadow: leadPulse === 1 ? '0 0 18px rgba(16, 185, 129, 0.85)' : '0 0 10px rgba(16, 185, 129, 0.3)' }}>{p1Influence}</div>
+            <div style={{ fontSize: '10px', color: 'var(--player-strong)', fontWeight: 700, letterSpacing: '1px' }}>{localPlayer === 1 ? 'SPIELER 1 (DU)' : 'SPIELER 1 (GEGNER)'}</div>
+            <div style={{ fontSize: '24px', fontWeight: 900, color: leadPulse === 1 ? 'var(--player-strong)' : 'var(--content-primary)' }}>{p1Influence}</div>
           </div>
           <div style={{
             fontSize: '11px',
             fontWeight: 800,
-            background: 'rgba(51, 65, 85, 0.5)',
+            background: 'var(--surface-muted)',
             padding: '4px 10px',
             borderRadius: '4px',
-            color: '#94a3b8',
-            border: '1px solid rgba(148, 163, 184, 0.1)',
+            color: 'var(--content-muted)',
+            border: '1px solid var(--border-subtle)',
             letterSpacing: '1px',
           }}>
             EINFLUSS
           </div>
           <div style={{ textAlign: 'left' }} className={leadPulse === 2 ? 'score-lead-pulse' : undefined}>
-            <div style={{ fontSize: '10px', color: '#ef4444', fontWeight: 700, letterSpacing: '1px' }}>{localPlayer === 2 ? 'SPIELER 2 (DU)' : 'SPIELER 2 (GEGNER)'}</div>
-            <div style={{ fontSize: '24px', fontWeight: 900, color: '#f8fafc', textShadow: leadPulse === 2 ? '0 0 18px rgba(239, 68, 68, 0.85)' : '0 0 10px rgba(239, 68, 68, 0.3)' }}>{p2Influence}</div>
+            <div style={{ fontSize: '10px', color: 'var(--opponent)', fontWeight: 700, letterSpacing: '1px' }}>{localPlayer === 2 ? 'SPIELER 2 (DU)' : 'SPIELER 2 (GEGNER)'}</div>
+            <div style={{ fontSize: '24px', fontWeight: 900, color: leadPulse === 2 ? 'var(--opponent-strong)' : 'var(--content-primary)' }}>{p2Influence}</div>
           </div>
         </div>
 
         {/* AP display */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           <div style={{
-            background: 'rgba(16, 185, 129, 0.1)',
-            border: '1px solid rgba(16, 185, 129, 0.2)',
+            background: 'color-mix(in srgb, var(--sage-500) 16%, transparent)',
+            border: '1px solid color-mix(in srgb, var(--sage-500) 25%, transparent)',
             padding: '6px 12px',
             borderRadius: '6px',
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
           }}>
-            <span style={{ fontSize: '11px', fontWeight: 700, color: '#10b981', letterSpacing: '0.5px' }}>P1 AP</span>
-            <strong style={{ fontSize: '14px', fontWeight: 800, color: '#10b981' }}>{gameState.actionPoints[1]}</strong>
+            <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--player-strong)', letterSpacing: '0.5px' }}>P1 AP</span>
+            <strong style={{ fontSize: '14px', fontWeight: 800, color: 'var(--player-strong)' }}>{gameState.actionPoints[1]}</strong>
           </div>
           <div style={{
-            background: 'rgba(239, 68, 68, 0.1)',
-            border: '1px solid rgba(239, 68, 68, 0.2)',
+            background: 'var(--feedback-negative-subtle)',
+            border: '1px solid var(--feedback-negative-subtle)',
             padding: '6px 12px',
             borderRadius: '6px',
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
           }}>
-            <span style={{ fontSize: '11px', fontWeight: 700, color: '#ef4444', letterSpacing: '0.5px' }}>P2 AP</span>
-            <strong style={{ fontSize: '14px', fontWeight: 800, color: '#ef4444' }}>{gameState.actionPoints[2]}</strong>
+            <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--feedback-negative)', letterSpacing: '0.5px' }}>P2 AP</span>
+            <strong style={{ fontSize: '14px', fontWeight: 800, color: 'var(--feedback-negative)' }}>{gameState.actionPoints[2]}</strong>
           </div>
         </div>
       </div>
@@ -669,34 +672,49 @@ const GameBoard: React.FC<GameBoardProps> = ({
         left: 0,
         right: 0,
         height: '70px',
-        background: 'linear-gradient(0deg, rgba(15,23,42,0.95) 0%, rgba(15,23,42,0.8) 100%)',
-        borderTop: '1px solid rgba(148, 163, 184, 0.15)',
+        background: 'linear-gradient(0deg, var(--surface-panel) 0%, var(--surface-raised) 100%)',
+        borderTop: '1px solid var(--border-subtle)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
         padding: '0 30px',
         zIndex: 100,
         backdropFilter: 'blur(10px)',
-        boxShadow: '0 -4px 20px rgba(0,0,0,0.5)',
+        boxShadow: '0 -4px 20px color-mix(in srgb, var(--ink-900) 28%, transparent)',
       }}>
-        {/* Turn indicator */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{
-            width: '10px',
-            height: '10px',
-            borderRadius: '50%',
-            background: isMyTurn ? '#10b981' : '#ef4444',
-            boxShadow: isMyTurn ? '0 0 10px #10b981' : '0 0 10px #ef4444',
-          }} />
-          <span style={{
-            fontSize: '14px',
-            fontWeight: 800,
-            letterSpacing: '1px',
-            color: isMyTurn ? '#10b981' : '#fca5a5',
-            textTransform: 'uppercase',
-          }}>
-            {isMyTurn ? '🟢 DEIN ZUG' : '🔴 GEGNER AM ZUG'}
-          </span>
+        {/* Exit + turn indicator */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          {onExitToMenu && (
+            <button
+              type="button"
+              className="game-board__exit"
+              onClick={() => {
+                if (window.confirm('Möchtest du das Spiel wirklich beenden und zum Hauptmenü zurückkehren?')) {
+                  onExitToMenu();
+                }
+              }}
+            >
+              Spiel beenden
+            </button>
+          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{
+              width: '10px',
+              height: '10px',
+              borderRadius: '50%',
+              background: isMyTurn ? 'var(--player-strong)' : 'var(--opponent)',
+              boxShadow: 'none',
+            }} />
+            <span style={{
+              fontSize: '14px',
+              fontWeight: 800,
+              letterSpacing: '1px',
+              color: isMyTurn ? 'var(--player-strong)' : 'var(--opponent)',
+              textTransform: 'uppercase',
+            }}>
+              {isMyTurn ? 'Dein Zug' : 'Gegner am Zug'}
+            </span>
+          </div>
         </div>
 
         {/* Action Buttons */}
@@ -705,9 +723,9 @@ const GameBoard: React.FC<GameBoardProps> = ({
             onClick={() => onCardClick({ type: 'button_pass_turn' })}
             disabled={!isMyTurn || gameState.passed[localPlayer]}
             style={{
-              background: gameState.passed[localPlayer] ? 'rgba(51, 65, 85, 0.4)' : (isMyTurn ? 'rgba(245, 158, 11, 0.2)' : 'rgba(51, 65, 85, 0.2)'),
-              color: gameState.passed[localPlayer] ? '#64748b' : (isMyTurn ? '#f59e0b' : '#94a3b8'),
-              border: gameState.passed[localPlayer] ? '1px solid rgba(51, 65, 85, 0.3)' : (isMyTurn ? '1px solid rgba(245, 158, 11, 0.4)' : '1px solid rgba(148, 163, 184, 0.1)'),
+              background: gameState.passed[localPlayer] ? 'var(--action-primary-disabled)' : (isMyTurn ? 'color-mix(in srgb, var(--amber-500) 22%, transparent)' : 'var(--surface-muted)'),
+              color: gameState.passed[localPlayer] ? 'var(--content-muted)' : (isMyTurn ? 'var(--amber-700)' : 'var(--content-muted)'),
+              border: gameState.passed[localPlayer] ? '1px solid var(--border-subtle)' : (isMyTurn ? '1px solid color-mix(in srgb, var(--amber-500) 40%, transparent)' : '1px solid var(--border-subtle)'),
               padding: '10px 24px',
               borderRadius: '8px',
               fontSize: '13px',
@@ -719,12 +737,12 @@ const GameBoard: React.FC<GameBoardProps> = ({
             }}
             onMouseEnter={(e) => {
               if (isMyTurn && !gameState.passed[localPlayer]) {
-                e.currentTarget.style.background = 'rgba(245, 158, 11, 0.3)';
+                e.currentTarget.style.background = 'color-mix(in srgb, var(--amber-500) 32%, transparent)';
               }
             }}
             onMouseLeave={(e) => {
               if (isMyTurn && !gameState.passed[localPlayer]) {
-                e.currentTarget.style.background = 'rgba(245, 158, 11, 0.2)';
+                e.currentTarget.style.background = 'color-mix(in srgb, var(--amber-500) 22%, transparent)';
               }
             }}
           >
@@ -735,8 +753,8 @@ const GameBoard: React.FC<GameBoardProps> = ({
             onClick={() => onCardClick({ type: 'button_end_turn' })}
             disabled={!isMyTurn}
             style={{
-              background: isMyTurn ? 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)' : 'rgba(51, 65, 85, 0.2)',
-              color: isMyTurn ? 'white' : '#64748b',
+              background: isMyTurn ? 'var(--action-primary)' : 'var(--surface-muted)',
+              color: isMyTurn ? 'var(--content-on-action)' : 'var(--content-muted)',
               border: 'none',
               padding: '10px 24px',
               borderRadius: '8px',
@@ -745,7 +763,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
               cursor: isMyTurn ? 'pointer' : 'not-allowed',
               textTransform: 'uppercase',
               letterSpacing: '1px',
-              boxShadow: isMyTurn ? '0 4px 12px rgba(59, 130, 246, 0.25)' : 'none',
+              boxShadow: isMyTurn ? '0 4px 12px color-mix(in srgb, var(--teal-500) 28%, transparent)' : 'none',
               transition: 'all 0.2s',
             }}
             onMouseEnter={(e) => {
@@ -771,9 +789,9 @@ const GameBoard: React.FC<GameBoardProps> = ({
         left: isLogOpen ? '0' : '-320px',
         bottom: '90px',
         width: '320px',
-        background: 'rgba(15, 23, 42, 0.95)',
-        borderRight: '1px solid rgba(148, 163, 184, 0.15)',
-        boxShadow: '4px 0 20px rgba(0,0,0,0.5)',
+        background: 'var(--surface-panel)',
+        borderRight: '1px solid var(--border-subtle)',
+        boxShadow: '4px 0 20px color-mix(in srgb, var(--ink-900) 28%, transparent)',
         zIndex: 150,
         display: 'flex',
         flexDirection: 'column',
@@ -789,11 +807,11 @@ const GameBoard: React.FC<GameBoardProps> = ({
             right: '-42px',
             width: '42px',
             height: '140px',
-            background: 'rgba(15, 23, 42, 0.95)',
-            border: '1px solid rgba(148, 163, 184, 0.15)',
+            background: 'var(--surface-panel)',
+            border: '1px solid var(--border-subtle)',
             borderLeft: 'none',
             borderRadius: '0 8px 8px 0',
-            color: '#3b82f6',
+            color: 'var(--action-primary)',
             cursor: 'pointer',
             display: 'flex',
             flexDirection: 'column',
@@ -801,7 +819,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
             justifyContent: 'center',
             gap: '8px',
             padding: '10px 0',
-            boxShadow: '4px 0 10px rgba(0,0,0,0.2)',
+            boxShadow: '4px 0 10px color-mix(in srgb, var(--ink-900) 12%, transparent)',
             zIndex: 140,
           }}
         >
@@ -820,7 +838,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
         {/* Feed Header */}
         <div style={{
           padding: '16px 20px',
-          borderBottom: '1px solid rgba(148, 163, 184, 0.1)',
+          borderBottom: '1px solid var(--border-subtle)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -829,15 +847,15 @@ const GameBoard: React.FC<GameBoardProps> = ({
             fontSize: '13px',
             fontWeight: 800,
             letterSpacing: '1px',
-            color: '#e2e8f0',
+            color: 'var(--content-primary)',
             textTransform: 'uppercase',
           }}>
             📡 Intelligence Feed
           </span>
           <span style={{
             fontSize: '10px',
-            background: 'rgba(59, 130, 246, 0.15)',
-            color: '#3b82f6',
+            background: 'color-mix(in srgb, var(--teal-500) 20%, transparent)',
+            color: 'var(--action-primary)',
             padding: '2px 8px',
             borderRadius: '10px',
             fontWeight: 700,
@@ -861,16 +879,16 @@ const GameBoard: React.FC<GameBoardProps> = ({
           {gameState.log && gameState.log.length > 0 ? (
             gameState.log.map((entry, index) => {
               // Highlight errors and warnings
-              let color = '#94a3b8';
-              if (entry.includes('❌') || entry.includes('ERROR')) color = '#fca5a5';
-              else if (entry.includes('🟢') || entry.includes('✓') || entry.includes('gelungen')) color = '#a7f3d0';
-              else if (entry.includes('🎯') || entry.includes('UI:')) color = '#cbd5e1';
-              else if (entry.includes('🤖')) color = '#93c5fd';
+              let color = 'var(--content-muted)';
+              if (entry.includes('❌') || entry.includes('ERROR')) color = 'var(--rose-400)';
+              else if (entry.includes('🟢') || entry.includes('✓') || entry.includes('gelungen')) color = 'var(--sage-500)';
+              else if (entry.includes('🎯') || entry.includes('UI:')) color = 'var(--content-secondary)';
+              else if (entry.includes('🤖')) color = 'var(--teal-400)';
 
               return (
                 <div key={index} style={{
                   color,
-                  borderBottom: '1px solid rgba(148, 163, 184, 0.05)',
+                  borderBottom: '1px solid var(--border-subtle)',
                   paddingBottom: '8px',
                   wordBreak: 'break-word'
                 }}>
@@ -879,7 +897,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
               );
             })
           ) : (
-            <div style={{ color: '#475569', fontStyle: 'italic', textAlign: 'center', marginTop: '20px' }}>
+            <div style={{ color: 'var(--content-muted)', fontStyle: 'italic', textAlign: 'center', marginTop: '20px' }}>
               Keine Logdaten vorhanden.
             </div>
           )}
@@ -895,22 +913,22 @@ const GameBoard: React.FC<GameBoardProps> = ({
             top: '38%',
             transform: 'translate(-50%, -50%)',
             padding: '16px 20px',
-            background: 'rgba(6,10,15,0.95)',
-            border: '1px solid rgba(255,255,255,0.12)',
+            background: 'var(--surface-panel)',
+            border: '1px solid var(--border-subtle)',
             borderRadius: '10px',
             zIndex: 2000,
-            color: '#e5e7eb',
+            color: 'var(--content-primary)',
             fontFamily: 'monospace',
             fontSize: '14px',
             minWidth: '300px',
-            boxShadow: '0 12px 40px rgba(0,0,0,0.5)',
+            boxShadow: '0 12px 40px color-mix(in srgb, var(--ink-900) 28%, transparent)',
           }}
         >
           <div style={{ fontWeight: 700, marginBottom: '8px' }}>Bestechungsskandal 2.0 — Ziel gewählt</div>
           <div style={{ marginBottom: '6px' }}>
             Ziel: <strong>{corruptionTargetName ?? 'Unbekannt'}</strong>
           </div>
-          <div style={{ marginBottom: '12px', color: '#94a3b8' }}>
+          <div style={{ marginBottom: '12px', color: 'var(--content-muted)' }}>
             Probe: W6 ≥ Einfluss der Karte
           </div>
           <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
@@ -918,8 +936,8 @@ const GameBoard: React.FC<GameBoardProps> = ({
               type="button"
               onClick={requestCorruptionRoll}
               style={{
-                background: '#2563eb',
-                color: 'white',
+                background: 'var(--action-primary)',
+                color: 'var(--content-on-action)',
                 border: 'none',
                 padding: '8px 14px',
                 borderRadius: '6px',
@@ -933,8 +951,8 @@ const GameBoard: React.FC<GameBoardProps> = ({
               type="button"
               onClick={cancelCorruption}
               style={{
-                background: '#374151',
-                color: 'white',
+                background: 'var(--border-default)',
+                color: 'var(--content-on-action)',
                 border: 'none',
                 padding: '8px 14px',
                 borderRadius: '6px',
@@ -955,22 +973,22 @@ const GameBoard: React.FC<GameBoardProps> = ({
             top: '38%',
             transform: 'translate(-50%, -50%)',
             padding: '16px 20px',
-            background: 'rgba(6,10,15,0.95)',
-            border: '1px solid rgba(255,255,255,0.12)',
+            background: 'var(--surface-panel)',
+            border: '1px solid var(--border-subtle)',
             borderRadius: '10px',
             zIndex: 2000,
-            color: '#e5e7eb',
+            color: 'var(--content-primary)',
             fontFamily: 'monospace',
             fontSize: '14px',
             minWidth: '300px',
-            boxShadow: '0 12px 40px rgba(0,0,0,0.5)',
+            boxShadow: '0 12px 40px color-mix(in srgb, var(--ink-900) 28%, transparent)',
           }}
         >
           <div style={{ fontWeight: 700, marginBottom: '8px' }}>Maulwurf — Ziel gewählt</div>
           <div style={{ marginBottom: '6px' }}>
             Schwächste Regierungskarte: <strong>{maulwurfTargetName ?? 'Unbekannt'}</strong>
           </div>
-          <div style={{ marginBottom: '12px', color: '#94a3b8' }}>
+          <div style={{ marginBottom: '12px', color: 'var(--content-muted)' }}>
             Benötigter Wurf: W6 ≥ {maulwurfRequiredRoll ?? '?'} (3 + Anzahl gegnerischer Regierungskarten)
           </div>
           <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
@@ -978,8 +996,8 @@ const GameBoard: React.FC<GameBoardProps> = ({
               type="button"
               onClick={requestMaulwurfRoll}
               style={{
-                background: '#2563eb',
-                color: 'white',
+                background: 'var(--action-primary)',
+                color: 'var(--content-on-action)',
                 border: 'none',
                 padding: '8px 14px',
                 borderRadius: '6px',
@@ -993,8 +1011,8 @@ const GameBoard: React.FC<GameBoardProps> = ({
               type="button"
               onClick={cancelMaulwurf}
               style={{
-                background: '#374151',
-                color: 'white',
+                background: 'var(--border-default)',
+                color: 'var(--content-on-action)',
                 border: 'none',
                 padding: '8px 14px',
                 borderRadius: '6px',
@@ -1012,7 +1030,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
           style={{
             position: 'fixed',
             inset: 0,
-            background: 'rgba(0,0,0,0.55)',
+            background: 'var(--surface-overlay)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -1021,21 +1039,21 @@ const GameBoard: React.FC<GameBoardProps> = ({
         >
           <div
             style={{
-              background: '#0f172a',
-              border: '1px solid rgba(148,163,184,0.35)',
+              background: 'var(--surface-panel)',
+              border: '1px solid var(--border-default)',
               borderRadius: '12px',
               padding: '18px 20px',
-              color: '#e2e8f0',
+              color: 'var(--content-primary)',
               fontSize: '14px',
               minWidth: '300px',
-              boxShadow: '0 12px 40px rgba(0,0,0,0.5)',
+              boxShadow: '0 12px 40px color-mix(in srgb, var(--ink-900) 28%, transparent)',
             }}
           >
             <div style={{ fontWeight: 700, marginBottom: '8px' }}>Tunnelvision — Probe</div>
             <div style={{ marginBottom: '6px' }}>
               Einfluss: <strong>{tunnelvisionPending.influence ?? '?'}</strong>
             </div>
-            <div style={{ marginBottom: '12px', color: '#94a3b8' }}>
+            <div style={{ marginBottom: '12px', color: 'var(--content-muted)' }}>
               Benötigter Wurf: W6 ≥ {tunnelvisionPending.requiredRoll ?? '?'}
             </div>
             <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
@@ -1043,8 +1061,8 @@ const GameBoard: React.FC<GameBoardProps> = ({
                 type="button"
                 onClick={requestTunnelvisionRoll}
                 style={{
-                  background: '#2563eb',
-                  color: 'white',
+                  background: 'var(--action-primary)',
+                  color: 'var(--content-on-action)',
                   border: 'none',
                   padding: '8px 14px',
                   borderRadius: '6px',

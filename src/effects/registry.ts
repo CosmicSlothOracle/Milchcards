@@ -83,6 +83,13 @@ export const EFFECTS: Record<string, EffectHandler> = {
   },
 
   // --- PUBLIC
+  // Passive AP design (avoid infinite engines):
+  // - Prefer once/turn or once/round flags over uncapped on-activation ADD_AP
+  // - On-play ADD_AP is OK (cost is charged BEFORE resolve); do not also grant
+  //   uncapped ADD_AP on every INITIATIVE_ACTIVATED
+  // - Deferred bonuses (apBonusInitiativeNext) consume on first use
+  // - Opportunist mirrors must set mirrored:true (one hop only)
+  // Safe variants: draw-only, influence buff, conditional (tag/synergy), once/match
   // Elon Musk — draw 1 on play; the once-per-round +1 AP fires on INITIATIVE_ACTIVATED
   'public.elon.draw_ap': ({ enqueue, player, log }) => {
     enqueue({ type: 'DRAW_CARDS', player, amount: 1 });

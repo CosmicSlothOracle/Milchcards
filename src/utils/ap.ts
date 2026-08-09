@@ -89,7 +89,7 @@ export const canPlayCard = (state: GameState, p: Player, card: Card): boolean =>
 
 export const hasGretaOnBoard = (state: GameState, p: Player) =>
   state.board[p].innen.some(
-    (c) => (c as any)?.kind === 'pol' && (c as any)?.name === 'Greta Thunberg' && !(c as any)?.deactivated
+    (c) => (c as any)?.name === 'Greta Thunberg' && !(c as any)?.deactivated
   );
 export const hasAnyZeroApPlay = (state: GameState, p: Player) => false; // Simplified AP system: No free cards
 export function resetTurnApRefundFlags(state: GameState, p: Player) {} // Simplified AP system: No refunds

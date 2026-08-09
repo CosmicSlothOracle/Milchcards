@@ -9,7 +9,7 @@ export interface SimpleDiceProps {
 
 /**
  * SimpleDice - A highly polished 2D CSS-based premium dice component.
- * Integrates beautifully with the dark-futuristic Milchcards aesthetic.
+ * Integrates beautifully with the Chamber Milchcards aesthetic.
  */
 const SimpleDice: React.FC<SimpleDiceProps> = ({
   size = 110,
@@ -107,12 +107,12 @@ const SimpleDice: React.FC<SimpleDiceProps> = ({
           position: 'absolute',
           width: '10px',
           height: '10px',
-          backgroundColor: '#3b82f6',
+          backgroundColor: 'var(--teal-700)',
           borderRadius: '50%',
           left: '50%',
           top: '50%',
           transform: `translate(calc(-50% + ${ x * 22 }px), calc(-50% + ${ y * 22 }px))`,
-          boxShadow: '0 0 8px #3b82f6, 0 0 16px rgba(59, 130, 246, 0.4)',
+          boxShadow: 'none',
           transition: 'all 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
         }}
       />
@@ -124,15 +124,15 @@ const SimpleDice: React.FC<SimpleDiceProps> = ({
       style={{
         width: size,
         height: size,
-        background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
-        border: '2px solid rgba(148, 163, 184, 0.2)',
+        background: 'linear-gradient(145deg, var(--cream-100) 0%, var(--sand-200) 100%)',
+        border: '2px solid var(--border-default)',
         borderRadius: '16px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         cursor: isRolling ? 'wait' : 'pointer',
         position: 'relative',
-        boxShadow: '0 8px 24px rgba(0,0,0,0.6), inset 0 0 12px rgba(255,255,255,0.05)',
+        boxShadow: 'var(--shadow-md)',
         transform: `scale(${ isRolling ? 1.05 : 1 }) rotate(${ rotation }deg)`,
         transition: 'all 0.5s cubic-bezier(0.19, 1, 0.22, 1)',
         userSelect: 'none',
@@ -165,15 +165,15 @@ const SimpleDice: React.FC<SimpleDiceProps> = ({
             left: '50%',
             transform: 'translateX(-50%)',
             fontSize: '11px',
-            color: '#3b82f6',
-            textShadow: '0 0 8px rgba(59, 130, 246, 0.4)',
+            color: 'var(--teal-700)',
+            textShadow: 'none',
             fontWeight: 800,
             whiteSpace: 'nowrap',
             letterSpacing: '1px',
             textTransform: 'uppercase',
           }}
         >
-          🎲 WÜRFELT...
+          Würfelt…
         </div>
       )}
     </div>

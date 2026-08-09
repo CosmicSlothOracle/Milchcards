@@ -17,268 +17,41 @@ export const MainMenu: React.FC<MainMenuProps> = ({
   onStartPvp,
 }) => {
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        minHeight: '100dvh',
-        width: '100vw',
-        background: 'radial-gradient(circle, #111a2e 0%, #070c16 100%)',
-        color: '#e8f0f8',
-        position: 'relative',
-        overflowX: 'hidden',
-        overflowY: 'auto',
-        padding: '24px 16px',
-        boxSizing: 'border-box',
-      }}
-    >
-      {/* Glow Effects */}
-      <div
-        style={{
-          position: 'absolute',
-          top: '-10%',
-          left: '20%',
-          width: '600px',
-          height: '600px',
-          background: 'rgba(16, 185, 129, 0.05)',
-          borderRadius: '50%',
-          filter: 'blur(100px)',
-          pointerEvents: 'none',
-        }}
-      />
-      <div
-        style={{
-          position: 'absolute',
-          bottom: '-10%',
-          right: '20%',
-          width: '600px',
-          height: '600px',
-          background: 'rgba(37, 99, 235, 0.05)',
-          borderRadius: '50%',
-          filter: 'blur(100px)',
-          pointerEvents: 'none',
-        }}
-      />
-
-      {/* Top Bar with Music Toggle */}
-      <div
-        style={{
-          position: 'absolute',
-          top: '30px',
-          right: '30px',
-          zIndex: 10,
-        }}
-      >
-        <MusicToggle size="large" />
+    <div className="mc-screen mc-screen--enter">
+      <div className="mc-top-right">
+        <MusicToggle size="medium" />
       </div>
 
-      {/* Main Title Container */}
-      <div
-        style={{
-          textAlign: 'center',
-          marginBottom: 'clamp(24px, 6vh, 50px)',
-          zIndex: 2,
-        }}
-      >
-        <h1
-          style={{
-            fontSize: 'clamp(40px, 12vw, 72px)',
-            fontWeight: 900,
-            letterSpacing: 'clamp(6px, 2vw, 12px)',
-            margin: 0,
-            background: 'linear-gradient(135deg, #10b981 0%, #3b82f6 100%)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            textShadow: '0 0 30px rgba(16, 185, 129, 0.2)',
-            fontFamily: '"Montserrat", "Arial Black", sans-serif',
-          }}
-        >
-          MILCHCARDS
-        </h1>
-        <p
-          style={{
-            fontSize: 'clamp(13px, 3.5vw, 18px)',
-            fontWeight: 500,
-            color: '#94a3b8',
-            letterSpacing: 'clamp(2px, 1vw, 4px)',
-            marginTop: '10px',
-            textTransform: 'uppercase',
-          }}
-        >
-          The Political Deck-Building Engine
-        </p>
+      <div className="mc-brand">
+        <h1 className="mc-brand__title">MILCHCARDS</h1>
+        <p className="mc-brand__subtitle">The Political Deck-Building Engine</p>
       </div>
 
-      {/* Menu Options */}
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '16px',
-          minWidth: '280px',
-          zIndex: 2,
-        }}
-      >
-        <button
-          onClick={onStartGame}
-          style={{
-            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-            color: 'white',
-            border: 'none',
-            padding: '16px 32px',
-            borderRadius: '8px',
-            fontSize: '16px',
-            fontWeight: 700,
-            letterSpacing: '2px',
-            textTransform: 'uppercase',
-            cursor: 'pointer',
-            boxShadow: '0 4px 15px rgba(16, 185, 129, 0.25)',
-            transition: 'transform 0.2s, box-shadow 0.2s',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = 'scale(1.03)';
-            e.currentTarget.style.boxShadow = '0 6px 20px rgba(16, 185, 129, 0.35)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = 'scale(1)';
-            e.currentTarget.style.boxShadow = '0 4px 15px rgba(16, 185, 129, 0.25)';
-          }}
-        >
-          🎮 Spiel Starten (vs KI)
+      <div className="mc-menu">
+        <button type="button" className="mc-btn mc-btn--primary" onClick={onStartGame}>
+          Spiel Starten (vs KI)
         </button>
 
         {onStartPvp && (
-          <button
-            onClick={onStartPvp}
-            style={{
-              background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
-              color: 'white',
-              border: 'none',
-              padding: '16px 32px',
-              borderRadius: '8px',
-              fontSize: '16px',
-              fontWeight: 700,
-              letterSpacing: '2px',
-              textTransform: 'uppercase',
-              cursor: 'pointer',
-              boxShadow: '0 4px 15px rgba(59, 130, 246, 0.25)',
-              transition: 'transform 0.2s, box-shadow 0.2s',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'scale(1.03)';
-              e.currentTarget.style.boxShadow = '0 6px 20px rgba(59, 130, 246, 0.35)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'scale(1)';
-              e.currentTarget.style.boxShadow = '0 4px 15px rgba(59, 130, 246, 0.25)';
-            }}
-          >
-            🌐 1v1 Online (PvP)
+          <button type="button" className="mc-btn mc-btn--secondary" onClick={onStartPvp}>
+            1v1 Online (PvP)
           </button>
         )}
 
-        <button
-          onClick={onOpenDeckBuilder}
-          style={{
-            background: 'rgba(30, 41, 59, 0.7)',
-            color: '#e2e8f0',
-            border: '1px solid rgba(148, 163, 184, 0.2)',
-            padding: '16px 32px',
-            borderRadius: '8px',
-            fontSize: '16px',
-            fontWeight: 600,
-            letterSpacing: '2px',
-            textTransform: 'uppercase',
-            cursor: 'pointer',
-            backdropFilter: 'blur(10px)',
-            transition: 'all 0.2s',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = 'scale(1.03)';
-            e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.6)';
-            e.currentTarget.style.background = 'rgba(30, 41, 59, 0.9)';
-            e.currentTarget.style.boxShadow = '0 4px 15px rgba(59, 130, 246, 0.15)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = 'scale(1)';
-            e.currentTarget.style.borderColor = 'rgba(148, 163, 184, 0.2)';
-            e.currentTarget.style.background = 'rgba(30, 41, 59, 0.7)';
-            e.currentTarget.style.boxShadow = 'none';
-          }}
-        >
-          🗂️ Deck-Manager
+        <button type="button" className="mc-btn mc-btn--outline" onClick={onOpenDeckBuilder}>
+          Deck-Manager
         </button>
 
-        <button
-          onClick={onStartTutorial}
-          style={{
-            background: 'rgba(30, 41, 59, 0.7)',
-            color: '#e2e8f0',
-            border: '1px solid rgba(148, 163, 184, 0.2)',
-            padding: '14px 32px',
-            borderRadius: '8px',
-            fontSize: '14px',
-            fontWeight: 600,
-            letterSpacing: '1.5px',
-            textTransform: 'uppercase',
-            cursor: 'pointer',
-            backdropFilter: 'blur(10px)',
-            transition: 'all 0.2s',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = 'scale(1.03)';
-            e.currentTarget.style.borderColor = 'rgba(14, 165, 233, 0.6)';
-            e.currentTarget.style.background = 'rgba(30, 41, 59, 0.9)';
-            e.currentTarget.style.boxShadow = '0 4px 15px rgba(14, 165, 233, 0.15)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = 'scale(1)';
-            e.currentTarget.style.borderColor = 'rgba(148, 163, 184, 0.2)';
-            e.currentTarget.style.background = 'rgba(30, 41, 59, 0.7)';
-            e.currentTarget.style.boxShadow = 'none';
-          }}
-        >
-          📘 Tutorial
+        <button type="button" className="mc-btn mc-btn--outline" onClick={onStartTutorial}>
+          Tutorial
         </button>
 
-        <button
-          onClick={onShowCredits}
-          style={{
-            background: 'transparent',
-            color: '#94a3b8',
-            border: 'none',
-            padding: '12px 32px',
-            borderRadius: '8px',
-            fontSize: '14px',
-            fontWeight: 500,
-            letterSpacing: '1px',
-            cursor: 'pointer',
-            transition: 'color 0.2s',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.color = '#3b82f6';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.color = '#94a3b8';
-          }}
-        >
-          🎓 Credits & Portfolio
+        <button type="button" className="mc-btn mc-btn--ghost" onClick={onShowCredits}>
+          Credits & Portfolio
         </button>
       </div>
 
-      {/* Footer Branding */}
-      <div
-        style={{
-          position: 'absolute',
-          bottom: '20px',
-          fontSize: '11px',
-          color: '#475569',
-          letterSpacing: '1px',
-          zIndex: 2,
-        }}
-      >
+      <div className="mc-footer-note">
         PROUDLY CREATED AS A WEB DEV DESIGN POC • © 2026
       </div>
     </div>

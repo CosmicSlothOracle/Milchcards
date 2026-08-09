@@ -125,9 +125,18 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
           } as EffectEvent);
         }
 
-        // Opportunist AP-Spiegelung (falls aktiv beim Gegner)
-        if (state.effectFlags[other(ev.player)]?.opportunistActive && ev.amount > 0) {
-          const mirror = { type: 'ADD_AP', player: other(ev.player), amount: ev.amount } as EffectEvent;
+        // Opportunist AP-Spiegelung (einmalig; mirrored tag verhindert Ping-Pong-Loops)
+        if (
+          state.effectFlags[other(ev.player)]?.opportunistActive &&
+          ev.amount > 0 &&
+          !(ev as any).mirrored
+        ) {
+          const mirror = {
+            type: 'ADD_AP',
+            player: other(ev.player),
+            amount: ev.amount,
+            mirrored: true,
+          } as EffectEvent;
           events.unshift(mirror);
           logPush(state, `Opportunist: AP +${ev.amount} gespiegelt.`);
         }
@@ -369,9 +378,18 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
             } as EffectEvent);
           }
 
-          // Opportunist-Spiegelung (falls aktiv beim Gegner)
-          if (state.effectFlags[other(player)]?.opportunistActive && amount > 0) {
-            const mirror = { type: 'BUFF_STRONGEST_GOV', player: other(player), amount } as EffectEvent;
+          // Opportunist-Spiegelung (einmalig; mirrored verhindert Ping-Pong)
+          if (
+            state.effectFlags[other(player)]?.opportunistActive &&
+            amount > 0 &&
+            !(ev as any).mirrored
+          ) {
+            const mirror = {
+              type: 'BUFF_STRONGEST_GOV',
+              player: other(player),
+              amount,
+              mirrored: true,
+            } as EffectEvent;
             events.unshift(mirror);
             logPush(state, logOpportunist(other(player), amount));
           }

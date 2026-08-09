@@ -215,8 +215,8 @@ export const HandCardModal: React.FC<HandCardModalProps> = ({
       zIndex: 1500,
     }}>
       <div className="hand-card-modal__panel" style={{
-        background: '#0d1621',
-        border: '3px solid #ffffff',
+        background: 'var(--surface-overlay)',
+        border: '3px solid var(--content-on-action)',
         borderRadius: '16px',
         padding: '24px',
         display: 'flex',
@@ -230,8 +230,8 @@ export const HandCardModal: React.FC<HandCardModalProps> = ({
         <div className="hand-card-modal__art" style={{
           flex: '0 0 512px', // 50% of 1024px
           height: '512px',
-          background: '#0b1118',
-          border: '2px solid #ffffff',
+          background: 'var(--surface-panel)',
+          border: '2px solid var(--content-on-action)',
           clipPath: 'polygon(50px 0, calc(100% - 50px) 0, 100% 50px, 100% 100%, 0 100%, 0 50px)',
           overflow: 'hidden',
           position: 'relative',
@@ -247,7 +247,7 @@ export const HandCardModal: React.FC<HandCardModalProps> = ({
               top: '50%',
               transform: 'translateY(-50%)',
               background: 'rgba(13, 22, 33, 0.9)',
-              border: '2px solid #1f3042',
+              border: '2px solid var(--border-default)',
               borderRadius: '50%',
               width: '48px',
               height: '48px',
@@ -255,7 +255,7 @@ export const HandCardModal: React.FC<HandCardModalProps> = ({
               alignItems: 'center',
               justifyContent: 'center',
               cursor: currentIndex > 0 ? 'pointer' : 'not-allowed',
-              color: '#eaf3ff',
+              color: 'var(--content-primary)',
               fontSize: '20px',
               fontWeight: 'bold',
               zIndex: 10,
@@ -275,7 +275,7 @@ export const HandCardModal: React.FC<HandCardModalProps> = ({
               top: '50%',
               transform: 'translateY(-50%)',
               background: 'rgba(13, 22, 33, 0.9)',
-              border: '2px solid #1f3042',
+              border: '2px solid var(--border-default)',
               borderRadius: '50%',
               width: '48px',
               height: '48px',
@@ -283,7 +283,7 @@ export const HandCardModal: React.FC<HandCardModalProps> = ({
               alignItems: 'center',
               justifyContent: 'center',
               cursor: currentIndex < sortedHand.length - 1 ? 'pointer' : 'not-allowed',
-              color: '#eaf3ff',
+              color: 'var(--content-primary)',
               fontSize: '20px',
               fontWeight: 'bold',
               zIndex: 10,
@@ -333,7 +333,7 @@ export const HandCardModal: React.FC<HandCardModalProps> = ({
                 margin: '0 0 4px 0',
                 fontSize: '20px',
                 fontWeight: 700,
-                color: '#eaf3ff',
+                color: 'var(--content-primary)',
                 lineHeight: '1.2',
               }}>
                 {currentCard.name}
@@ -341,7 +341,7 @@ export const HandCardModal: React.FC<HandCardModalProps> = ({
 
               <div style={{
                 fontSize: '12px',
-                color: '#6b7280',
+                color: 'var(--content-muted)',
                 fontWeight: 500,
                 display: 'flex',
                 gap: '8px',
@@ -349,8 +349,8 @@ export const HandCardModal: React.FC<HandCardModalProps> = ({
               }}>
                 <span>Karte {currentIndex + 1} von {sortedHand.length}</span>
                 <span style={{
-                  background: currentPlayer === 1 ? '#4ade80' : '#ef4444',
-                  color: 'white',
+                  background: currentPlayer === 1 ? 'var(--feedback-positive)' : 'var(--feedback-negative)',
+                  color: 'var(--content-on-action)',
                   padding: '2px 6px',
                   borderRadius: '4px',
                   fontSize: '10px',
@@ -367,7 +367,7 @@ export const HandCardModal: React.FC<HandCardModalProps> = ({
               style={{
                 background: 'none',
                 border: 'none',
-                color: '#8faecc',
+                color: 'var(--content-secondary)',
                 fontSize: '24px',
                 cursor: 'pointer',
                 padding: '8px',
@@ -382,14 +382,14 @@ export const HandCardModal: React.FC<HandCardModalProps> = ({
 
           {/* Card Type and Cost */}
           <div style={{
-            background: '#111827',
-            border: '1px solid #ffffff',
+            background: 'var(--surface-raised)',
+            border: '1px solid var(--content-on-action)',
             borderRadius: '8px',
             padding: '12px',
             fontSize: '12px',
           }}>
-            <div style={{ color: '#9ca3af', marginBottom: '4px' }}>Typ & Kosten</div>
-            <div style={{ color: '#e5e7eb' }}>
+            <div style={{ color: 'var(--content-muted)', marginBottom: '4px' }}>Typ & Kosten</div>
+            <div style={{ color: 'var(--content-primary)' }}>
               {currentCard.kind === 'pol'
                 ? `Regierung/Öffentlichkeit • ${ convertHPToUSD((currentCard as PoliticianCard).BP || 0) }`
                 : `${ (currentCard as SpecialCard).type } • ${ convertHPToUSD((currentCard as SpecialCard).bp) }`
@@ -397,7 +397,7 @@ export const HandCardModal: React.FC<HandCardModalProps> = ({
             </div>
             {currentCard.kind === 'pol' && (
               <div style={{
-                color: '#e5e7eb',
+                color: 'var(--content-primary)',
                 marginTop: '8px',
                 display: 'flex',
                 gap: '8px',
@@ -406,18 +406,18 @@ export const HandCardModal: React.FC<HandCardModalProps> = ({
                 fontVariantNumeric: 'tabular-nums',
               }}>
                 <span style={{
-                  background: 'rgba(16, 185, 129, 0.15)',
+                  background: 'color-mix(in srgb, var(--sage-500) 20%, transparent)',
                   border: '1px solid rgba(16, 185, 129, 0.4)',
-                  color: '#34d399',
+                  color: 'var(--player)',
                   borderRadius: '6px',
                   padding: '3px 8px',
                 }}>
                   Einfluss {(currentCard as any).influence ?? '—'}
                 </span>
                 <span style={{
-                  background: 'rgba(59, 130, 246, 0.15)',
+                  background: 'color-mix(in srgb, var(--teal-500) 20%, transparent)',
                   border: '1px solid rgba(59, 130, 246, 0.4)',
-                  color: '#93c5fd',
+                  color: 'var(--teal-400)',
                   borderRadius: '6px',
                   padding: '3px 8px',
                 }}>
@@ -428,8 +428,8 @@ export const HandCardModal: React.FC<HandCardModalProps> = ({
             {/* Show subcategories for public cards */}
             {cardDetails?.subcategories && cardDetails.subcategories.length > 0 && (
               <div style={{ marginTop: '8px' }}>
-                <div style={{ color: '#9ca3af', marginBottom: '4px' }}>Schlüsselwörter</div>
-                <div style={{ color: '#e5e7eb', fontSize: '11px' }}>
+                <div style={{ color: 'var(--content-muted)', marginBottom: '4px' }}>Schlüsselwörter</div>
+                <div style={{ color: 'var(--content-primary)', fontSize: '11px' }}>
                   {withIcons(cardDetails.subcategories.join(', '), 12)}
                 </div>
               </div>
@@ -438,18 +438,18 @@ export const HandCardModal: React.FC<HandCardModalProps> = ({
 
           {/* AP Breakdown */}
           <div style={{
-            background: '#111827',
-            border: '1px solid #ffffff',
+            background: 'var(--surface-raised)',
+            border: '1px solid var(--content-on-action)',
             borderRadius: '8px',
             padding: '12px',
             fontSize: '12px',
           }}>
-            <div style={{ color: '#9ca3af', marginBottom: '8px', fontWeight: '600' }}>AP-Kosten</div>
+            <div style={{ color: 'var(--content-muted)', marginBottom: '8px', fontWeight: '600' }}>AP-Kosten</div>
             <div style={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              color: '#e5e7eb',
+              color: 'var(--content-primary)',
               marginBottom: '4px'
             }}>
               <span>Basis</span>
@@ -461,7 +461,7 @@ export const HandCardModal: React.FC<HandCardModalProps> = ({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              color: '#e5e7eb',
+              color: 'var(--content-primary)',
               marginBottom: '4px'
             }}>
               <span>Refunds</span>
@@ -475,13 +475,13 @@ export const HandCardModal: React.FC<HandCardModalProps> = ({
               justifyContent: 'space-between',
               marginTop: '8px',
               padding: '6px 8px',
-              background: net === 0 ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.1)',
-              border: `1px solid ${ net === 0 ? '#10b981' : '#f59e0b' }`,
+              background: net === 0 ? 'color-mix(in srgb, var(--sage-500) 16%, transparent)' : 'rgba(245, 158, 11, 0.1)',
+              border: `1px solid ${ net === 0 ? 'var(--player-strong)' : 'var(--amber-700)' }`,
               borderRadius: '4px',
               fontWeight: '600'
             }}>
-              <span style={{ color: net === 0 ? '#10b981' : '#f59e0b' }}>Netto</span>
-              <span style={{ color: net === 0 ? '#10b981' : '#f59e0b' }}>
+              <span style={{ color: net === 0 ? 'var(--player-strong)' : 'var(--amber-700)' }}>Netto</span>
+              <span style={{ color: net === 0 ? 'var(--player-strong)' : 'var(--amber-700)' }}>
                 {net} AP {net === 0 ? '· verbraucht keine Aktion' : ''}
               </span>
             </div>
@@ -489,8 +489,8 @@ export const HandCardModal: React.FC<HandCardModalProps> = ({
 
           {/* Game Effect */}
           <div style={{
-            background: '#111827',
-            border: '1px solid #ffffff',
+            background: 'var(--surface-raised)',
+            border: '1px solid var(--content-on-action)',
             borderRadius: '8px',
             padding: '12px',
             flex: 1,
@@ -499,13 +499,13 @@ export const HandCardModal: React.FC<HandCardModalProps> = ({
               margin: '0 0 8px 0',
               fontSize: '14px',
               fontWeight: 600,
-              color: '#e5e7eb',
+              color: 'var(--content-primary)',
             }}>
               Spieleffekt
             </h3>
             <p style={{
               margin: 0,
-              color: '#d1d5db',
+              color: 'var(--content-secondary)',
               lineHeight: '1.4',
               fontSize: '12px',
             }}>
@@ -529,19 +529,20 @@ export const HandCardModal: React.FC<HandCardModalProps> = ({
             }}
             style={{
               background: waitingForReplacement
-                ? 'linear-gradient(45deg, #f59e0b, #f97316)'
+                ? 'var(--amber-700)'
                 : canPlay
-                  ? 'linear-gradient(45deg, #10b981, #059669)'
-                  : 'linear-gradient(45deg, #6b7280, #4b5563)',
+                  ? 'var(--action-primary)'
+                  : 'var(--action-primary-disabled)',
               border: 'none',
-              borderRadius: '8px',
+              borderRadius: 'var(--radius-md)',
               padding: '12px 16px',
-              color: 'white',
+              color: 'var(--content-on-action)',
               fontSize: '14px',
-              fontWeight: 'bold',
+              fontWeight: 700,
+              fontFamily: 'var(--font-ui)',
               cursor: canPlay ? 'pointer' : 'not-allowed',
-              animation: canPlay ? 'pulse 2s infinite' : 'none',
-              boxShadow: canPlay ? '0 4px 16px rgba(16, 185, 129, 0.4)' : 'none',
+              boxShadow: canPlay ? 'var(--shadow-md)' : 'none',
+              transition: 'background var(--duration-fast) var(--ease-out), transform var(--duration-fast) var(--ease-out)',
             }}
           >
             {waitingForReplacement
@@ -554,11 +555,11 @@ export const HandCardModal: React.FC<HandCardModalProps> = ({
           {/* Guard-Hinweis für detaillierte Begründung */}
           {!canPlay && (
             <div style={{
-              background: 'rgba(239, 68, 68, 0.1)',
-              border: '1px solid #ef4444',
+              background: 'var(--feedback-negative-subtle)',
+              border: '1px solid var(--feedback-negative)',
               borderRadius: '6px',
               padding: '8px 12px',
-              color: '#f87171',
+              color: 'var(--feedback-negative)',
               fontSize: '12px',
               textAlign: 'center',
             }}>
@@ -579,10 +580,10 @@ export const HandCardModal: React.FC<HandCardModalProps> = ({
           {onlyZeroApPossible && (
             <div style={{
               background: 'rgba(59, 130, 246, 0.1)',
-              border: '1px solid #3b82f6',
+              border: '1px solid var(--action-primary)',
               borderRadius: '6px',
               padding: '8px 12px',
-              color: '#60a5fa',
+              color: 'var(--content-link)',
               fontSize: '12px',
               textAlign: 'center',
             }}>
@@ -593,7 +594,7 @@ export const HandCardModal: React.FC<HandCardModalProps> = ({
           {waitingForReplacement && (
             <div style={{
               fontSize: '11px',
-              color: '#f59e0b',
+              color: 'var(--amber-700)',
               textAlign: 'center',
               marginTop: '4px',
             }}>

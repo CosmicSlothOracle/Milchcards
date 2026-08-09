@@ -15,26 +15,15 @@ interface PvpLobbyProps {
   onBack: () => void;
 }
 
-const buttonBase: React.CSSProperties = {
-  padding: '14px 28px',
-  borderRadius: '8px',
-  fontSize: '15px',
-  fontWeight: 700,
-  letterSpacing: '1.5px',
-  textTransform: 'uppercase',
-  cursor: 'pointer',
-  border: 'none',
-  transition: 'all 0.2s',
-};
-
-const selectStyle: React.CSSProperties = {
-  background: 'rgba(15, 23, 42, 0.8)',
-  border: '1px solid rgba(148, 163, 184, 0.3)',
-  borderRadius: '8px',
+const fieldStyle: React.CSSProperties = {
+  background: 'var(--surface-default)',
+  border: '1px solid var(--border-default)',
+  borderRadius: 'var(--radius-md)',
   padding: '10px 14px',
-  color: '#e8f0f8',
-  fontSize: '14px',
-  minWidth: '240px',
+  color: 'var(--content-primary)',
+  fontSize: 14,
+  fontFamily: 'var(--font-ui)',
+  minWidth: 240,
 };
 
 export const PvpLobby: React.FC<PvpLobbyProps> = ({
@@ -64,67 +53,39 @@ export const PvpLobby: React.FC<PvpLobbyProps> = ({
   };
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        minHeight: '100dvh',
-        width: '100vw',
-        background: 'radial-gradient(circle, #111a2e 0%, #070c16 100%)',
-        color: '#e8f0f8',
-        gap: 'clamp(16px, 4vh, 24px)',
-        overflowY: 'auto',
-        padding: '24px 16px',
-        boxSizing: 'border-box',
-      }}
-    >
-      <h2 style={{
-        fontSize: 'clamp(26px, 8vw, 36px)',
-        fontWeight: 900,
-        letterSpacing: 'clamp(3px, 1.5vw, 6px)',
-        margin: 0,
-        background: 'linear-gradient(135deg, #10b981 0%, #3b82f6 100%)',
-        WebkitBackgroundClip: 'text',
-        WebkitTextFillColor: 'transparent',
-      }}>
+    <div className="mc-screen mc-screen--enter" style={{ gap: 'clamp(16px, 4vh, 24px)' }}>
+      <h2 className="mc-brand__title" style={{ fontSize: 'clamp(26px, 8vw, 40px)' }}>
         1v1 ONLINE
       </h2>
 
       {!configured && (
-        <div style={{
-          maxWidth: '480px',
-          textAlign: 'center',
-          background: 'rgba(239, 68, 68, 0.1)',
-          border: '1px solid rgba(239, 68, 68, 0.3)',
-          borderRadius: '10px',
-          padding: '20px 24px',
-          color: '#fca5a5',
-          fontSize: '14px',
-          lineHeight: 1.6,
-        }}>
-          <strong>PvP ist nicht konfiguriert.</strong><br />
+        <div
+          className="mc-panel"
+          style={{
+            maxWidth: 480,
+            textAlign: 'center',
+            padding: '20px 24px',
+            background: 'var(--feedback-negative-subtle)',
+            borderColor: 'color-mix(in srgb, var(--rose-500) 40%, transparent)',
+            color: 'var(--rose-800)',
+            fontSize: 14,
+            lineHeight: 1.6,
+          }}
+        >
+          <strong>PvP ist nicht konfiguriert.</strong>
+          <br />
           Starte den lokalen Relay-Server mit <code>npm run pvp</code>
           oder setze <code>REACT_APP_WS_URL</code>.
         </div>
       )}
 
       {configured && !inRoom && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', alignItems: 'center' }}>
-          <button
-            onClick={onCreateRoom}
-            style={{
-              ...buttonBase,
-              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-              color: 'white',
-              minWidth: '300px',
-            }}
-          >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20, alignItems: 'center', width: 'min(360px, 92vw)' }}>
+          <button type="button" className="mc-btn mc-btn--primary" style={{ width: '100%' }} onClick={onCreateRoom}>
             Raum erstellen (Host)
           </button>
 
-          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center', width: '100%', flexWrap: 'wrap', justifyContent: 'center' }}>
             <input
               value={joinCode}
               onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
@@ -137,28 +98,22 @@ export const PvpLobby: React.FC<PvpLobbyProps> = ({
               autoCapitalize="characters"
               spellCheck={false}
               style={{
-                background: 'rgba(15, 23, 42, 0.8)',
-                border: '1px solid rgba(148, 163, 184, 0.3)',
-                borderRadius: '8px',
+                ...fieldStyle,
+                minWidth: 0,
+                width: 170,
                 padding: '14px 16px',
-                color: '#e8f0f8',
-                fontSize: '18px',
+                fontSize: 18,
                 fontWeight: 700,
-                letterSpacing: '4px',
-                width: '170px',
+                letterSpacing: 4,
                 textAlign: 'center',
                 textTransform: 'uppercase',
               }}
             />
             <button
+              type="button"
+              className="mc-btn mc-btn--secondary"
               onClick={() => joinCode.trim() && onJoinRoom(joinCode)}
               disabled={joinCode.trim().length < 4}
-              style={{
-                ...buttonBase,
-                background: joinCode.trim().length >= 4 ? 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)' : 'rgba(51, 65, 85, 0.4)',
-                color: joinCode.trim().length >= 4 ? 'white' : '#64748b',
-                cursor: joinCode.trim().length >= 4 ? 'pointer' : 'not-allowed',
-              }}
             >
               Beitreten
             </button>
@@ -167,48 +122,53 @@ export const PvpLobby: React.FC<PvpLobbyProps> = ({
       )}
 
       {configured && inRoom && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', alignItems: 'center' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20, alignItems: 'center' }}>
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '12px', color: '#94a3b8', letterSpacing: '2px', marginBottom: '8px' }}>RAUMCODE</div>
-            <div style={{
-              fontSize: '42px',
-              fontWeight: 900,
-              letterSpacing: '10px',
-              color: '#10b981',
-              background: 'rgba(16, 185, 129, 0.08)',
-              border: '1px solid rgba(16, 185, 129, 0.3)',
-              borderRadius: '12px',
-              padding: '12px 28px',
-              userSelect: 'all',
-            }}>
+            <div style={{ fontSize: 12, color: 'var(--content-muted)', letterSpacing: 2, marginBottom: 8 }}>
+              RAUMCODE
+            </div>
+            <div
+              className="mc-panel"
+              style={{
+                fontSize: 42,
+                fontWeight: 800,
+                letterSpacing: 10,
+                color: 'var(--player-strong)',
+                fontFamily: 'var(--font-display)',
+                padding: '12px 28px',
+                userSelect: 'all',
+                background: 'var(--feedback-positive-subtle)',
+                borderColor: 'color-mix(in srgb, var(--sage-500) 45%, transparent)',
+              }}
+            >
               {roomCode}
             </div>
           </div>
 
           {isHostWaiting && (
-            <div style={{ color: '#94a3b8', fontSize: '14px' }}>
+            <div style={{ color: 'var(--content-muted)', fontSize: 14 }}>
               Warte auf Mitspieler … Teile den Code!
             </div>
           )}
 
           {isReady && isHost && (
-            <div style={{ color: '#10b981', fontSize: '14px', fontWeight: 700 }}>
+            <div style={{ color: 'var(--player-strong)', fontSize: 14, fontWeight: 700 }}>
               Mitspieler verbunden!
             </div>
           )}
 
           {isReady && !isHost && (
-            <div style={{ color: '#10b981', fontSize: '14px', fontWeight: 700 }}>
+            <div style={{ color: 'var(--player-strong)', fontSize: 14, fontWeight: 700 }}>
               Verbunden – warte auf Spielstart durch den Host…
             </div>
           )}
 
           {isHost && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', alignItems: 'center' }}>
-              <label style={{ fontSize: '12px', color: '#94a3b8', letterSpacing: '1px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center' }}>
+              <label style={{ fontSize: 12, color: 'var(--content-muted)', letterSpacing: 1 }}>
                 DECK SPIELER 1 (Host)
                 <div style={{ marginTop: 6 }}>
-                  <select value={p1Deck} onChange={(e) => setP1Deck(e.target.value)} style={selectStyle}>
+                  <select value={p1Deck} onChange={(e) => setP1Deck(e.target.value)} style={fieldStyle}>
                     <option value="__random__">Zufällig</option>
                     {PRESET_DECKS.map((d) => (
                       <option key={d.name} value={d.name}>{d.name}</option>
@@ -216,10 +176,10 @@ export const PvpLobby: React.FC<PvpLobbyProps> = ({
                   </select>
                 </div>
               </label>
-              <label style={{ fontSize: '12px', color: '#94a3b8', letterSpacing: '1px' }}>
+              <label style={{ fontSize: 12, color: 'var(--content-muted)', letterSpacing: 1 }}>
                 DECK SPIELER 2 (Gast)
                 <div style={{ marginTop: 6 }}>
-                  <select value={p2Deck} onChange={(e) => setP2Deck(e.target.value)} style={selectStyle}>
+                  <select value={p2Deck} onChange={(e) => setP2Deck(e.target.value)} style={fieldStyle}>
                     <option value="__random__">Zufällig</option>
                     {PRESET_DECKS.map((d) => (
                       <option key={d.name} value={d.name}>{d.name}</option>
@@ -232,22 +192,18 @@ export const PvpLobby: React.FC<PvpLobbyProps> = ({
 
           {isHost && (
             <button
+              type="button"
+              className="mc-btn mc-btn--primary"
+              style={{ minWidth: 300 }}
               onClick={() => onStartMatch(resolveDeck(p1Deck), resolveDeck(p2Deck))}
               disabled={!isReady}
-              style={{
-                ...buttonBase,
-                background: isReady ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : 'rgba(51, 65, 85, 0.4)',
-                color: isReady ? 'white' : '#64748b',
-                cursor: isReady ? 'pointer' : 'not-allowed',
-                minWidth: '300px',
-              }}
             >
               Spiel starten
             </button>
           )}
 
           {isReady && isHost && (
-            <div style={{ color: '#64748b', fontSize: '12px', maxWidth: '380px', textAlign: 'center' }}>
+            <div style={{ color: 'var(--content-muted)', fontSize: 12, maxWidth: 380, textAlign: 'center' }}>
               Wähle Premade-Decks für beide Spieler oder lasse sie zufällig zuweisen.
             </div>
           )}
@@ -255,21 +211,13 @@ export const PvpLobby: React.FC<PvpLobbyProps> = ({
       )}
 
       {error && (
-        <div style={{ color: '#fca5a5', fontSize: '14px', maxWidth: '420px', textAlign: 'center' }}>
+        <div style={{ color: 'var(--feedback-negative)', fontSize: 14, maxWidth: 420, textAlign: 'center' }}>
           {error}
         </div>
       )}
 
-      <button
-        onClick={onBack}
-        style={{
-          ...buttonBase,
-          background: 'transparent',
-          color: '#94a3b8',
-          border: '1px solid rgba(148, 163, 184, 0.2)',
-        }}
-      >
-        ← Zurück
+      <button type="button" className="mc-btn mc-btn--ghost" onClick={onBack}>
+        Zurück
       </button>
     </div>
   );

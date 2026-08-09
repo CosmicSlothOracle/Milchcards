@@ -34,6 +34,8 @@ export function startOfTurn(state: GameState, p: Player) {
   f.aiWeiweiInitiativeUsed = false;
   f.gretaFirstGovApUsed = false;
   f.zivilgesellschaftApUsed = false;
+  // Opportunist is a Sofort buff for the turn it was activated — never leave it sticky
+  f.opportunistActive = false;
   // Elon is once-per-round: do NOT clear elonInitiativeApUsed here (cleared on round resolve)
   // Oppositionsblockade / Parlament geschlossen end at start of this player's turn
   f.initiativesLocked = false;

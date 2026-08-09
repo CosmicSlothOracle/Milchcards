@@ -278,13 +278,6 @@ export function useGameState() {
     console.log('[DIAG] setGameState called in startMatchWithDecks');
   }, [gameAI, log]);
 
-  const startMatchVsAI = useCallback((p1DeckEntries: BuilderEntry[], presetKey: string = '') => {
-    const p2DeckEntries: BuilderEntry[] = [];
-    gameAI.setAiEnabled(true);
-    gameAI.setAiPreset(presetKey);
-    gameActions.startMatchWithDecks(p1DeckEntries, p2DeckEntries);
-  }, [gameAI, gameActions]);
-
   // Prüfe ob der Zug automatisch gewechselt werden soll
   const shouldAdvanceTurn = useCallback((gameState: GameState, player: Player): boolean => {
     // Wenn Spieler gepasst hat

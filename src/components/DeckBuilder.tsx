@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { BuilderEntry, BasePolitician, BaseSpecial } from '../types/game';
 import { Pols, Specials } from '../data/gameData';
+import { PRESET_DECKS } from '../data/presetDecks';
 import { currentBuilderBudget, currentBuilderCount, drawCardImage } from '../utils/gameUtils';
 import { getCardDetails, formatWealth, formatSources } from '../data/cardDetails';
 import { Icon } from '../ui/Icon';
@@ -60,67 +61,8 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
     'Cancel Culture'
   ]);
 
-  // Optimized preset decks (8 balanced combinations, 50+ BP each)
-  const PRESETS: { name: string; cards: string[] }[] = [
-    {
-      name: 'Tech Oligarchs',
-      cards: [
-        'Vladimir Putin', 'Xi Jinping', 'Donald Trump', 'Mohammed bin Salman', 'Recep Tayyip Erdoğan',
-        'Elon Musk', 'Bill Gates', 'Mark Zuckerberg', 'Tim Cook', 'Sam Altman'
-      ]
-    },
-    {
-      name: 'Diplomatic Power',
-      cards: [
-        'Jens Stoltenberg', 'Olaf Scholz', 'Rishi Sunak', 'Kamala Harris', 'Helmut Schmidt',
-        'Greta Thunberg', 'Warren Buffett', 'George Soros', 'Spin Doctor', 'Think-tank'
-      ]
-    },
-    {
-      name: 'Activist Movement',
-      cards: [
-        'Benjamin Netanyahu', 'Volodymyr Zelenskyy', 'Ursula von der Leyen', 'Narendra Modi', 'Luiz Inácio Lula da Silva',
-        'Greta Thunberg', 'Malala Yousafzai', 'Ai Weiwei', 'Alexei Navalny', 'Jennifer Doudna'
-      ]
-    },
-    {
-      name: 'Initiative Rush (Optimized)',
-      cards: [
-        'Benjamin Netanyahu', 'Volodymyr Zelenskyy', 'Ursula von der Leyen', 'Hans Eichel', 'Rainer Offergeld',
-        'Verzoegerungsverfahren', 'Symbolpolitik', 'Shadow Lobbying', 'Opportunist', 'Think-tank',
-        'Greta Thunberg', 'George Soros', 'Malala Yousafzai', 'Ai Weiwei'
-      ]
-    },
-    {
-      name: 'Media Control',
-      cards: [
-        'Vladimir Putin', 'Xi Jinping', 'Donald Trump', 'Mohammed bin Salman', 'Recep Tayyip Erdoğan',
-        'Oprah Winfrey', 'Mark Zuckerberg', 'Tim Cook', 'Influencer-Kampagne', 'Whataboutism'
-      ]
-    },
-    {
-      name: 'Economic Influence',
-      cards: [
-        'Jens Stoltenberg', 'Olaf Scholz', 'Rishi Sunak', 'Kamala Harris', 'Helmut Schmidt',
-        'Warren Buffett', 'George Soros', 'Jeff Bezos', 'Mukesh Ambani', 'Roman Abramovich'
-      ]
-    },
-    {
-      name: 'Balanced Power',
-      cards: [
-        'Vladimir Putin', 'Xi Jinping', 'Donald Trump', 'Benjamin Netanyahu', 'Volodymyr Zelenskyy',
-        'Elon Musk', 'Bill Gates', 'Mark Zuckerberg', 'Spin Doctor', 'Think-tank'
-      ]
-    },
-    {
-      name: 'Initiative Focus',
-      cards: [
-        'Jens Stoltenberg', 'Olaf Scholz', 'Rishi Sunak', 'Kamala Harris', 'Helmut Schmidt',
-        'Spin Doctor', 'Think-tank', 'Symbolpolitik', 'Shadow Lobbying', 'Opportunist',
-        'Influencer-Kampagne', 'Whataboutism', 'Greta Thunberg', 'George Soros'
-      ]
-    }
-  ];
+  // Shared catalog — every card appears in at least one premade (see presetDecks.ts)
+  const PRESETS = PRESET_DECKS;
 
   const [presetIndex, setPresetIndex] = useState(0);
 
@@ -364,27 +306,27 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
   // Helper function to get category color for a card
   const getCategoryColor = (kind: 'pol' | 'spec', base: BasePolitician | BaseSpecial) => {
     if (kind === 'pol') {
-      return { main: '#add8e6', complementary: '#e6f3ff' }; // Government: Light Blue
+      return { main: '#355d69', complementary: '#c5dde3' }; // Government: teal
     }
 
     const spec = base as BaseSpecial;
     if (spec.type === 'Öffentlichkeitskarte') {
-      return { main: '#f5f5dc', complementary: '#fefcf0' }; // Public: Beige
+      return { main: '#d0baa9', complementary: '#f4e9d4' }; // Public: sand/cream
     }
     if (spec.type === 'Sofort-Initiative') {
-      return { main: '#40e0d0', complementary: '#e6fffe' }; // Initiatives (Instant): Turquoise
+      return { main: '#6aae9d', complementary: '#d9ebe3' }; // Instant: sage
     }
     if (spec.type === 'Dauerhaft-Initiative') {
-      return { main: '#40e0d0', complementary: '#e6fffe' }; // Initiatives (Permanent): Turquoise
+      return { main: '#5b4a68', complementary: '#e0d6dc' }; // Permanent: mauve
     }
     if (spec.type === 'Intervention') {
-      return { main: '#c8a0ff', complementary: '#f3e6ff' }; // Interventions: Light Purple
+      return { main: '#9a5563', complementary: '#e9ced3' }; // Intervention: rose
     }
     if ((spec as any).tag === 'Corruption') {
-      return { main: '#ffb86b', complementary: '#fff4e6' }; // Corruption: Orange
+      return { main: '#c4a35a', complementary: '#e8d4a8' }; // Corruption: amber
     }
 
-    return { main: '#26394c', complementary: '#1a2a3a' }; // Default
+    return { main: '#37364e', complementary: '#eceaf1' }; // Default: ink
   };
 
   // Helper: classify a card into an effect category for sorting / grouping.
@@ -628,8 +570,8 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
 
   const handleStartMatch = useCallback(() => {
     const p1Deck: BuilderEntry[] = deck.length ? deck : [];
-    // 🧪 TEST DECK: P2 bekommt das gleiche Deck wie P1 für isoliertes Testing
-    const p2Deck: BuilderEntry[] = deck.length ? [...deck] : []; // Same deck as P1
+    // P2 deck is unused for vs-AI (parent assigns a different premade); keep empty here.
+    const p2Deck: BuilderEntry[] = [];
 
     console.log('🔧 DEBUG: Starting match with decks:', { p1Cards: p1Deck.length, p2Cards: p2Deck.length });
     onStartMatch(p1Deck, p2Deck);
@@ -702,9 +644,9 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
     <div
       onClick={handleClick}
       style={{
-        background: isDisabled ? '#0a0f15' : categoryColors.complementary + '4D', // 30% opacity
-        border: `2px solid ${isDisabled ? '#1a1f2a' : categoryColors.main}`, // 100% opacity outline
-        outline: '1px solid #000000', // Thin black outline
+        background: isDisabled ? 'var(--surface-muted)' : categoryColors.complementary + '4D', // 30% opacity
+        border: `2px solid ${isDisabled ? 'var(--border-strong)' : categoryColors.main}`, // 100% opacity outline
+        outline: '1px solid var(--ink-1100)', // Thin black outline
         borderRadius: '8px',
         padding: '6px',
         display: 'flex',
@@ -733,8 +675,8 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
           width: '120px',
           height: '120px',
           borderRadius: '6px',
-          background: isDisabled ? '#080b0f' : '#0b1118',
-          border: `1px solid ${isDisabled ? '#151a20' : '#1e2c3b'}`,
+          background: isDisabled ? 'var(--surface-sunken)' : 'var(--surface-panel)',
+          border: `1px solid ${isDisabled ? 'var(--border-subtle)' : 'var(--border-default)'}`,
           opacity: isDisabled ? 0.6 : 1,
         }}
         ref={(canvas) => {
@@ -758,7 +700,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
         margin: 0,
         fontSize: '10px',
         fontWeight: 600,
-        color: isDisabled ? '#6b7280' : '#000000',
+        color: isDisabled ? 'var(--content-muted)' : 'var(--ink-1100)',
         textAlign: 'center',
         lineHeight: '1.2',
         overflow: 'hidden',
@@ -779,7 +721,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
       }}>
         <span style={{
           fontSize: '9px',
-          color: isDisabled ? '#6b7280' : '#000000',
+          color: isDisabled ? 'var(--content-muted)' : 'var(--ink-1100)',
           fontWeight: 500,
           textAlign: 'center',
         }}>
@@ -809,7 +751,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
       position: 'fixed',
       inset: 0,
       display: 'flex',
-      background: 'radial-gradient(circle, #0e1626 0%, #050912 100%)',
+      background: 'var(--bg-app-wash)',
       zIndex: 40,
     }}>
       <div className="deckbuilder__inner" style={{
@@ -828,7 +770,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
           gap: '20px',
           alignItems: 'center',
           justifyContent: 'space-between',
-          borderBottom: '1px solid rgba(148, 163, 184, 0.1)',
+          borderBottom: '1px solid var(--border-subtle)',
           paddingBottom: '20px',
         }}>
           <div className="deckbuilder__status" style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
@@ -836,33 +778,31 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
               fontWeight: 800,
               fontSize: '24px',
               letterSpacing: '2px',
-              background: 'linear-gradient(135deg, #10b981 0%, #3b82f6 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
+              color: 'var(--content-brand)',
               textTransform: 'uppercase',
-              fontFamily: '"Montserrat", sans-serif'
+              fontFamily: 'var(--font-display), sans-serif'
             }}>
               Deck-Manager
             </div>
             <span style={{
               padding: '6px 12px',
               borderRadius: '20px',
-              background: 'rgba(15, 26, 38, 0.6)',
-              border: budget > 105 || budget < 75 ? '1px solid rgba(239, 68, 68, 0.5)' : '1px solid rgba(16, 185, 129, 0.5)',
+              background: 'var(--surface-panel)',
+              border: budget > 105 || budget < 75 ? '1px solid color-mix(in srgb, var(--rose-500) 50%, transparent)' : '1px solid color-mix(in srgb, var(--sage-500) 50%, transparent)',
               fontSize: '13px',
               fontWeight: 600,
-              color: budget > 105 || budget < 75 ? '#fca5a5' : '#10b981',
+              color: budget > 105 || budget < 75 ? 'var(--rose-400)' : 'var(--player-strong)',
             }}>
               💰 Budget (BP): {budget} / 105 (Min: 75)
             </span>
             <span style={{
               padding: '6px 12px',
               borderRadius: '20px',
-              background: 'rgba(15, 26, 38, 0.6)',
-              border: count > 15 || count < 10 ? '1px solid rgba(239, 68, 68, 0.5)' : '1px solid rgba(59, 130, 246, 0.5)',
+              background: 'var(--surface-panel)',
+              border: count > 15 || count < 10 ? '1px solid color-mix(in srgb, var(--rose-500) 50%, transparent)' : '1px solid color-mix(in srgb, var(--teal-500) 50%, transparent)',
               fontSize: '13px',
               fontWeight: 600,
-              color: count > 15 || count < 10 ? '#fca5a5' : '#3b82f6',
+              color: count > 15 || count < 10 ? 'var(--rose-400)' : 'var(--action-primary)',
             }}>
               🃏 Deck: {count}/15 (Min: 10)
             </span>
@@ -870,11 +810,11 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
               <span style={{
                 padding: '6px 12px',
                 borderRadius: '20px',
-                background: 'rgba(239, 68, 68, 0.1)',
-                border: '1px solid rgba(239, 68, 68, 0.3)',
+                background: 'var(--feedback-negative-subtle)',
+                border: '1px solid color-mix(in srgb, var(--rose-500) 35%, transparent)',
                 fontSize: '12px',
                 fontWeight: 500,
-                color: '#fca5a5',
+                color: 'var(--rose-400)',
               }}>
                 ⚠️ Benötigt mind. 6 Regierungskarten (Aktuell: {governmentCount})
               </span>
@@ -886,8 +826,8 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
               <button
                 onClick={handleStartVsAI}
                 style={{
-                  background: isValid ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : '#475569',
-                  color: 'white',
+                  background: isValid ? 'var(--action-primary)' : 'var(--content-muted)',
+                  color: 'var(--content-on-action)',
                   border: 'none',
                   padding: '10px 24px',
                   borderRadius: '8px',
@@ -900,7 +840,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                   display: 'flex',
                   alignItems: 'center',
                   gap: '8px',
-                  boxShadow: isValid ? '0 4px 12px rgba(16, 185, 129, 0.25)' : 'none',
+                  boxShadow: isValid ? '0 4px 12px color-mix(in srgb, var(--sage-500) 28%, transparent)' : 'none',
                   transition: 'all 0.2s',
                 }}
                 disabled={!isValid}
@@ -912,9 +852,9 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
             <button
               onClick={onClose}
               style={{
-                background: 'rgba(30, 41, 59, 0.8)',
-                color: '#94a3b8',
-                border: '1px solid rgba(148, 163, 184, 0.2)',
+                background: 'var(--surface-panel)',
+                color: 'var(--content-muted)',
+                border: '1px solid var(--border-subtle)',
                 padding: '10px 20px',
                 borderRadius: '8px',
                 fontSize: '14px',
@@ -923,12 +863,12 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                 transition: 'all 0.2s',
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.color = '#f8fafc';
-                e.currentTarget.style.background = 'rgba(30, 41, 59, 1)';
+                e.currentTarget.style.color = 'var(--content-primary)';
+                e.currentTarget.style.background = 'var(--surface-raised)';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.color = '#94a3b8';
-                e.currentTarget.style.background = 'rgba(30, 41, 59, 0.8)';
+                e.currentTarget.style.color = 'var(--content-muted)';
+                e.currentTarget.style.background = 'var(--surface-panel)';
               }}
             >
               Abbrechen
@@ -942,17 +882,17 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
           justifyContent: 'space-between',
           alignItems: 'center',
           gap: '20px',
-          background: 'rgba(15, 23, 42, 0.3)',
+          background: 'var(--surface-muted)',
           padding: '12px 20px',
           borderRadius: '10px',
-          border: '1px solid rgba(148, 163, 184, 0.05)',
+          border: '1px solid var(--border-subtle)',
         }}>
           <div className="deckbuilder__search" style={{
             display: 'flex',
             alignItems: 'center',
             gap: '12px',
-            background: 'rgba(15, 26, 38, 0.6)',
-            border: '1px solid rgba(148, 163, 184, 0.1)',
+            background: 'var(--surface-panel)',
+            border: '1px solid var(--border-subtle)',
             borderRadius: '8px',
             padding: '4px 16px',
             width: '320px',
@@ -969,23 +909,23 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                 background: 'transparent',
                 border: 'none',
                 fontSize: '14px',
-                color: '#e8f0f8',
+                color: 'var(--content-primary)',
                 padding: '6px 0',
               }}
             />
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <span style={{ fontSize: '13px', fontWeight: 600, color: '#94a3b8' }}>PRESET-DECKS:</span>
+            <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--content-muted)' }}>PRESET-DECKS:</span>
             <select
               value={presetIndex}
               onChange={(e) => setPresetIndex(Number(e.target.value))}
               style={{
-                background: 'rgba(15, 26, 38, 0.8)',
-                color: '#eaf3ff',
+                background: 'var(--surface-panel)',
+                color: 'var(--content-primary)',
                 borderRadius: '6px',
                 padding: '8px 16px',
-                border: '1px solid rgba(148, 163, 184, 0.15)',
+                border: '1px solid var(--border-subtle)',
                 fontSize: '13px',
                 fontWeight: 500,
                 cursor: 'pointer',
@@ -1001,21 +941,21 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
             <button
               onClick={() => applyPreset(presetIndex)}
               style={{
-                background: 'rgba(16, 185, 129, 0.15)',
-                color: '#10b981',
+                background: 'color-mix(in srgb, var(--sage-500) 20%, transparent)',
+                color: 'var(--player-strong)',
                 borderRadius: '6px',
                 padding: '8px 16px',
-                border: '1px solid rgba(16, 185, 129, 0.3)',
+                border: '1px solid color-mix(in srgb, var(--sage-500) 35%, transparent)',
                 fontSize: '13px',
                 fontWeight: 600,
                 cursor: 'pointer',
                 transition: 'all 0.2s',
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'rgba(16, 185, 129, 0.25)';
+                e.currentTarget.style.background = 'color-mix(in srgb, var(--sage-500) 28%, transparent)';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'rgba(16, 185, 129, 0.15)';
+                e.currentTarget.style.background = 'color-mix(in srgb, var(--sage-500) 20%, transparent)';
               }}
             >
               Preset Laden
@@ -1034,10 +974,10 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
           {/* Categorized Card Columns */}
           <div className="deckbuilder__cards" style={{
             overflow: 'auto',
-            border: '1px solid #1f2c3a',
+            border: '1px solid var(--border-default)',
             borderRadius: '10px',
             padding: '8px',
-            background: '#0a121b',
+            background: 'var(--surface-panel)',
             display: 'grid',
             gridTemplateColumns: 'repeat(6, 1fr)',
             gap: '12px',
@@ -1049,8 +989,8 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
               gap: '8px',
             }}>
               <div style={{
-                background: 'rgba(173, 216, 230, 0.2)',
-                border: '1px solid #4a90e2',
+                background: 'color-mix(in srgb, var(--teal-300) 35%, transparent)',
+                border: '1px solid var(--teal-500)',
                 borderRadius: '8px',
                 padding: '8px',
                 textAlign: 'center',
@@ -1059,7 +999,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                   margin: 0,
                   fontSize: '14px',
                   fontWeight: 700,
-                  color: '#add8e6',
+                  color: 'var(--teal-400)',
                   marginBottom: '4px',
                   display: 'flex',
                   alignItems: 'center',
@@ -1071,7 +1011,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                 <p style={{
                   margin: 0,
                   fontSize: '11px',
-                  color: '#8bb5d9',
+                  color: 'var(--teal-600)',
                   lineHeight: '1.3',
                 }}>
                   {withIcons('Provide Influence points. At the end of each round, the player with the highest total Influence wins the round. Win two rounds to win the game.')}
@@ -1084,11 +1024,11 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                 flex: 1,
                 justifyContent: 'start',
                 alignContent: 'start',
-                background: 'rgba(173, 216, 230, 0.8)', // Government color with 80% opacity
+                background: 'color-mix(in srgb, var(--teal-200) 70%, var(--cream-200))', // Government color with 80% opacity
                 borderRadius: '8px',
                 padding: '8px',
                 gridAutoRows: 'minmax(190px, auto)', // Adjust for new height
-                outline: '1px solid #000000', // Thin black outline
+                outline: '1px solid var(--ink-1100)', // Thin black outline
               }}>
                 <CardList cards={categorizedCards.categories.government} />
               </div>
@@ -1101,8 +1041,8 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
               gap: '8px',
             }}>
               <div style={{
-                background: 'rgba(245, 245, 220, 0.2)',
-                border: '1px solid #d2b48c',
+                background: 'color-mix(in srgb, var(--sand-300) 35%, transparent)',
+                border: '1px solid var(--sand-400)',
                 borderRadius: '8px',
                 padding: '8px',
                 textAlign: 'center',
@@ -1111,7 +1051,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                   margin: 0,
                   fontSize: '14px',
                   fontWeight: 700,
-                  color: '#f5f5dc',
+                  color: 'var(--sand-800)',
                   marginBottom: '4px',
                   display: 'flex',
                   alignItems: 'center',
@@ -1123,7 +1063,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                 <p style={{
                   margin: 0,
                   fontSize: '11px',
-                  color: '#d2b48c',
+                  color: 'var(--sand-400)',
                   lineHeight: '1.3',
                 }}>
                   {withIcons('Permanent support cards that modify values, action points, or Influence over time.')}
@@ -1136,11 +1076,11 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                 flex: 1,
                 justifyContent: 'start',
                 alignContent: 'start',
-                background: 'rgba(245, 245, 220, 0.8)', // Public color with 80% opacity
+                background: 'color-mix(in srgb, var(--cream-300) 75%, var(--sand-200))', // Public color with 80% opacity
                 borderRadius: '8px',
                 padding: '8px',
                 gridAutoRows: 'minmax(190px, auto)', // Adjust for new height
-                outline: '1px solid #000000', // Thin black outline
+                outline: '1px solid var(--ink-1100)', // Thin black outline
               }}>
                 <CardList cards={categorizedCards.categories.public} />
               </div>
@@ -1153,8 +1093,8 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
               gap: '8px',
             }}>
               <div style={{
-                background: 'rgba(64, 224, 208, 0.2)',
-                border: '1px solid #40e0d0',
+                background: 'color-mix(in srgb, var(--sage-400) 30%, transparent)',
+                border: '1px solid var(--sage-500)',
                 borderRadius: '8px',
                 padding: '8px',
                 textAlign: 'center',
@@ -1163,7 +1103,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                   margin: 0,
                   fontSize: '14px',
                   fontWeight: 700,
-                  color: '#40e0d0',
+                  color: 'var(--sage-500)',
                   marginBottom: '4px',
                   display: 'flex',
                   alignItems: 'center',
@@ -1175,7 +1115,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                 <p style={{
                   margin: 0,
                   fontSize: '11px',
-                  color: '#40e0d0',
+                  color: 'var(--sage-500)',
                   lineHeight: '1.3',
                 }}>
                   {withIcons('One-time effects for immediate advantages (e.g., Influence, points, actions).')}
@@ -1188,11 +1128,11 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                 flex: 1,
                 justifyContent: 'start',
                 alignContent: 'start',
-                background: 'rgba(64, 224, 208, 0.8)', // Initiatives (Instant) color with 80% opacity
+                background: 'color-mix(in srgb, var(--sage-200) 70%, var(--cream-200))', // Initiatives (Instant) color with 80% opacity
                 borderRadius: '8px',
                 padding: '8px',
                 gridAutoRows: 'minmax(190px, auto)', // Adjust for new height
-                outline: '1px solid #000000', // Thin black outline
+                outline: '1px solid var(--ink-1100)', // Thin black outline
               }}>
                 <CardList cards={categorizedCards.categories.initiatives_sofort} />
               </div>
@@ -1205,8 +1145,8 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
               gap: '8px',
             }}>
               <div style={{
-                background: 'rgba(64, 224, 208, 0.2)',
-                border: '1px solid #40e0d0',
+                background: 'color-mix(in srgb, var(--sage-400) 30%, transparent)',
+                border: '1px solid var(--sage-500)',
                 borderRadius: '8px',
                 padding: '8px',
                 textAlign: 'center',
@@ -1215,7 +1155,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                   margin: 0,
                   fontSize: '14px',
                   fontWeight: 700,
-                  color: '#40e0d0',
+                  color: 'var(--sage-500)',
                   marginBottom: '4px',
                   display: 'flex',
                   alignItems: 'center',
@@ -1227,7 +1167,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                 <p style={{
                   margin: 0,
                   fontSize: '11px',
-                  color: '#40e0d0',
+                  color: 'var(--sage-500)',
                   lineHeight: '1.3',
                 }}>
                   {withIcons('Stay on the field and apply continuous effects.')}
@@ -1240,11 +1180,11 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                 flex: 1,
                 justifyContent: 'start',
                 alignContent: 'start',
-                background: 'rgba(64, 224, 208, 0.8)', // Initiatives (Permanent) color with 80% opacity
+                background: 'color-mix(in srgb, var(--sage-200) 70%, var(--cream-200))', // Initiatives (Permanent) color with 80% opacity
                 borderRadius: '8px',
                 padding: '8px',
                 gridAutoRows: 'minmax(190px, auto)', // Adjust for new height
-                outline: '1px solid #000000', // Thin black outline
+                outline: '1px solid var(--ink-1100)', // Thin black outline
               }}>
                 <CardList cards={categorizedCards.categories.initiatives_dauerhaft} />
               </div>
@@ -1257,8 +1197,8 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
               gap: '8px',
             }}>
               <div style={{
-                background: 'rgba(200, 160, 255, 0.2)',
-                border: '1px solid #c8a0ff',
+                background: 'color-mix(in srgb, var(--mauve-400) 30%, transparent)',
+                border: '1px solid var(--mauve-400)',
                 borderRadius: '8px',
                 padding: '8px',
                 textAlign: 'center',
@@ -1267,7 +1207,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                   margin: 0,
                   fontSize: '14px',
                   fontWeight: 700,
-                  color: '#c8a0ff',
+                  color: 'var(--mauve-400)',
                   marginBottom: '4px',
                   display: 'flex',
                   alignItems: 'center',
@@ -1279,7 +1219,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                 <p style={{
                   margin: 0,
                   fontSize: '11px',
-                  color: '#c8a0ff',
+                  color: 'var(--mauve-400)',
                   lineHeight: '1.3',
                 }}>
                   {withIcons('Trap cards that trigger automatically under certain conditions.')}
@@ -1292,11 +1232,11 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                 flex: 1,
                 justifyContent: 'start',
                 alignContent: 'start',
-                background: 'rgba(200, 160, 255, 0.8)', // Interventions color with 80% opacity
+                background: 'color-mix(in srgb, var(--mauve-200) 65%, var(--cream-200))', // Interventions color with 80% opacity
                 borderRadius: '8px',
                 padding: '8px',
                 gridAutoRows: 'minmax(190px, auto)', // Adjust for new height
-                outline: '1px solid #000000', // Thin black outline
+                outline: '1px solid var(--ink-1100)', // Thin black outline
               }}>
                 <CardList cards={categorizedCards.categories.interventions} />
               </div>
@@ -1309,8 +1249,8 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
               gap: '8px',
             }}>
               <div style={{
-                background: 'rgba(255, 200, 120, 0.06)',
-                border: '1px solid #ffb86b',
+                background: 'color-mix(in srgb, var(--amber-500) 12%, transparent)',
+                border: '1px solid var(--amber-500)',
                 borderRadius: '8px',
                 padding: '8px',
                 textAlign: 'center',
@@ -1319,7 +1259,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                   margin: 0,
                   fontSize: '14px',
                   fontWeight: 700,
-                  color: '#ffb86b',
+                  color: 'var(--amber-500)',
                   marginBottom: '4px',
                   display: 'flex',
                   alignItems: 'center',
@@ -1331,7 +1271,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                 <p style={{
                   margin: 0,
                   fontSize: '11px',
-                  color: '#ffb86b',
+                  color: 'var(--amber-500)',
                   lineHeight: '1.3',
                 }}>
                   {withIcons('Special cards with a D6 roll; can seize, corrupt, or remove Government cards.')}
@@ -1344,11 +1284,11 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                 flex: 1,
                 justifyContent: 'start',
                 alignContent: 'start',
-                background: 'rgba(255, 184, 107, 0.8)', // Corruption color with 80% opacity
+                background: 'color-mix(in srgb, var(--amber-300) 65%, var(--cream-200))', // Corruption color with 80% opacity
                 borderRadius: '8px',
                 padding: '8px',
                 gridAutoRows: 'minmax(190px, auto)', // Adjust for new height
-                outline: '1px solid #000000', // Thin black outline
+                outline: '1px solid var(--ink-1100)', // Thin black outline
               }}>
                 <CardList cards={categorizedCards.categories.corruptions} />
               </div>
@@ -1358,10 +1298,10 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
           {/* Sidebar */}
           <div className="deckbuilder__sidebar" style={{
             overflow: 'auto',
-            border: '1px solid #1f2c3a',
+            border: '1px solid var(--border-default)',
             borderRadius: '10px',
             padding: '8px',
-            background: '#0a121b',
+            background: 'var(--surface-panel)',
             display: 'flex',
             flexDirection: 'column',
             gap: '10px',
@@ -1372,15 +1312,15 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
               flexDirection: 'column',
               gap: '6px',
               fontSize: '12px',
-              color: '#cfe0f2',
+              color: 'var(--content-primary)',
             }}>
               <div style={{
                 padding: '4px 8px',
                 borderRadius: '8px',
-                background: '#0f1a26',
-                border: '1px solid #203043',
+                background: 'var(--surface-raised)',
+                border: '1px solid var(--border-default)',
                 fontSize: '12px',
-                color: isValid ? '#4ade80' : '#ef4444',
+                color: isValid ? 'var(--feedback-positive)' : 'var(--feedback-negative)',
               }}>
                 {isValid ? 'Deck OK' : `Deck invalid${overBudget ? ' · Budget too high' : ''}${underBudget ? ' · Budget too low' : ''}${overCount ? ' · Too many cards' : ''}${underMinGovernment ? ' · Need 5+ Government' : ''}${underMinCards ? ' · Need 5+ cards' : ''}`}
               </div>
@@ -1395,27 +1335,27 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                 <div style={{
                   padding: '2px 6px',
                   borderRadius: '4px',
-                  background: governmentCount >= 6 ? '#1f2937' : '#7f1d1d',
-                  color: governmentCount >= 6 ? '#d1d5db' : '#fca5a5',
-                  border: `1px solid ${governmentCount >= 6 ? '#374151' : '#dc2626'}`,
+                  background: governmentCount >= 6 ? 'var(--surface-muted)' : 'var(--feedback-negative-subtle)',
+                  color: governmentCount >= 6 ? 'var(--content-secondary)' : 'var(--rose-400)',
+                  border: `1px solid ${governmentCount >= 6 ? 'var(--border-default)' : 'var(--feedback-negative)'}`,
                 }}>
                   Gov: {governmentCount}/6+
                 </div>
                 <div style={{
                   padding: '2px 6px',
                   borderRadius: '4px',
-                  background: count <= 15 ? '#1f2937' : '#7f1d1d',
-                  color: count <= 15 ? '#d1d5db' : '#fca5a5',
-                  border: `1px solid ${count <= 15 ? '#374151' : '#dc2626'}`,
+                  background: count <= 15 ? 'var(--surface-muted)' : 'var(--feedback-negative-subtle)',
+                  color: count <= 15 ? 'var(--content-secondary)' : 'var(--rose-400)',
+                  border: `1px solid ${count <= 15 ? 'var(--border-default)' : 'var(--feedback-negative)'}`,
                 }}>
                   Cards: {count}/15
                 </div>
                 <div style={{
                   padding: '2px 6px',
                   borderRadius: '4px',
-                  background: (budget >= 75 && budget <= 105) ? '#1f2937' : '#7f1d1d',
-                  color: (budget >= 75 && budget <= 105) ? '#d1d5db' : '#fca5a5',
-                  border: `1px solid ${(budget >= 75 && budget <= 105) ? '#374151' : '#dc2626'}`,
+                  background: (budget >= 75 && budget <= 105) ? 'var(--surface-muted)' : 'var(--feedback-negative-subtle)',
+                  color: (budget >= 75 && budget <= 105) ? 'var(--content-secondary)' : 'var(--rose-400)',
+                  border: `1px solid ${(budget >= 75 && budget <= 105) ? 'var(--border-default)' : 'var(--feedback-negative)'}`,
                 }}>
                   Budget: {budget}/105
                 </div>
@@ -1436,7 +1376,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                     justifyContent: 'space-between',
                     alignItems: 'center',
                     padding: '6px 8px',
-                    borderBottom: '1px solid #182433',
+                    borderBottom: '1px solid var(--border-subtle)',
                     fontSize: '12px',
                   }}>
                     <div style={{ flex: 1 }}>{entry.count}× {base.name}</div>
@@ -1449,10 +1389,10 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                             builderRemove(base, entry.kind);
                           }}
                           style={{
-                            background: '#dc2626',
+                            background: 'var(--feedback-negative)',
                             border: 'none',
                             borderRadius: '4px',
-                            color: 'white',
+                            color: 'var(--content-on-action)',
                             width: '20px',
                             height: '20px',
                             fontSize: '12px',
@@ -1472,10 +1412,10 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                           }}
                           disabled={!builderCanAdd(base, entry.kind)}
                           style={{
-                            background: builderCanAdd(base, entry.kind) ? '#059669' : '#6b7280',
+                            background: builderCanAdd(base, entry.kind) ? 'var(--sage-700)' : 'var(--content-muted)',
                             border: 'none',
                             borderRadius: '4px',
-                            color: 'white',
+                            color: 'var(--content-on-action)',
                             width: '20px',
                             height: '20px',
                             fontSize: '12px',
@@ -1505,9 +1445,9 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                 onClick={handleApplyDeck}
                 disabled={!isValid}
                 style={{
-                  background: '#162436',
-                  color: '#eaf3ff',
-                  border: '1px solid #27425b',
+                  background: 'var(--surface-sunken)',
+                  color: 'var(--content-primary)',
+                  border: '1px solid var(--border-default)',
                   borderRadius: '8px',
                   padding: '6px 10px',
                   fontSize: '12px',
@@ -1521,9 +1461,9 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                 onClick={handleStartMatch}
                 disabled={!isValid}
                 style={{
-                  background: '#162436',
-                  color: '#eaf3ff',
-                  border: '1px solid #27425b',
+                  background: 'var(--surface-sunken)',
+                  color: 'var(--content-primary)',
+                  border: '1px solid var(--border-default)',
                   borderRadius: '8px',
                   padding: '6px 10px',
                   fontSize: '12px',
@@ -1548,7 +1488,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
           left: 0,
           right: 0,
           bottom: 0,
-          background: 'rgba(0,0,0,0.8)',
+          background: 'var(--surface-overlay)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'flex-start',
@@ -1556,8 +1496,8 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
           zIndex: 50,
         }}>
           <div className="deckbuilder__detail-panel" style={{
-            background: '#0d1621',
-            border: '3px solid #ffffff',
+            background: 'var(--surface-overlay)',
+            border: '3px solid var(--content-on-action)',
             borderRadius: '16px',
             padding: '24px',
             display: 'flex',
@@ -1571,8 +1511,8 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
             <div className="deckbuilder__detail-art" style={{
               flex: '0 0 1024px',
               height: '1024px',
-              background: '#0b1118',
-              border: '2px solid #ffffff',
+              background: 'var(--surface-panel)',
+              border: '2px solid var(--content-on-action)',
               borderRadius: '12px',
               overflow: 'hidden',
               position: 'relative',
@@ -1586,8 +1526,8 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                   left: '16px',
                   top: '50%',
                   transform: 'translateY(-50%)',
-                  background: 'rgba(13, 22, 33, 0.9)',
-                  border: '2px solid #1f3042',
+                  background: 'var(--surface-panel)',
+                  border: '2px solid var(--border-default)',
                   borderRadius: '50%',
                   width: '48px',
                   height: '48px',
@@ -1595,19 +1535,19 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                   alignItems: 'center',
                   justifyContent: 'center',
                   cursor: 'pointer',
-                  color: '#eaf3ff',
+                  color: 'var(--content-primary)',
                   fontSize: '20px',
                   fontWeight: 'bold',
                   zIndex: 10,
                   transition: 'all 0.2s ease',
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'rgba(22, 36, 54, 0.95)';
-                  e.currentTarget.style.borderColor = '#27425b';
+                  e.currentTarget.style.background = 'var(--surface-raised)';
+                  e.currentTarget.style.borderColor = 'var(--border-default)';
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'rgba(13, 22, 33, 0.9)';
-                  e.currentTarget.style.borderColor = '#1f3042';
+                  e.currentTarget.style.background = 'var(--surface-panel)';
+                  e.currentTarget.style.borderColor = 'var(--border-default)';
                 }}
               >
                 ‹
@@ -1621,8 +1561,8 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                   right: '16px',
                   top: '50%',
                   transform: 'translateY(-50%)',
-                  background: 'rgba(13, 22, 33, 0.9)',
-                  border: '2px solid #1f3042',
+                  background: 'var(--surface-panel)',
+                  border: '2px solid var(--border-default)',
                   borderRadius: '50%',
                   width: '48px',
                   height: '48px',
@@ -1630,19 +1570,19 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                   alignItems: 'center',
                   justifyContent: 'center',
                   cursor: 'pointer',
-                  color: '#eaf3ff',
+                  color: 'var(--content-primary)',
                   fontSize: '20px',
                   fontWeight: 'bold',
                   zIndex: 10,
                   transition: 'all 0.2s ease',
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'rgba(22, 36, 54, 0.95)';
-                  e.currentTarget.style.borderColor = '#27425b';
+                  e.currentTarget.style.background = 'var(--surface-raised)';
+                  e.currentTarget.style.borderColor = 'var(--border-default)';
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'rgba(13, 22, 33, 0.9)';
-                  e.currentTarget.style.borderColor = '#1f3042';
+                  e.currentTarget.style.background = 'var(--surface-panel)';
+                  e.currentTarget.style.borderColor = 'var(--border-default)';
                 }}
               >
                 ›
@@ -1696,7 +1636,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                       margin: '0 0 8px 0',
                       fontSize: '28px',
                     fontWeight: 700,
-                    color: '#eaf3ff',
+                    color: 'var(--content-primary)',
                       lineHeight: '1.2',
                   }}>
                     {selectedCard.base.name}
@@ -1706,7 +1646,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                   <div style={{
                       fontSize: '16px',
                       fontWeight: 600,
-                      color: '#dbe9f8',
+                      color: 'var(--content-primary)',
                       marginBottom: '4px',
                     }}>
                       {cardDetails?.category || (selectedCard.kind === 'pol' ? 'Government' : 'Public')}
@@ -1716,7 +1656,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                     {cardDetails?.subcategories && cardDetails.subcategories.length > 0 && (
                       <div style={{
                         fontSize: '14px',
-                        color: '#a9c1da',
+                        color: 'var(--content-secondary)',
                         marginBottom: '4px',
                       }}>
                         {withIcons(cardDetails.subcategories.join(', '), 14)}
@@ -1727,7 +1667,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                     {cardDetails?.highestPosition && (
                       <div style={{
                         fontSize: '14px',
-                    color: '#8faecc',
+                    color: 'var(--content-secondary)',
                         marginBottom: '8px',
                       }}>
                         {cardDetails.highestPosition}
@@ -1738,7 +1678,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                     {selectedCard.kind === 'spec' && (
                       <div style={{
                         fontSize: '14px',
-                        color: '#8faecc',
+                        color: 'var(--content-secondary)',
                         marginBottom: '4px',
                       }}>
                         {cardDetails?.cardType || (selectedCard.kind === 'spec' ? (selectedCard.base as any).type : '')}
@@ -1756,7 +1696,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                         flexWrap: 'wrap',
                         marginTop: '4px',
                         marginBottom: '4px',
-                        color: '#a9c1da',
+                        color: 'var(--content-secondary)',
                         fontSize: '14px',
                       }}>
                         <span>Influence: {(selectedCard.base as any).influence}</span>
@@ -1767,7 +1707,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
 
                     <div style={{
                       fontSize: '12px',
-                      color: '#6b7280',
+                      color: 'var(--content-muted)',
                     fontWeight: 500,
                   }}>
                     Card {categorizedCards.allFilteredCards.findIndex(
@@ -1784,12 +1724,12 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                     gap: '8px',
                   }}>
                     <div style={{
-                      background: '#1f2937',
-                      border: '1px solid #374151',
+                      background: 'var(--surface-muted)',
+                      border: '1px solid var(--border-default)',
                       borderRadius: '8px',
                       padding: '8px 12px',
                       fontSize: '14px',
-                      color: '#e5e7eb',
+                      color: 'var(--content-primary)',
                     }}>
                       Cost: { (cardDetails?.deckCost ?? (selectedCard.kind === 'pol' ? (selectedCard.base as BasePolitician).BP || 0 : (selectedCard.base as BaseSpecial).bp)) + ' BP' }
                     </div>
@@ -1800,14 +1740,14 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                   style={{
                     background: 'none',
                     border: 'none',
-                    color: '#8faecc',
+                    color: 'var(--content-secondary)',
                     fontSize: '24px',
                     cursor: 'pointer',
                     padding: '4px',
                     borderRadius: '4px',
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.background = '#1a2a3a';
+                    e.currentTarget.style.background = 'var(--surface-muted)';
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.background = 'none';
@@ -1820,8 +1760,8 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
 
                 {/* Game Effect */}
               <div style={{
-                  background: '#111827',
-                  border: '1px solid #ffffff',
+                  background: 'var(--surface-raised)',
+                  border: '1px solid var(--content-on-action)',
                   borderRadius: '12px',
                   padding: '20px',
               }}>
@@ -1829,14 +1769,14 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                   margin: '0 0 12px 0',
                   fontSize: '16px',
                   fontWeight: 600,
-                    color: '#e5e7eb',
+                    color: 'var(--content-primary)',
                 }}>
                     Game Effect
                 </h3>
 
                   <p style={{
                     margin: 0,
-                    color: '#d1d5db',
+                    color: 'var(--content-secondary)',
                     lineHeight: '1.5',
                     fontSize: '15px',
                   }}>
@@ -1850,8 +1790,8 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                 {/* Synergy for Public */}
                 {cardDetails?.synergy && (
                   <div style={{
-                    background: '#111827',
-                    border: '1px solid #ffffff',
+                    background: 'var(--surface-raised)',
+                    border: '1px solid var(--content-on-action)',
                     borderRadius: '12px',
                     padding: '20px',
                   }}>
@@ -1859,13 +1799,13 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                       margin: '0 0 12px 0',
                       fontSize: '16px',
                       fontWeight: 600,
-                      color: '#e5e7eb',
+                      color: 'var(--content-primary)',
                     }}>
                       Synergy
                     </h3>
                     <p style={{
                       margin: 0,
-                      color: '#d1d5db',
+                      color: 'var(--content-secondary)',
                       lineHeight: '1.5',
                       fontSize: '15px',
                     }}>
@@ -1877,8 +1817,8 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                 {/* Trigger Information for Interventions */}
                 {cardDetails?.trigger && (
               <div style={{
-                    background: '#111827',
-                    border: '1px solid #ffffff',
+                    background: 'var(--surface-raised)',
+                    border: '1px solid var(--content-on-action)',
                     borderRadius: '12px',
                     padding: '20px',
               }}>
@@ -1886,13 +1826,13 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                   margin: '0 0 12px 0',
                   fontSize: '16px',
                   fontWeight: 600,
-                      color: '#e5e7eb',
+                      color: 'var(--content-primary)',
                 }}>
                       Trigger
                 </h3>
                 <p style={{
                   margin: 0,
-                      color: '#d1d5db',
+                      color: 'var(--content-secondary)',
                   lineHeight: '1.5',
                       fontSize: '15px',
                 }}>
@@ -1904,21 +1844,21 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                 {/* Usage and Example for Initiatives/Interventions */}
                 {(cardDetails?.usage || cardDetails?.example) && (
                   <div style={{
-                    background: '#111827',
-                    border: '1px solid #ffffff',
+                    background: 'var(--surface-raised)',
+                    border: '1px solid var(--content-on-action)',
                     borderRadius: '12px',
                     padding: '20px',
                   }}>
                     {cardDetails.usage && (
                       <div style={{ marginBottom: '10px' }}>
-                        <div style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '4px' }}>When to play?</div>
-                        <div style={{ color: '#d1d5db', fontSize: '15px', lineHeight: '1.5' }}>{cardDetails.usage}</div>
+                        <div style={{ fontSize: '12px', color: 'var(--content-muted)', marginBottom: '4px' }}>When to play?</div>
+                        <div style={{ color: 'var(--content-secondary)', fontSize: '15px', lineHeight: '1.5' }}>{cardDetails.usage}</div>
                       </div>
                     )}
                     {cardDetails.example && (
                       <div>
-                        <div style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '4px' }}>Example</div>
-                        <div style={{ color: '#d1d5db', fontSize: '15px', lineHeight: '1.5' }}>{cardDetails.example}</div>
+                        <div style={{ fontSize: '12px', color: 'var(--content-muted)', marginBottom: '4px' }}>Example</div>
+                        <div style={{ color: 'var(--content-secondary)', fontSize: '15px', lineHeight: '1.5' }}>{cardDetails.example}</div>
                       </div>
                     )}
                   </div>
@@ -1927,8 +1867,8 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                 {/* Personal Information */}
                 {cardDetails && (cardDetails.nationality || cardDetails.birthDate || cardDetails.estimatedWealth || cardDetails.controversialQuote) && (
                   <div style={{
-                    background: '#111827',
-                    border: '1px solid #ffffff',
+                    background: 'var(--surface-raised)',
+                    border: '1px solid var(--content-on-action)',
                     borderRadius: '12px',
                     padding: '20px',
                   }}>
@@ -1936,7 +1876,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                       margin: '0 0 16px 0',
                       fontSize: '16px',
                       fontWeight: 600,
-                      color: '#e5e7eb',
+                      color: 'var(--content-primary)',
                     }}>
                       Personal Information
                     </h3>
@@ -1944,37 +1884,37 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                       {cardDetails.nationality && (
                         <div>
-                          <div style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '4px' }}>Nationality</div>
-                          <div style={{ color: '#e5e7eb', fontWeight: 500 }}>{cardDetails.nationality}</div>
+                          <div style={{ fontSize: '12px', color: 'var(--content-muted)', marginBottom: '4px' }}>Nationality</div>
+                          <div style={{ color: 'var(--content-primary)', fontWeight: 500 }}>{cardDetails.nationality}</div>
                         </div>
                       )}
 
                       {cardDetails.birthDate && (
                         <div>
-                          <div style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '4px' }}>Birth Date</div>
-                          <div style={{ color: '#e5e7eb', fontWeight: 500 }}>{cardDetails.birthDate}</div>
+                          <div style={{ fontSize: '12px', color: 'var(--content-muted)', marginBottom: '4px' }}>Birth Date</div>
+                          <div style={{ color: 'var(--content-primary)', fontWeight: 500 }}>{cardDetails.birthDate}</div>
                         </div>
                       )}
                     </div>
 
                     {cardDetails.estimatedWealth && (
                       <div style={{ marginTop: '12px' }}>
-                        <div style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '4px' }}>Estimated Wealth</div>
-                        <div style={{ color: '#e5e7eb', fontWeight: 500 }}>{formatWealth(cardDetails.estimatedWealth)}</div>
+                        <div style={{ fontSize: '12px', color: 'var(--content-muted)', marginBottom: '4px' }}>Estimated Wealth</div>
+                        <div style={{ color: 'var(--content-primary)', fontWeight: 500 }}>{formatWealth(cardDetails.estimatedWealth)}</div>
                       </div>
                     )}
 
                     {cardDetails.controversialQuote && (
                       <div style={{
                         marginTop: '16px',
-                        background: '#1f2937',
-                        border: '1px solid #ffffff',
+                        background: 'var(--surface-muted)',
+                        border: '1px solid var(--content-on-action)',
                         borderRadius: '8px',
                         padding: '12px',
                       }}>
-                        <div style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '6px' }}>Quote</div>
+                        <div style={{ fontSize: '12px', color: 'var(--content-muted)', marginBottom: '6px' }}>Quote</div>
                         <div style={{
-                          color: '#d1d5db',
+                          color: 'var(--content-secondary)',
                           fontStyle: 'italic',
                           lineHeight: '1.4',
                           fontSize: '14px',
@@ -1992,7 +1932,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                           style={{
                             background: 'none',
                             border: 'none',
-                            color: '#9ca3af',
+                            color: 'var(--content-muted)',
                             fontSize: '12px',
                             cursor: 'pointer',
                             textDecoration: 'underline',
@@ -2021,10 +1961,10 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                   style={{
                     flex: 1,
                       background: builderCanAdd(selectedCard.base, selectedCard.kind)
-                        ? '#374151'
-                        : '#1f2937',
-                      color: '#e5e7eb',
-                      border: '1px solid #4b5563',
+                        ? 'var(--border-default)'
+                        : 'var(--surface-muted)',
+                      color: 'var(--content-primary)',
+                      border: '1px solid var(--ink-500)',
                     borderRadius: '8px',
                     padding: '12px',
                     fontSize: '14px',
@@ -2046,13 +1986,13 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                 top: 'calc(50% + 5px)',
                 left: 'calc(50% + 5px)',
                 transform: 'translate(-50%, -50%)',
-                background: '#0d1621',
-                border: '2px solid #ffffff',
+                background: 'var(--surface-overlay)',
+                border: '2px solid var(--content-on-action)',
                 borderRadius: '12px',
                 padding: '20px',
                 minWidth: '400px',
                 maxWidth: '600px',
-                boxShadow: '0 20px 60px rgba(0, 0, 0, 0.8)',
+                boxShadow: 'var(--shadow-lg)',
                 zIndex: 60,
               }}>
                 <div style={{
@@ -2065,7 +2005,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                     margin: 0,
                     fontSize: '16px',
                     fontWeight: 600,
-                    color: '#e5e7eb',
+                    color: 'var(--content-primary)',
                   }}>
                     Sources & Calculation Basis
                   </h4>
@@ -2074,7 +2014,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                     style={{
                       background: 'none',
                       border: 'none',
-                      color: '#9ca3af',
+                      color: 'var(--content-muted)',
                       fontSize: '20px',
                       cursor: 'pointer',
                       padding: '4px',
@@ -2086,12 +2026,12 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
 
                 {cardDetails.calculation && (
                   <div style={{ marginBottom: '16px' }}>
-                    <div style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '6px' }}>Calculation:</div>
+                    <div style={{ fontSize: '12px', color: 'var(--content-muted)', marginBottom: '6px' }}>Calculation:</div>
                     <div style={{
-                      color: '#d1d5db',
+                      color: 'var(--content-secondary)',
                       fontSize: '13px',
                       lineHeight: '1.4',
-                      background: '#1f2937',
+                      background: 'var(--surface-muted)',
                       padding: '10px',
                       borderRadius: '6px',
                     }}>
@@ -2100,9 +2040,9 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
         </div>
       )}
 
-                <div style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '6px' }}>Sources:</div>
+                <div style={{ fontSize: '12px', color: 'var(--content-muted)', marginBottom: '6px' }}>Sources:</div>
                 <div style={{
-                  color: '#d1d5db',
+                  color: 'var(--content-secondary)',
                   fontSize: '13px',
                   lineHeight: '1.4',
                 }}>

@@ -559,9 +559,9 @@ function AppContent() {
     <div style={{
       margin: 0,
       padding: 0,
-      background: '#0b0f14',
-      color: '#e8f0f8',
-      fontFamily: 'ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Arial, "Apple Color Emoji", "Segoe UI Emoji"',
+      background: 'var(--bg-app)',
+      color: 'var(--content-primary)',
+      fontFamily: 'var(--font-ui)',
       height: '100vh',
       overflow: 'hidden',
     }}>
@@ -620,7 +620,7 @@ function AppContent() {
             onStartVsAI={(p1Deck) => {
               try {
                 startMatchVsAI(p1Deck, '');
-                log('🤖 Spiel vs KI mit zufälligem Premade-Deck gestartet');
+                log('🤖 Spiel vs KI gestartet (KI erhält anderes Premade-Deck)');
                 setAppState('game');
               } catch (error) {
                 console.error('Start vs AI failed', error);
@@ -648,7 +648,7 @@ function AppContent() {
             <div style={{
               position: 'relative',
               overflow: 'hidden',
-              background: '#0e141b',
+              background: 'var(--bg-app)',
             }}>
               <GameBoard
                 gameState={gameState}
@@ -657,6 +657,10 @@ function AppContent() {
                 onCardHover={handleCardHover}
                 devMode={devMode}
                 localPlayer={pvpRole === 'guest' ? 2 : 1}
+                onExitToMenu={() => {
+                  if (pvpRole) pvp.leaveRoom();
+                  setAppState('menu');
+                }}
               />
 
               {/* HandCardModal is kept for detailed views */}
@@ -707,7 +711,7 @@ function AppContent() {
                 />
               </div>
 
-              {/* In-Game Music & Back to Menu buttons */}
+              {/* Music toggle — exit lives subtly in the bottom HUD bar */}
               {mobile.isMobile ? (
                 <div className="mobile-menu" style={{ position: 'fixed', top: 'max(8px, env(safe-area-inset-top))', left: 'max(8px, env(safe-area-inset-left))', zIndex: 1000 }}>
                   <button
@@ -744,37 +748,7 @@ function AppContent() {
                   top: '20px',
                   right: '20px',
                   zIndex: 1000,
-                  display: 'flex',
-                  gap: '12px',
-                  alignItems: 'center'
                 }}>
-                  <button
-                    onClick={() => {
-                      if (window.confirm('Möchtest du das Spiel wirklich beenden und zum Hauptmenü zurückkehren?')) {
-                        if (pvpRole) pvp.leaveRoom();
-                        setAppState('menu');
-                      }
-                    }}
-                    style={{
-                      background: 'rgba(239, 68, 68, 0.2)',
-                      color: '#fca5a5',
-                      border: '1px solid rgba(239, 68, 68, 0.3)',
-                      padding: '8px 16px',
-                      borderRadius: '6px',
-                      fontSize: '12px',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      transition: 'all 0.2s',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = 'rgba(239, 68, 68, 0.4)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)';
-                    }}
-                  >
-                    🚪 Spiel beenden
-                  </button>
                   <MusicToggle size="medium" />
                 </div>
               )}
@@ -785,16 +759,17 @@ function AppContent() {
                   position: 'fixed',
                   top: '70px',
                   right: '20px',
-                  background: '#ff6b35',
-                  color: 'white',
+                  background: 'var(--amber-700)',
+                  color: 'var(--content-on-action)',
                   padding: '8px 12px',
-                  borderRadius: '6px',
+                  borderRadius: 'var(--radius-sm)',
                   fontSize: '12px',
                   fontWeight: 600,
-                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
+                  boxShadow: 'var(--shadow-sm)',
                   zIndex: 1000,
+                  fontFamily: 'var(--font-ui)',
                 }}>
-                  🔧 DEV MODE - KI AUS
+                  DEV MODE — KI AUS
                 </div>
               )}
               {showRotateOverlay && <RotateDeviceOverlay />}

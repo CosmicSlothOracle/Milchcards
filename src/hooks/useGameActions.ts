@@ -3,7 +3,7 @@ import { GameState, Card, Player, BuilderEntry, PoliticianCard } from '../types/
 import { createDefaultEffectFlags } from '../types/game';
 import { buildDeckFromEntries, sumGovernmentInfluenceWithAuras, removeCardFromDeck, drawCardsAtRoundEnd } from '../utils/gameUtils';
 import { Pols, Specials } from '../data/gameData';
-import { presetToBuilderEntries, randomPresetDeck } from '../data/presetDecks';
+import { presetToBuilderEntries, randomPresetDeckDifferentFrom } from '../data/presetDecks';
 import { getCardActionPointCost, getNetApCost, canPlayCard, isInitiativeCard, isGovernmentCard } from '../utils/ap';
 import { triggerCardEffects } from '../effects/cards';
 import { ensureTestBaselineAP } from '../utils/testCompat';
@@ -641,19 +641,19 @@ export function useGameActions(
     }));
   }, [gameState, setGameState, log]);
 
-  const startMatchVsAI = useCallback((p1DeckEntries: BuilderEntry[], presetKey: string = '') => {
-    // Select random premade deck for the AI
-    const randomPreset = randomPresetDeck();
-    log(`🤖 KI erhält zufälliges Deck: "${ randomPreset.name }"`);
+  const startMatchVsAI = useCallback((p1DeckEntries: BuilderEntry[], _presetKey: string = '') => {
+    // Always assign a premade that differs from the player's deck composition
+    const aiPreset = randomPresetDeckDifferentFrom(p1DeckEntries);
+    log(`🤖 KI erhält Premade-Deck: "${aiPreset.name}"`);
 
-    const p2DeckEntries = presetToBuilderEntries(randomPreset, log);
-    log(`🤖 KI-Deck erstellt: ${ p2DeckEntries.length } Karten`);
+    const p2DeckEntries = presetToBuilderEntries(aiPreset, log);
+    log(`🤖 KI-Deck erstellt: ${p2DeckEntries.length} Karten (${aiPreset.name})`);
 
     // Enable AI for P2 first so nextTurn/auto-run sees the flag immediately
     setGameState(prev => ({ ...prev, aiEnabled: { ...(prev.aiEnabled || { 1: false, 2: false }), 2: true } }));
     log('🔧 AI aktiviert für Spieler 2');
     startMatchWithDecks(p1DeckEntries, p2DeckEntries);
-  }, [startMatchWithDecks]);
+  }, [startMatchWithDecks, setGameState, log]);
 
   const playCard = useCallback((player: Player, handIndex: number, lane?: 'innen' | 'aussen') => {
     logger.info(`playCard START P${ player } idx=${ handIndex }`);
@@ -717,6 +717,24 @@ export function useGameActions(
         // Helper: cancel the stored AP cost without charging (rollback paths)
         const cancelPendingAp = () => {
           delete (newState as any)._pendingApCost;
+        };
+        /**
+         * Charge play cost FIRST, then resolve effects.
+         * Previously ADD_AP from Öffentlichkeitskarten (Tim Cook, Soros, Greta, …)
+         * ran before the cost deduction and was visually/net cancelled by the 1 AP cost.
+         */
+        const resolveEffectsAfterCost = () => {
+          migrateLegacyQueue(newState);
+          chargePendingAp();
+          if (newState._effectQueue && newState._effectQueue.length > 0) {
+            resolveQueue(newState, newState._effectQueue);
+            newState._effectQueue = [];
+          }
+          newState.hands = { 1: [...newState.hands[1]], 2: [...newState.hands[2]] } as any;
+          newState.decks = { 1: [...newState.decks[1]], 2: [...newState.decks[2]] } as any;
+          newState.actionPoints = { ...newState.actionPoints };
+          recomputeAuraFlags(newState);
+          afterQueueResolved?.();
         };
 
         // Enhanced AP counter logging
@@ -907,26 +925,7 @@ export function useGameActions(
           }
           // UI visual: particle burst + pop scale for played card (prototype hook)
           try { spawnCardVisual(playedCard, newState); } catch (e) { }
-          // Migration Helper verwenden
-          migrateLegacyQueue(newState);
-          // Nur noch _effectQueue verwenden
-          if (newState._effectQueue && newState._effectQueue.length > 0) {
-            try { log(`DEBUG: about to resolve queue (pol play) -> ${ JSON.stringify((newState._effectQueue as any).map((e: any) => ({ type: e.type, amount: e.amount, msg: e.msg })).slice(0, 50)) }`); } catch (e) { }
-            log(`DEBUG AP before resolve (pol play): P1=${ newState.actionPoints[1] } P2=${ newState.actionPoints[2] }`);
-            resolveQueue(newState, newState._effectQueue);
-            newState._effectQueue = [];
-            // Nach Queue-Auflösung: Hand-Arrays immutabel neu zuweisen
-            afterQueueResolved?.();
-            log(`DEBUG AP after resolve (pol play): P1=${ newState.actionPoints[1] } P2=${ newState.actionPoints[2] }`);
-          }
-
-          // AP-Kosten NACH Queue-Verarbeitung abziehen (verhindert temporäres 0 AP)
-          const pendingCost = (newState as any)._pendingApCost;
-          if (pendingCost !== undefined) {
-            newState.actionPoints[player] = Math.max(0, newState.actionPoints[player] - pendingCost);
-            log(`💳 Kosten abgezogen: AP ${ newState.actionPoints[player] + pendingCost }→${ newState.actionPoints[player] }`);
-            delete (newState as any)._pendingApCost;
-          }
+          resolveEffectsAfterCost();
 
           // Release playing UID after queue resolved — removed (was breaking React Strict Mode)
 
@@ -1016,10 +1015,11 @@ export function useGameActions(
               return newState;
             }
 
-            // 6) Karteneffekte enqueuen + Traps prüfen + Queue auflösen
+            // 6) Karteneffekte + public AP reactions (Dauerhaft counts as one activation)
+            (newState as any)._lastActivatedInitiative = playedCard.name;
             triggerCardEffects(newState, player, playedCard);
+            (newState._effectQueue ??= []).push({ type: 'INITIATIVE_ACTIVATED', player } as any);
 
-            // Check for trap triggers (vor der Auflösung)
             applyTrapsOnCardPlayed(
               newState,
               player,
@@ -1028,20 +1028,7 @@ export function useGameActions(
               (m) => (newState._effectQueue ??= []).push({ type: 'LOG', msg: m })
             );
 
-            // Migration Helper verwenden
-            migrateLegacyQueue(newState);
-            // Nur noch _effectQueue verwenden
-            if (newState._effectQueue && newState._effectQueue.length > 0) {
-              try { log(`DEBUG: about to resolve queue (spec ongoing) -> ${ JSON.stringify((newState._effectQueue as any).map((e: any) => ({ type: e.type, amount: e.amount, msg: e.msg })).slice(0, 50)) }`); } catch (e) { }
-              log(`DEBUG AP before resolve (spec ongoing): P1=${ newState.actionPoints[1] } P2=${ newState.actionPoints[2] }`);
-              resolveQueue(newState, newState._effectQueue);
-              newState._effectQueue = [];
-              // Nach Queue-Auflösung: Hand-Arrays immutabel neu zuweisen
-              afterQueueResolved?.();
-              log(`DEBUG AP after resolve (spec ongoing): P1=${ newState.actionPoints[1] } P2=${ newState.actionPoints[2] }`);
-            }
-
-            chargePendingAp();
+            resolveEffectsAfterCost();
             return newState;
           }
 
@@ -1091,17 +1078,11 @@ export function useGameActions(
               return newState;
             }
 
-            // Dauerhaft-Initiativen werden weiterhin sofort aktiviert
-            // Initiative in den Ablagestapel
+            // Legacy initiative fallthrough → discard + activate immediately
             newState.discard = [...newState.discard, playedCard];
             log(`P${ player } spielt Initiative: ${ playedCard.name }`);
-
-            // 6) Karteneffekte enqueuen + Traps prüfen + Queue auflösen
-            console.log('🔥 ABOUT TO TRIGGER CARD EFFECTS (INITIATIVE):', playedCard.name, 'effectKey:', (playedCard as any).effectKey);
             (newState as any)._lastActivatedInitiative = playedCard.name;
             triggerCardEffects(newState, player, playedCard);
-
-            // Check for trap triggers (vor der Auflösung)
             applyTrapsOnCardPlayed(
               newState,
               player,
@@ -1109,21 +1090,7 @@ export function useGameActions(
               (e) => (newState._effectQueue ??= []).push(e),
               (m) => (newState._effectQueue ??= []).push({ type: 'LOG', msg: m })
             );
-
-            // Migration Helper verwenden
-            migrateLegacyQueue(newState);
-            // Nur noch _effectQueue verwenden
-            if (newState._effectQueue && newState._effectQueue.length > 0) {
-              resolveQueue(newState, newState._effectQueue);
-              newState._effectQueue = [];
-              // Nach Queue-Auflösung: Hand-Arrays immutabel neu zuweisen
-              afterQueueResolved?.();
-            }
-
-            // 🔥 CLUSTER 3: Auren-Flags neu berechnen (nach Kartenspielen)
-            recomputeAuraFlags(newState);
-
-            chargePendingAp();
+            resolveEffectsAfterCost();
             return newState;
           }
 
@@ -1180,7 +1147,6 @@ export function useGameActions(
                 }
               } catch (e) { /* hooks are best-effort */ }
 
-              // Check for trap triggers (vor der Queue-Auflösung, damit alles zusammen aufgelöst wird)
               applyTrapsOnCardPlayed(
                 newState,
                 player,
@@ -1189,31 +1155,21 @@ export function useGameActions(
                 (m) => (newState._effectQueue ??= []).push({ type: 'LOG', msg: m })
               );
 
-              // Migration Helper verwenden
-              migrateLegacyQueue(newState);
-              if (newState._effectQueue && newState._effectQueue.length > 0) {
-                resolveQueue(newState, newState._effectQueue);
-                newState._effectQueue = [];
-                // Nach Queue-Auflösung: Hand-Arrays immutabel neu zuweisen
-                afterQueueResolved?.();
-              }
-
-              // 🔗 NGO-Synergie: Wenn eine NGO gelegt wird und Joschka Fischer liegt, erhält P${player} +1 Einfluss (Rundenauswertung)
               if ((specCard as any).tag === 'NGO') {
                 const hasJoschka = newState.board[player].aussen.some(c => c.kind === 'pol' && (c as any).name === 'Joschka Fischer' && !(c as any).deactivated);
                 if (hasJoschka) {
                   log(`🔥🔥🔥 SYNERGIE AKTIVIERT! 🔥🔥🔥 Joschka Fischer + ${ playedCard.name }[NGO] → +1 Einfluss bei Rundenauswertung`);
                 }
               }
+
+              resolveEffectsAfterCost();
             } else {
               log(`❌ ERROR: Lane full - Öffentlichkeit ist voll (5/5)`);
-              // Karte zurück in die Hand (AP war noch nicht abgezogen)
               newState.hands[player] = [...newState.hands[player], playedCard];
               cancelPendingAp();
               return newState;
             }
 
-            chargePendingAp();
             return newState;
           }
 
@@ -1230,23 +1186,7 @@ export function useGameActions(
           log(`P${ player } spielt ${ playedCard.name } als ${ specCard.type }`);
           feedbackSuccess(`${playedCard.name} gelegt`, String(specCard.type || 'Intervention'));
 
-          // 6) Karteneffekte enqueuen + Queue auflösen
-          console.log('🔥 ABOUT TO TRIGGER CARD EFFECTS:', playedCard.name, 'effectKey:', (playedCard as any).effectKey);
           triggerCardEffects(newState, player, playedCard);
-          // Migration Helper verwenden
-          migrateLegacyQueue(newState);
-          // Nur noch _effectQueue verwenden
-          if (newState._effectQueue && newState._effectQueue.length > 0) {
-            try { log(`DEBUG: about to resolve queue (spec instant) -> ${ JSON.stringify((newState._effectQueue as any).map((e: any) => ({ type: e.type, amount: e.amount, msg: e.msg })).slice(0, 50)) }`); } catch (e) { }
-            log(`DEBUG AP before resolve (spec instant): P1=${ newState.actionPoints[1] } P2=${ newState.actionPoints[2] }`);
-            resolveQueue(newState, newState._effectQueue);
-            newState._effectQueue = [];
-            // Nach Queue-Auflösung: Hand-Arrays immutabel neu zuweisen
-            afterQueueResolved?.();
-            log(`DEBUG AP after resolve (spec instant): P1=${ newState.actionPoints[1] } P2=${ newState.actionPoints[2] }`);
-          }
-
-          // Check for trap triggers
           applyTrapsOnCardPlayed(
             newState,
             player,
@@ -1254,32 +1194,12 @@ export function useGameActions(
             (e) => (newState._effectQueue ??= []).push(e),
             (m) => (newState._effectQueue ??= []).push({ type: 'LOG', msg: m })
           );
-          if (newState._effectQueue && newState._effectQueue.length > 0) {
-            resolveQueue(newState, newState._effectQueue);
-            newState._effectQueue = [];
-            afterQueueResolved?.();
-          }
-
-          chargePendingAp();
+          resolveEffectsAfterCost();
           return newState;
         }
 
-        // 6) Karteneffekte enqueuen + Queue auflösen (fallback für unbekannte Kartentypen)
+        // Fallback für unbekannte Kartentypen
         triggerCardEffects(newState, player, selectedCard);
-        // Migration Helper verwenden
-        migrateLegacyQueue(newState);
-        // Nur noch _effectQueue verwenden
-        if (newState._effectQueue && newState._effectQueue.length > 0) {
-          try { log(`DEBUG: about to resolve queue (spec public/default) -> ${ JSON.stringify((newState._effectQueue as any).map((e: any) => ({ type: e.type, amount: e.amount, msg: e.msg })).slice(0, 50)) }`); } catch (e) { }
-          log(`DEBUG AP before resolve (spec public/default): P1=${ newState.actionPoints[1] } P2=${ newState.actionPoints[2] }`);
-          resolveQueue(newState, newState._effectQueue);
-          newState._effectQueue = [];
-          // Nach Queue-Auflösung: Hand-Arrays immutabel neu zuweisen
-          afterQueueResolved?.();
-          log(`DEBUG AP after resolve (spec public/default): P1=${ newState.actionPoints[1] } P2=${ newState.actionPoints[2] }`);
-        }
-
-        // Check for trap triggers
         applyTrapsOnCardPlayed(
           newState,
           player,
@@ -1287,15 +1207,7 @@ export function useGameActions(
           (e) => (newState._effectQueue ??= []).push(e),
           (m) => (newState._effectQueue ??= []).push({ type: 'LOG', msg: m })
         );
-        if (newState._effectQueue && newState._effectQueue.length > 0) {
-          resolveQueue(newState, newState._effectQueue);
-          newState._effectQueue = [];
-          afterQueueResolved?.();
-        }
-
-        chargePendingAp();
-
-        // Kein Aktionenlimit mehr → automatischer Turnwechsel entfällt
+        resolveEffectsAfterCost();
 
         return newState;
       })();
@@ -1426,12 +1338,10 @@ export function useGameActions(
       if (newState._effectQueue && newState._effectQueue.length > 0) {
         log('⏳ Effekte werden noch aufgelöst – Zugwechsel folgt automatisch.');
 
-        // WORKAROUND: Filter out INITIATIVE_ACTIVATED events to prevent double execution
-        const filteredQueue = newState._effectQueue.filter(event => event.type !== 'INITIATIVE_ACTIVATED');
-        if (filteredQueue.length > 0) {
-          resolveQueue(newState, [...filteredQueue]);
-        }
+        // Resolve remaining effects fully (including INITIATIVE_ACTIVATED public reactions)
+        resolveQueue(newState, [...newState._effectQueue]);
         newState._effectQueue = [];
+        newState.hands = { 1: [...newState.hands[1]], 2: [...newState.hands[2]] } as any;
 
         // Nach Queue-Auflösung: Wenn Flag noch gesetzt, Zug beenden
         if (newState.isEndingTurn) {
