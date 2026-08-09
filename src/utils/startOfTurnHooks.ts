@@ -29,8 +29,15 @@ export function startOfTurn(state: GameState, p: Player) {
   f.auraScience = 0;
   f.auraHealth = 0;
   f.auraMilitaryPenalty = 0;
-  // Oppositionsblockade ends at start of player's turn
+  // Once-per-turn effect trackers
+  f.markZuckerbergUsed = false;
+  f.aiWeiweiInitiativeUsed = false;
+  f.gretaFirstGovApUsed = false;
+  f.zivilgesellschaftApUsed = false;
+  // Elon is once-per-round: do NOT clear elonInitiativeApUsed here (cleared on round resolve)
+  // Oppositionsblockade / Parlament geschlossen end at start of this player's turn
   f.initiativesLocked = false;
+  f.cannotPlayMoreGovernment = false;
   // Simplified AP system: No initiative-specific bonuses
 
   // Helper to consume double aura flag once
@@ -85,7 +92,7 @@ export function startOfTurn(state: GameState, p: Player) {
   }
   if (pubNames.includes('Ai Weiwei')) {
     if (!state._effectQueue) state._effectQueue = [];
-    state._effectQueue.push({ type: 'LOG', msg: 'Ai Weiwei: +1 card +1 AP on next initiative activation.' } as any);
+    state._effectQueue.push({ type: 'LOG', msg: 'Ai Weiwei: einmal pro Zug +1 Karte +1 AP bei Initiative-Aktivierung.' } as any);
   }
 
   // Leadership effect: +1 AP immediately

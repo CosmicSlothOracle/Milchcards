@@ -16,6 +16,7 @@ export function makePolInstance(base: BasePolitician): PoliticianCard {
     BP: base.BP ?? 0,
     influence: base.influence, // 🔥 VEREINFACHT: Direkt von base.influence, kein M mehr!
     ...(base.effect && { effect: base.effect }), // 🔥 EFFEKT ÜBERTRAGUNG FÜR JOSCHKA FISCHER NGO-BOOST!
+    ...(base.effectKey && { effectKey: base.effectKey }),
     protected: false,
     protectedUntil: null,
     deactivated: false,

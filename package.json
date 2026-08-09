@@ -10,7 +10,6 @@
     "@types/node": "^16.18.68",
     "@types/react": "^18.2.42",
     "@types/react-dom": "^18.2.17",
-    "firebase": "^12.14.0",
     "gsap": "^3.13.0",
     "howler": "^2.2.4",
     "konva": "^9.3.22",
@@ -27,13 +26,21 @@
     "dev": "node node_modules/react-scripts/bin/react-scripts.js start",
     "build": "node node_modules/react-scripts/bin/react-scripts.js build",
     "test": "node node_modules/react-scripts/bin/react-scripts.js test",
-    "eject": "node node_modules/react-scripts/bin/react-scripts.js eject"
+    "eject": "node node_modules/react-scripts/bin/react-scripts.js eject",
+    "pvp": "npm --prefix server start",
+    "pvp:install": "npm --prefix server install",
+    "dev:all": "node scripts/dev_all.js"
   },
   "eslintConfig": {
     "extends": [
       "react-app",
       "react-app/jest"
     ]
+  },
+  "jest": {
+    "moduleNameMapper": {
+      "^canvas$": "<rootDir>/src/test/__mocks__/canvas.js"
+    }
   },
   "browserslist": {
     "production": [

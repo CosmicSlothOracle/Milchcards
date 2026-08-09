@@ -135,7 +135,13 @@ export function useGameState() {
 
   // Import functionality from separated hooks
   const gameActions = useGameActions(gameState, setGameState, log, afterQueueResolved);
-  const gameAI = useGameAI(gameState, setGameState, log);
+  const gameAI = useGameAI(
+    gameState,
+    setGameState,
+    log,
+    gameActions.playCard,
+    gameActions.passTurn
+  );
   const gameEffects = useGameEffects(gameState, setGameState, log, {
     logFunctionCall,
     logCardEffect,
@@ -515,12 +521,24 @@ export function useGameState() {
         const isWeakGov = (played.influence <= 5 && event.lane === 'aussen');
         const isLowPowerGov = (played.influence <= 4 && event.lane === 'aussen');
 
-        // Cancel Culture / Fake News-Kampagne
+        // Cancel Culture: only Oligarch / Media-like publics
         if ((details?.name === 'Cancel Culture' || key === 'Cancel_Culture') && event.lane === 'innen') {
-          tryApplyNegativeEffect(played, () => { played.deactivated = true; }, prev.round);
-          oppTraps.splice(i, 1); i--; trapsChanged = true;
-          log(`Intervention ausgelöst: Cancel Culture → ${ played.name } deaktiviert.`);
-          logIntervention('Cancel Culture', `Ausgelöst gegen ${ played.name } in Öffentlichkeit`);
+          const subs = (details?.subcategories || []) as string[];
+          const isOligarchOrMedia =
+            isMedia ||
+            isPlatform ||
+            (played as any).tag === 'Oligarch' ||
+            (played as any).tag === 'Medien' ||
+            (played as any).tag === 'Media' ||
+            subs.includes('Oligarch') ||
+            subs.includes('Medien') ||
+            subs.includes('Plattform');
+          if (isOligarchOrMedia) {
+            tryApplyNegativeEffect(played, () => { played.deactivated = true; }, prev.round);
+            oppTraps.splice(i, 1); i--; trapsChanged = true;
+            log(`Intervention ausgelöst: Cancel Culture → ${ played.name } deaktiviert.`);
+            logIntervention('Cancel Culture', `Ausgelöst gegen ${ played.name } (Oligarch/Medien)`);
+          }
           continue;
         }
         if ((details?.name === 'Fake News-Kampagne' || key === 'Fake_News_Kampagne') && isMedia) {
@@ -600,21 +618,11 @@ export function useGameState() {
           continue;
         }
 
-        // Cyber-Attacke (Plattform)
+        // Cyber-Attacke (Plattform): deactivate instead of destroy
         if ((details?.name === 'Cyber-Attacke' || key === 'Cyber_Attacke') && isPlatform) {
-          const loc = findCardLocation(played as any, { ...prev, board } as GameState);
-          if (loc) {
-            const updatedLane = board[loc.player][loc.lane].filter(c => c.uid !== played.uid);
-            board = {
-              ...board,
-              [loc.player]: {
-                ...board[loc.player],
-                [loc.lane]: updatedLane
-              }
-            } as GameState['board'];
-          }
+          tryApplyNegativeEffect(played, () => { (played as any).deactivated = true; }, prev.round);
           oppTraps.splice(i, 1); i--; trapsChanged = true;
-          log(`Intervention ausgelöst: Cyber-Attacke → ${ played.name } zerstört.`);
+          log(`Intervention ausgelöst: Cyber-Attacke → ${ played.name } deaktiviert.`);
           continue;
         }
 
@@ -781,9 +789,16 @@ export function useGameState() {
         }
       }
 
-      // Napoleon Komplex: Tier 1 Regierungskarten +1 Einfluss
-      if (govSlot?.kind === 'spec' && (govSlot as SpecialCard).name === 'Napoleon Komplex') {
-        if (card.T === 1) influence += 1;
+      // Napoleon Komplex: +1 only on strongest Tier-1 government (handled via sumGovernmentInfluenceWithAuras)
+      // Legacy path kept for display parity: +1 if this is the strongest T1
+      if (govSlot?.kind === 'spec' && (govSlot as SpecialCard).name === 'Napoleon Komplex' && card.T === 1) {
+        const t1 = govCards.filter(c => c.T === 1 && !c.deactivated);
+        const strongest = t1.reduce((best, c) => {
+          const score = c.influence + (c.tempBuffs || 0) - (c.tempDebuffs || 0);
+          const bestScore = best.influence + (best.tempBuffs || 0) - (best.tempDebuffs || 0);
+          return score > bestScore ? c : best;
+        }, t1[0]);
+        if (strongest && strongest.uid === card.uid) influence += 1;
       }
 
       // Zivilgesellschaft: Bewegung-Karten +1 Einfluss

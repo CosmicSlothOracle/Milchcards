@@ -78,10 +78,11 @@ export function useGameEffects(
           }
         },
         'Digitaler Wahlkampf': (spec) => {
-          logCardEffect(spec.name, 'Ziehe 2 Karten, nächste Initiative -1 AP');
+          // Legacy path; primary resolution is DIGITAL_CAMPAIGN_DRAW (capped at 2)
+          logCardEffect(spec.name, 'Ziehe bis zu 2 Karten (1 pro Medien/Plattform)');
           const { newHands, newDecks } = drawCards(player, 2, newState, log);
           newState = { ...newState, hands: newHands, decks: newDecks };
-          logDataFlow('effectFlags', 'newState', { player }, 'Platform effect applied');
+          logDataFlow('effectFlags', 'newState', { player }, 'Digital campaign effect applied');
         },
         'Partei-Offensive': (spec) => {
           const opponent: Player = player === 1 ? 2 : 1;
@@ -89,10 +90,13 @@ export function useGameEffects(
           logDataFlow('opponent analysis', 'oppGovCards', { opponent, count: oppGovCards.length, cards: oppGovCards.map(c => c.name) }, 'Finding active opponent government cards');
 
           if (oppGovCards.length > 0) {
-            const targetCard = oppGovCards[0];
-            targetCard.deactivated = true;
-            logCardEffect(spec.name, `${targetCard.name} wird deaktiviert (bis Rundenende)`);
-            logDataFlow('card deactivation', 'targetCard', { card: targetCard.name, deactivated: true }, 'Partei-Offensive effect applied');
+            const targetCard = [...oppGovCards].sort((a, b) =>
+              ((b.influence || 0) + (b.tempBuffs || 0) - (b.tempDebuffs || 0)) -
+              ((a.influence || 0) + (a.tempBuffs || 0) - (a.tempDebuffs || 0))
+            )[0];
+            targetCard.tempDebuffs = (targetCard.tempDebuffs || 0) + 3;
+            logCardEffect(spec.name, `${targetCard.name} erhält −3 Einfluss`);
+            logDataFlow('card debuff', 'targetCard', { card: targetCard.name, tempDebuffs: targetCard.tempDebuffs }, 'Partei-Offensive effect applied');
           } else {
             logWarning('No active opponent government cards found', 'Partei-Offensive effect has no target');
           }

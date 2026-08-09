@@ -248,31 +248,43 @@ const GameBoard: React.FC<GameBoardProps> = ({
     style: React.CSSProperties,
     data: any,
     options?: { selected?: boolean; showActivate?: boolean; onActivate?: () => void; highlight?: boolean }
-  ) => (
-    <div
-      key={card.uid}
-      className={`game-board__card${ options?.selected ? ' game-board__card--selected' : '' }${ options?.highlight ? ' game-board__card--corruption' : '' }`}
-      style={style}
-      onClick={() => onCardClick(data)}
-      onMouseEnter={(event) => handleHover(card, event)}
-      onMouseMove={(event) => handleHover(card, event)}
-      onMouseLeave={() => handleHover(null)}
-    >
-      <img src={getCardImagePath(card, 'ui')} alt={card.name} />
-      {options?.showActivate && options.onActivate && (
-        <button
-          type="button"
-          className="game-board__activate"
-          onClick={(event) => {
-            event.stopPropagation();
-            options.onActivate?.();
-          }}
-        >
-          Aktivieren
-        </button>
-      )}
-    </div>
-  );
+  ) => {
+    const spawn = recentlyPlayed.has(card.uid);
+    const corrOk = corruptionSuccessUids.has(card.uid);
+    const corrFail = corruptionFailUids.has(card.uid);
+    return (
+      <div
+        key={card.uid}
+        className={[
+          'game-board__card',
+          options?.selected ? 'game-board__card--selected' : '',
+          options?.highlight ? 'game-board__card--corruption' : '',
+          spawn ? 'game-board__card--spawn' : '',
+          corrOk ? 'game-board__card--corruption-success' : '',
+          corrFail ? 'game-board__card--corruption-fail' : '',
+        ].filter(Boolean).join(' ')}
+        style={style}
+        onClick={() => onCardClick(data)}
+        onMouseEnter={(event) => handleHover(card, event)}
+        onMouseMove={(event) => handleHover(card, event)}
+        onMouseLeave={() => handleHover(null)}
+      >
+        <img src={getCardImagePath(card, 'ui')} alt={card.name} />
+        {options?.showActivate && options.onActivate && (
+          <button
+            type="button"
+            className="game-board__activate"
+            onClick={(event) => {
+              event.stopPropagation();
+              options.onActivate?.();
+            }}
+          >
+            Aktivieren
+          </button>
+        )}
+      </div>
+    );
+  };
 
   const renderSlot = (
     key: string,
@@ -459,6 +471,43 @@ const GameBoard: React.FC<GameBoardProps> = ({
 
   const p1Influence = calculatePlayerInfluence(1);
   const p2Influence = calculatePlayerInfluence(2);
+  const leadPlayer: 0 | 1 | 2 =
+    p1Influence === p2Influence ? 0 : (p1Influence > p2Influence ? 1 : 2);
+  const prevLeadRef = useRef<0 | 1 | 2>(0);
+  const [leadPulse, setLeadPulse] = useState<1 | 2 | null>(null);
+
+  useEffect(() => {
+    const prev = prevLeadRef.current;
+    if (leadPlayer !== 0 && leadPlayer !== prev && (p1Influence > 0 || p2Influence > 0)) {
+      setLeadPulse(leadPlayer);
+      try {
+        const { feedbackLead } = require('../utils/feedback');
+        const you = leadPlayer === localPlayer;
+        feedbackLead(
+          you ? 'Du führst' : `Spieler ${leadPlayer} führt`,
+          `${p1Influence} : ${p2Influence} Einfluss`,
+        );
+      } catch { /* ignore */ }
+      const t = window.setTimeout(() => setLeadPulse(null), 1600);
+      prevLeadRef.current = leadPlayer;
+      return () => window.clearTimeout(t);
+    }
+    prevLeadRef.current = leadPlayer;
+  }, [leadPlayer, p1Influence, p2Influence, localPlayer]);
+
+  const tunnelvisionPending = pendingAbility?.type === 'tunnelvision_probe' ? pendingAbility : null;
+
+  const requestTunnelvisionRoll = useCallback(() => {
+    if (!tunnelvisionPending) return;
+    window.dispatchEvent(new CustomEvent('pc:tunnelvision_request_roll', {
+      detail: {
+        player: tunnelvisionPending.actorPlayer,
+        targetUid: tunnelvisionPending.targetUid,
+        requiredRoll: tunnelvisionPending.requiredRoll,
+        influence: tunnelvisionPending.influence,
+      },
+    }));
+  }, [tunnelvisionPending]);
 
   return (
     <div className={`game-board${ useCompactHud ? ' game-board--mobile-landscape' : '' }`} ref={boardRef}>
@@ -523,9 +572,9 @@ const GameBoard: React.FC<GameBoardProps> = ({
 
         {/* Central scoreboard */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-          <div style={{ textAlign: 'right' }}>
+          <div style={{ textAlign: 'right' }} className={leadPulse === 1 ? 'score-lead-pulse' : undefined}>
             <div style={{ fontSize: '10px', color: '#10b981', fontWeight: 700, letterSpacing: '1px' }}>{localPlayer === 1 ? 'SPIELER 1 (DU)' : 'SPIELER 1 (GEGNER)'}</div>
-            <div style={{ fontSize: '24px', fontWeight: 900, color: '#f8fafc', textShadow: '0 0 10px rgba(16, 185, 129, 0.3)' }}>{p1Influence}</div>
+            <div style={{ fontSize: '24px', fontWeight: 900, color: '#f8fafc', textShadow: leadPulse === 1 ? '0 0 18px rgba(16, 185, 129, 0.85)' : '0 0 10px rgba(16, 185, 129, 0.3)' }}>{p1Influence}</div>
           </div>
           <div style={{
             fontSize: '11px',
@@ -539,9 +588,9 @@ const GameBoard: React.FC<GameBoardProps> = ({
           }}>
             EINFLUSS
           </div>
-          <div style={{ textAlign: 'left' }}>
+          <div style={{ textAlign: 'left' }} className={leadPulse === 2 ? 'score-lead-pulse' : undefined}>
             <div style={{ fontSize: '10px', color: '#ef4444', fontWeight: 700, letterSpacing: '1px' }}>{localPlayer === 2 ? 'SPIELER 2 (DU)' : 'SPIELER 2 (GEGNER)'}</div>
-            <div style={{ fontSize: '24px', fontWeight: 900, color: '#f8fafc', textShadow: '0 0 10px rgba(239, 68, 68, 0.3)' }}>{p2Influence}</div>
+            <div style={{ fontSize: '24px', fontWeight: 900, color: '#f8fafc', textShadow: leadPulse === 2 ? '0 0 18px rgba(239, 68, 68, 0.85)' : '0 0 10px rgba(239, 68, 68, 0.3)' }}>{p2Influence}</div>
           </div>
         </div>
 
@@ -862,7 +911,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
             Ziel: <strong>{corruptionTargetName ?? 'Unbekannt'}</strong>
           </div>
           <div style={{ marginBottom: '12px', color: '#94a3b8' }}>
-            Probe: W6 ≥ Einfluss der Karte (inkl. Oligarch-Bonus)
+            Probe: W6 ≥ Einfluss der Karte
           </div>
           <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
             <button
@@ -922,7 +971,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
             Schwächste Regierungskarte: <strong>{maulwurfTargetName ?? 'Unbekannt'}</strong>
           </div>
           <div style={{ marginBottom: '12px', color: '#94a3b8' }}>
-            Benötigter Wurf: W6 ≥ {maulwurfRequiredRoll ?? '?'} (2 + Anzahl gegnerischer Regierungskarten)
+            Benötigter Wurf: W6 ≥ {maulwurfRequiredRoll ?? '?'} (3 + Anzahl gegnerischer Regierungskarten)
           </div>
           <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
             <button
@@ -954,6 +1003,58 @@ const GameBoard: React.FC<GameBoardProps> = ({
             >
               Abbrechen
             </button>
+          </div>
+        </div>
+      )}
+
+      {tunnelvisionPending && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.55)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1300,
+          }}
+        >
+          <div
+            style={{
+              background: '#0f172a',
+              border: '1px solid rgba(148,163,184,0.35)',
+              borderRadius: '12px',
+              padding: '18px 20px',
+              color: '#e2e8f0',
+              fontSize: '14px',
+              minWidth: '300px',
+              boxShadow: '0 12px 40px rgba(0,0,0,0.5)',
+            }}
+          >
+            <div style={{ fontWeight: 700, marginBottom: '8px' }}>Tunnelvision — Probe</div>
+            <div style={{ marginBottom: '6px' }}>
+              Einfluss: <strong>{tunnelvisionPending.influence ?? '?'}</strong>
+            </div>
+            <div style={{ marginBottom: '12px', color: '#94a3b8' }}>
+              Benötigter Wurf: W6 ≥ {tunnelvisionPending.requiredRoll ?? '?'}
+            </div>
+            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                onClick={requestTunnelvisionRoll}
+                style={{
+                  background: '#2563eb',
+                  color: 'white',
+                  border: 'none',
+                  padding: '8px 14px',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontWeight: 700,
+                }}
+              >
+                Würfeln
+              </button>
+            </div>
           </div>
         </div>
       )}

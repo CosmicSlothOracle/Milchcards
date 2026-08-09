@@ -1,0 +1,517 @@
+{
+  "generatedAt": "2026-08-08T23:06:03.251Z",
+  "method": "Mechanics-aware critical review + density math (influence/BP). Bands: impossible → oppressive → strong → acceptable.",
+  "summary": {
+    "impossible": 6,
+    "oppressive": 8,
+    "strong": 6,
+    "acceptable": 8,
+    "verdict": "Game is playable but several hard-control and engine cards sit in impossible/oppressive bands. Highest priority: corruption steals, Ai Weiwei, Tunnelvision, Parlament geschlossen, Jeff Bezos, then T1 density."
+  },
+  "assertions": [
+    {
+      "name": "Bestechungsskandal 2.0",
+      "band": "impossible",
+      "severity": 95,
+      "cost": 3,
+      "claim": "Dice steal of enemy gov converts their best score into yours. Oligarch count + Adani bonus push success rate high. Single card can flip a round.",
+      "fix": "Raise BP to 5, require W6≥influence (no oligarch stacking), or once-per-match."
+    },
+    {
+      "name": "Maulwurf",
+      "band": "impossible",
+      "severity": 92,
+      "cost": 3,
+      "claim": "Auto-picks weakest gov; probe often W6≥2–3. Near-guaranteed steal after bp nerf still too cheap for permanent board theft.",
+      "fix": "Restore BP4+, scale required roll harder, or return card to hand instead of steal."
+    },
+    {
+      "name": "Ai Weiwei",
+      "band": "impossible",
+      "severity": 90,
+      "cost": 5,
+      "claim": "On EVERY initiative activation: +1 draw +1 AP. Turns Softort-Initiative spam into infinite resource engine with no once-per-turn gate.",
+      "fix": "Once per turn, or AP-only / draw-only, or require NGO synergy."
+    },
+    {
+      "name": "Parlament geschlossen",
+      "band": "impossible",
+      "severity": 88,
+      "cost": 3,
+      "claim": "After ≥2 govs, locks scoring lane for the round. Opponent with early double-gov is soft-locked out of the win condition.",
+      "fix": "Lock for one turn not whole round, or only if trap owner is behind."
+    },
+    {
+      "name": "Jeff Bezos",
+      "band": "impossible",
+      "severity": 86,
+      "cost": 6,
+      "claim": "Purges all other oligarchs on both boards. Asymmetric board wipe of an entire archetype on play.",
+      "fix": "Remove only opponent oligarchs, or deactivate one, or self-side only."
+    },
+    {
+      "name": "Tunnelvision",
+      "band": "impossible",
+      "severity": 84,
+      "cost": 2,
+      "claim": "Dauerhaft forces W6 probes on every gov play for BOTH players. Critical fail deletes cards. Dominates the match texture for 2 BP.",
+      "fix": "Owner-only tax, or raise BP, or remove critical-fail exile."
+    },
+    {
+      "name": "Oppositionsblockade",
+      "band": "oppressive",
+      "severity": 78,
+      "cost": 3,
+      "claim": "Full initiative lock until EOT. Shuts traps+sofort package for a turn at mid cost.",
+      "fix": "Lock Sofort only, or allow 1 initiative through."
+    },
+    {
+      "name": "Partei-Offensive",
+      "band": "oppressive",
+      "severity": 76,
+      "cost": 3,
+      "claim": "Hard-deactivates strongest enemy gov, no dice. Direct score deletion.",
+      "fix": "−2/−3 instead of full deactivate, or dice check."
+    },
+    {
+      "name": "Cyber-Attacke",
+      "band": "oppressive",
+      "severity": 74,
+      "cost": 3,
+      "claim": "DESTROYS platform (permanent), not deactivate. Punishes Meta/Cook engines lethally.",
+      "fix": "Deactivate instead of destroy, or return to hand."
+    },
+    {
+      "name": "Digitaler Wahlkampf",
+      "band": "oppressive",
+      "severity": 72,
+      "cost": 3,
+      "claim": "Draws 1 per media/platform on board — scales to 3–4 cards in platform decks with no cap.",
+      "fix": "Cap draws at 2, or draw1 + buff instead of uncapped."
+    },
+    {
+      "name": "Whataboutism",
+      "band": "oppressive",
+      "severity": 70,
+      "cost": 2,
+      "claim": "Reactivates deactivated card for 2 BP — undoes expensive removal at discount (even with −1).",
+      "fix": "Cost 3, or only publics, or −2 influence."
+    },
+    {
+      "name": "T1 density cluster",
+      "band": "oppressive",
+      "severity": 68,
+      "cost": 4,
+      "claim": "~12 T1 pols at I/BP=1.25 (5I/4BP). Swarm decks out-efficiency prestige T2 (10I/17BP dens≈0.59).",
+      "fix": "Raise T1 BP by +1 or trim influence on dens≥1.2 pack."
+    },
+    {
+      "name": "Koalitionszwang",
+      "band": "oppressive",
+      "severity": 66,
+      "cost": 2,
+      "claim": "Mirror-influence + activist bonuses can silently stack multi-point swings; hard to read mid-game.",
+      "fix": "Cap total bonus +2, or activist term only."
+    },
+    {
+      "name": "Tim Cook",
+      "band": "oppressive",
+      "severity": 64,
+      "cost": 5,
+      "claim": "Unconditional +2 AP on play. Immediate double-action without board setup.",
+      "fix": "+1 AP, or +2 only if Platform already present."
+    },
+    {
+      "name": "Elon Musk",
+      "band": "strong",
+      "severity": 58,
+      "cost": 8,
+      "claim": "Draw + once/turn AP on initiative. Powerful but deckCost 8 is a real brake.",
+      "fix": "Monitor; optional once-per-round instead of once-per-turn."
+    },
+    {
+      "name": "Cancel Culture",
+      "band": "strong",
+      "severity": 56,
+      "cost": 2,
+      "claim": "Deactivates any public on play — broad hate trap at low cost.",
+      "fix": "Restrict to Oligarch/Media only."
+    },
+    {
+      "name": "Interne Fraktionskämpfe",
+      "band": "strong",
+      "severity": 54,
+      "cost": 2,
+      "claim": "Cancels big (3+ BP) initiatives cheaply — good hate, can feel binary.",
+      "fix": "Acceptable if big inits stay rare; else BP3."
+    },
+    {
+      "name": "Warren Buffett",
+      "band": "strong",
+      "severity": 52,
+      "cost": 7,
+      "claim": "+1 AP on play + aura +1 strongest gov if no gov played — passive score creep.",
+      "fix": "Aura only OR on-play AP, not both."
+    },
+    {
+      "name": "Napoleon Komplex",
+      "band": "strong",
+      "severity": 50,
+      "cost": 2,
+      "claim": "+1 all T1 govs; pairs with density cluster. Slot-limited saves it.",
+      "fix": "Acceptable with T1 dens fix; else +1 to one T1 only."
+    },
+    {
+      "name": "Greta Thunberg",
+      "band": "strong",
+      "severity": 48,
+      "cost": 4,
+      "claim": "First gov each turn +1 AP — reliable tempo in gov decks.",
+      "fix": "Fine; watch with Ai Weiwei stacks."
+    },
+    {
+      "name": "Alternative Fakten",
+      "band": "acceptable",
+      "severity": 35,
+      "cost": 2,
+      "claim": "−1 to enemy intervention magnitude. Solid hate, not round-winning alone.",
+      "fix": "Keep."
+    },
+    {
+      "name": "Scandal Spiral",
+      "band": "acceptable",
+      "severity": 34,
+      "cost": 2,
+      "claim": "Cancels 2nd public only — situational, rewards holding the trap.",
+      "fix": "Keep."
+    },
+    {
+      "name": "Spin Doctor",
+      "band": "acceptable",
+      "severity": 32,
+      "cost": 2,
+      "claim": "Strongest gov +2. Clear, fair tempo/score bump.",
+      "fix": "Keep."
+    },
+    {
+      "name": "Satire-Show",
+      "band": "acceptable",
+      "severity": 30,
+      "cost": 2,
+      "claim": "Conditional −2 if you trail — comeback tool with a check.",
+      "fix": "Keep."
+    },
+    {
+      "name": "Symbolpolitik",
+      "band": "acceptable",
+      "severity": 22,
+      "cost": 1,
+      "claim": "Draw 1, nothing else. Intentional floor filler.",
+      "fix": "Keep as glue."
+    },
+    {
+      "name": "Standard T2 prestige (Putin/Xi/etc)",
+      "band": "acceptable",
+      "severity": 28,
+      "cost": 17,
+      "claim": "High influence, terrible dens (~0.59). Fair win-condition cards if T1 dens is fixed.",
+      "fix": "Keep; fix T1 instead."
+    },
+    {
+      "name": "Milchglas Transparenz",
+      "band": "acceptable",
+      "severity": 26,
+      "cost": 2,
+      "claim": "+1 if no NGO/movement — niche anti-activist tech.",
+      "fix": "Keep."
+    },
+    {
+      "name": "Lobby Leak",
+      "band": "acceptable",
+      "severity": 30,
+      "cost": 2,
+      "claim": "Force discard on NGO play — fair tax.",
+      "fix": "Keep."
+    }
+  ],
+  "density": {
+    "t1HighDensity": [
+      {
+        "name": "Werner Maihofer",
+        "inf": 3,
+        "bp": 2,
+        "T": 1,
+        "dens": 1.5
+      },
+      {
+        "name": "John Snow",
+        "inf": 4,
+        "bp": 3,
+        "T": 1,
+        "dens": 1.33
+      },
+      {
+        "name": "Karl Carstens",
+        "inf": 4,
+        "bp": 3,
+        "T": 1,
+        "dens": 1.33
+      },
+      {
+        "name": "Hans Eichel",
+        "inf": 4,
+        "bp": 3,
+        "T": 1,
+        "dens": 1.33
+      },
+      {
+        "name": "Edelgard Bulmahn",
+        "inf": 4,
+        "bp": 3,
+        "T": 1,
+        "dens": 1.33
+      },
+      {
+        "name": "Gerhart Baum",
+        "inf": 4,
+        "bp": 3,
+        "T": 1,
+        "dens": 1.33
+      },
+      {
+        "name": "Rainer Offergeld",
+        "inf": 4,
+        "bp": 3,
+        "T": 1,
+        "dens": 1.33
+      },
+      {
+        "name": "Heidemarie Wieczorek-Zeul",
+        "inf": 5,
+        "bp": 4,
+        "T": 1,
+        "dens": 1.25
+      },
+      {
+        "name": "Renate Künast",
+        "inf": 5,
+        "bp": 4,
+        "T": 1,
+        "dens": 1.25
+      },
+      {
+        "name": "Rudolf Scharping",
+        "inf": 5,
+        "bp": 4,
+        "T": 1,
+        "dens": 1.25
+      },
+      {
+        "name": "John Ashcroft",
+        "inf": 5,
+        "bp": 4,
+        "T": 1,
+        "dens": 1.25
+      },
+      {
+        "name": "Tedros Adhanom Ghebreyesus",
+        "inf": 5,
+        "bp": 4,
+        "T": 1,
+        "dens": 1.25
+      },
+      {
+        "name": "Tom Ridge",
+        "inf": 5,
+        "bp": 4,
+        "T": 1,
+        "dens": 1.25
+      },
+      {
+        "name": "Alberto Gonzales",
+        "inf": 5,
+        "bp": 4,
+        "T": 1,
+        "dens": 1.25
+      },
+      {
+        "name": "Annette Schavan",
+        "inf": 5,
+        "bp": 4,
+        "T": 1,
+        "dens": 1.25
+      },
+      {
+        "name": "Franz Josef Jung",
+        "inf": 5,
+        "bp": 4,
+        "T": 1,
+        "dens": 1.25
+      },
+      {
+        "name": "Georg Leber",
+        "inf": 5,
+        "bp": 4,
+        "T": 1,
+        "dens": 1.25
+      },
+      {
+        "name": "Hans Apel",
+        "inf": 5,
+        "bp": 4,
+        "T": 1,
+        "dens": 1.25
+      },
+      {
+        "name": "Peter Struck",
+        "inf": 5,
+        "bp": 4,
+        "T": 1,
+        "dens": 1.25
+      },
+      {
+        "name": "Pedro Sánchez",
+        "inf": 6,
+        "bp": 5,
+        "T": 1,
+        "dens": 1.2
+      },
+      {
+        "name": "Keir Starmer",
+        "inf": 6,
+        "bp": 5,
+        "T": 1,
+        "dens": 1.2
+      },
+      {
+        "name": "Robert Gates",
+        "inf": 6,
+        "bp": 5,
+        "T": 1,
+        "dens": 1.2
+      },
+      {
+        "name": "Karl Rove",
+        "inf": 6,
+        "bp": 5,
+        "T": 1,
+        "dens": 1.2
+      },
+      {
+        "name": "Shigeru Ishiba",
+        "inf": 6,
+        "bp": 5,
+        "T": 1,
+        "dens": 1.2
+      },
+      {
+        "name": "Henry Paulson",
+        "inf": 6,
+        "bp": 5,
+        "T": 1,
+        "dens": 1.2
+      },
+      {
+        "name": "Johannes Rau",
+        "inf": 6,
+        "bp": 5,
+        "T": 1,
+        "dens": 1.2
+      },
+      {
+        "name": "Erhard Eppler",
+        "inf": 6,
+        "bp": 5,
+        "T": 1,
+        "dens": 1.2
+      },
+      {
+        "name": "Friedrich Merz",
+        "inf": 6,
+        "bp": 5,
+        "T": 1,
+        "dens": 1.2
+      },
+      {
+        "name": "Otto Schily",
+        "inf": 6,
+        "bp": 5,
+        "T": 1,
+        "dens": 1.2
+      },
+      {
+        "name": "Rishi Sunak",
+        "inf": 7,
+        "bp": 6,
+        "T": 1,
+        "dens": 1.17
+      },
+      {
+        "name": "Horst Köhler",
+        "inf": 7,
+        "bp": 6,
+        "T": 1,
+        "dens": 1.17
+      }
+    ],
+    "t2LowDensity": [
+      {
+        "name": "King Charles III",
+        "inf": 7,
+        "bp": 12,
+        "T": 2,
+        "dens": 0.58
+      },
+      {
+        "name": "Colin Powell",
+        "inf": 7,
+        "bp": 12,
+        "T": 2,
+        "dens": 0.58
+      },
+      {
+        "name": "Condoleezza Rice",
+        "inf": 7,
+        "bp": 12,
+        "T": 2,
+        "dens": 0.58
+      },
+      {
+        "name": "Donald Rumsfeld",
+        "inf": 7,
+        "bp": 12,
+        "T": 2,
+        "dens": 0.58
+      },
+      {
+        "name": "Vladimir Putin",
+        "inf": 10,
+        "bp": 17,
+        "T": 2,
+        "dens": 0.59
+      },
+      {
+        "name": "Xi Jinping",
+        "inf": 10,
+        "bp": 17,
+        "T": 2,
+        "dens": 0.59
+      },
+      {
+        "name": "Recep Tayyip Erdoğan",
+        "inf": 10,
+        "bp": 17,
+        "T": 2,
+        "dens": 0.59
+      },
+      {
+        "name": "Donald Trump",
+        "inf": 10,
+        "bp": 17,
+        "T": 2,
+        "dens": 0.59
+      }
+    ],
+    "note": "T1 dens≈1.25 vs T2 prestige dens≈0.59 — swarm outclasses prestige on pure efficiency."
+  }
+}

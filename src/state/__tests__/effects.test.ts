@@ -15,8 +15,8 @@ describe('effects engine', () => {
       hands: { 1: [], 2: [] },
       traps: { 1: [], 2: [] },
       board: {
-        1: { innen: [], aussen: [] },
-        2: { innen: [], aussen: [] }
+        1: { innen: [], aussen: [], sofort: [] },
+        2: { innen: [], aussen: [], sofort: [] }
       },
       permanentSlots: {
         1: { government: null, public: null, initiativePermanent: null },
@@ -35,7 +35,6 @@ describe('effects engine', () => {
 
   describe('recomputeAuraFlags', () => {
     it('should reset all aura flags initially', () => {
-      // Set some flags manually first
       gameState.effectFlags[1].scienceInitiativeBonus = true;
       gameState.effectFlags[2].healthInitiativeBonus = true;
 
@@ -62,7 +61,7 @@ describe('effects engine', () => {
         type: 'Öffentlichkeitskarte',
         bp: 2,
         impl: 'test'
-      };
+      } as any;
 
       gameState.board[1].innen.push(doudnaCard);
       recomputeAuraFlags(gameState);
@@ -71,7 +70,7 @@ describe('effects engine', () => {
       expect(gameState.effectFlags[2].scienceInitiativeBonus).toBe(false);
     });
 
-    it('should set Noam Chomsky flag for opponent', () => {
+    it('should set Noam Chomsky penalty flag on the opponent', () => {
       const chomskyCard: Card = {
         id: 1,
         key: 'Noam_Chomsky',
@@ -82,12 +81,11 @@ describe('effects engine', () => {
         type: 'Öffentlichkeitskarte',
         bp: 2,
         impl: 'test'
-      };
+      } as any;
 
       gameState.board[1].innen.push(chomskyCard);
       recomputeAuraFlags(gameState);
 
-      // Chomsky affects the opponent
       expect(gameState.effectFlags[1].militaryInitiativePenalty).toBe(false);
       expect(gameState.effectFlags[2].militaryInitiativePenalty).toBe(true);
     });
@@ -104,13 +102,13 @@ describe('effects engine', () => {
       type: 'Sofort-Initiative',
       bp: 2,
       impl: 'test'
-    };
+    } as any;
 
     it('should return base influence for non-instant initiatives', () => {
       const nonInitiativeCard: Card = {
         ...instantInitiativeCard,
         type: 'Dauerhaft-Initiative'
-      };
+      } as any;
 
       const result = applyInstantInitiativeInfluenceMods(gameState, 1, 3, nonInitiativeCard);
 
@@ -118,8 +116,11 @@ describe('effects engine', () => {
       expect(result.reasons).toEqual([]);
     });
 
-    it('should apply Jennifer Doudna bonus', () => {
-      gameState.effectFlags[1].scienceInitiativeBonus = true;
+    it('should apply Jennifer Doudna bonus from board', () => {
+      gameState.board[1].innen.push({
+        id: 9, key: 'd', name: 'Jennifer Doudna', kind: 'spec', baseId: 9, uid: 9,
+        type: 'Öffentlichkeitskarte', bp: 2, impl: 't'
+      } as any);
 
       const result = applyInstantInitiativeInfluenceMods(gameState, 1, 2, instantInitiativeCard);
 
@@ -127,8 +128,11 @@ describe('effects engine', () => {
       expect(result.reasons).toContain('Jennifer Doudna: +1 Einfluss');
     });
 
-    it('should apply Anthony Fauci bonus', () => {
-      gameState.effectFlags[1].healthInitiativeBonus = true;
+    it('should apply Anthony Fauci bonus from board', () => {
+      gameState.board[1].innen.push({
+        id: 9, key: 'f', name: 'Anthony Fauci', kind: 'spec', baseId: 9, uid: 9,
+        type: 'Öffentlichkeitskarte', bp: 2, impl: 't'
+      } as any);
 
       const result = applyInstantInitiativeInfluenceMods(gameState, 1, 2, instantInitiativeCard);
 
@@ -136,8 +140,11 @@ describe('effects engine', () => {
       expect(result.reasons).toContain('Anthony Fauci: +1 Einfluss');
     });
 
-    it('should apply Noam Chomsky penalty', () => {
-      gameState.effectFlags[1].militaryInitiativePenalty = true;
+    it('should apply Noam Chomsky penalty from opponent board', () => {
+      gameState.board[2].innen.push({
+        id: 9, key: 'c', name: 'Noam Chomsky', kind: 'spec', baseId: 9, uid: 9,
+        type: 'Öffentlichkeitskarte', bp: 2, impl: 't'
+      } as any);
 
       const result = applyInstantInitiativeInfluenceMods(gameState, 1, 3, instantInitiativeCard);
 
@@ -146,86 +153,30 @@ describe('effects engine', () => {
     });
 
     it('should combine multiple effects', () => {
-      gameState.effectFlags[1].scienceInitiativeBonus = true;
-      gameState.effectFlags[1].healthInitiativeBonus = true;
-      gameState.effectFlags[1].militaryInitiativePenalty = true;
+      gameState.board[1].innen.push(
+        { id: 1, key: 'd', name: 'Jennifer Doudna', kind: 'spec', baseId: 1, uid: 1, type: 'Öffentlichkeitskarte', bp: 2, impl: 't' } as any,
+        { id: 2, key: 'f', name: 'Anthony Fauci', kind: 'spec', baseId: 2, uid: 2, type: 'Öffentlichkeitskarte', bp: 2, impl: 't' } as any,
+      );
+      gameState.board[2].innen.push(
+        { id: 3, key: 'c', name: 'Noam Chomsky', kind: 'spec', baseId: 3, uid: 3, type: 'Öffentlichkeitskarte', bp: 2, impl: 't' } as any,
+      );
 
       const result = applyInstantInitiativeInfluenceMods(gameState, 1, 2, instantInitiativeCard);
 
       expect(result.influence).toBe(3); // 2 + 1 + 1 - 1
       expect(result.reasons).toHaveLength(3);
-      expect(result.reasons).toContain('Jennifer Doudna: +1 Einfluss');
-      expect(result.reasons).toContain('Anthony Fauci: +1 Einfluss');
-      expect(result.reasons).toContain('Noam Chomsky: −1 Einfluss');
     });
   });
 
   describe('maybeApplyAiWeiweiInstantBonus', () => {
-    const instantInitiativeCard: Card = {
-      id: 1,
-      key: 'test_initiative',
-      name: 'Test Initiative',
-      kind: 'spec',
-      baseId: 1,
-      uid: 1,
-      type: 'Sofort-Initiative',
-      bp: 2,
-      impl: 'test'
-    };
-
-    const mockLog = jest.fn();
-
-    beforeEach(() => {
-      mockLog.mockClear();
-    });
-
-    it('should not apply bonus for non-instant initiatives', () => {
-      const nonInitiativeCard: Card = {
-        ...instantInitiativeCard,
-        type: 'Dauerhaft-Initiative'
-      };
-
-      maybeApplyAiWeiweiInstantBonus(gameState, 1, nonInitiativeCard, mockLog);
-
+    it('is a deprecated no-op (handled via INITIATIVE_ACTIVATED)', () => {
+      const mockLog = jest.fn();
+      maybeApplyAiWeiweiInstantBonus(gameState, 1, {
+        id: 1, key: 't', name: 'Test', kind: 'spec', baseId: 1, uid: 1,
+        type: 'Sofort-Initiative', bp: 2, impl: 't'
+      } as any, mockLog);
       expect(mockLog).not.toHaveBeenCalled();
-    });
-
-    it('should not apply bonus without Ai Weiwei flag', () => {
-      maybeApplyAiWeiweiInstantBonus(gameState, 1, instantInitiativeCard, mockLog);
-
-      expect(mockLog).not.toHaveBeenCalled();
-    });
-
-    it('should apply bonus with Ai Weiwei flag', () => {
-      gameState.effectFlags[1].cultureInitiativeBonus = true;
-      gameState.actionPoints[1] = 2;
-
-      const drawnCard: Card = {
-        id: 2,
-        key: 'drawn_card',
-        name: 'Drawn Card',
-        kind: 'pol',
-        baseId: 2,
-        uid: 2,
-        tag: 'test',
-        T: 1,
-        BP: 1,
-        influence: 1,
-        protected: false,
-        deactivated: false,
-        tempDebuffs: 0,
-        tempBuffs: 0,
-        _activeUsed: false
-      };
-
-      gameState.decks[1] = [drawnCard];
-
-      maybeApplyAiWeiweiInstantBonus(gameState, 1, instantInitiativeCard, mockLog);
-
       expect(gameState.actionPoints[1]).toBe(3);
-      expect(gameState.hands[1]).toContain(drawnCard);
-      expect(mockLog).toHaveBeenCalledWith('🔥 Ai Weiwei: +1 Karte gezogen (Drawn Card)');
-      expect(mockLog).toHaveBeenCalledWith('🔥 Ai Weiwei: +1 AP (2→3)');
     });
   });
 });

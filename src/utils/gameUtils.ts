@@ -63,10 +63,25 @@ export function sumGovernmentInfluenceWithAuras(state: GameState, player: Player
 
   const govSlot = state.permanentSlots[player].government;
   const pubSlot = state.permanentSlots[player].public;
-  const hasCoalitionBonus = govSlot?.kind === 'spec' && (govSlot as SpecialCard).name === 'Koalitionszwang';
-  const tier2GovCount = govCards.filter(card => card.T === 2).length;
+
+  // Napoleon Komplex: +1 only on the strongest active Tier-1 government card
+  let napoleonStrongestUid: number | null = null;
+  if (govSlot?.kind === 'spec' && (govSlot as SpecialCard).name === 'Napoleon Komplex') {
+    const t1 = govCards.filter(c => c.T === 1 && !(c as any).deactivated);
+    if (t1.length > 0) {
+      const strongest = t1.reduce((best, c) => {
+        const score = (c.influence || 0) + ((c as any).tempBuffs || 0) - ((c as any).tempDebuffs || 0);
+        const bestScore = (best.influence || 0) + ((best as any).tempBuffs || 0) - ((best as any).tempDebuffs || 0);
+        return score > bestScore ? c : best;
+      });
+      napoleonStrongestUid = (strongest as any).uid ?? null;
+    }
+  }
 
   govCards.forEach(card => {
+    // Deaktivierte Karten zählen nicht zur Einflusswertung
+    if ((card as any).deactivated) return;
+
     let influence = card.influence;
 
     // 🔥 CRITICAL FIX: Add temporary buffs and debuffs from effects
@@ -82,9 +97,9 @@ export function sumGovernmentInfluenceWithAuras(state: GameState, player: Player
       }
     }
 
-    // Napoleon Komplex: Tier 1 Regierungskarten +1 Einfluss
-    if (govSlot?.kind === 'spec' && (govSlot as SpecialCard).name === 'Napoleon Komplex') {
-      if (card.T === 1) influence += 1;
+    // Napoleon Komplex: +1 Einfluss nur auf stärkste Tier-1-Regierung
+    if (napoleonStrongestUid != null && (card as any).uid === napoleonStrongestUid) {
+      influence += 1;
     }
 
     // Zivilgesellschaft: Bewegung-Karten +1 Einfluss (wenn eine Bewegung in Öffentlichkeit liegt)

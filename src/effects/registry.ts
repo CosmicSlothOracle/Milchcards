@@ -22,10 +22,11 @@ export const EFFECTS: Record<string, EffectHandler> = {
     // Joschka Fischer provides NGO synergy - handled by aura system
     log('🟢 gov.ngo_boost');
   },
-  // Bill Gates — +1 AP
+  // Bill Gates — draw 1; next initiative this turn gives +1 AP
   'public.bill_gates.next_initiative_ap1': ({ enqueue, player, log }) => {
-    enqueue({ type: 'ADD_AP', player, amount: 1 });
-    enqueue({ type: 'LOG', msg: 'Bill Gates: +1 AP.' });
+    enqueue({ type: 'DRAW_CARDS', player, amount: 1 });
+    enqueue({ type: 'SET_NEXT_INITIATIVE_AP_BONUS', player, amount: 1 });
+    enqueue({ type: 'LOG', msg: 'Bill Gates: +1 Karte; nächste Initiative gibt +1 AP.' });
     log('🟢 public.bill_gates.next_initiative_ap1');
   },
 
@@ -75,61 +76,72 @@ export const EFFECTS: Record<string, EffectHandler> = {
     log('🟢 init.visual_effects_demo.comprehensive');
   },
 
-  // Greta Thunberg — +1 AP
+  // Greta Thunberg — aura: first government card each turn grants +1 AP (hook in playCard)
   'public.greta_thunberg.first_gov_ap1': ({ enqueue, player, log }) => {
-    enqueue({ type: 'ADD_AP', player, amount: 1 });
-    enqueue({ type: 'LOG', msg: 'Greta Thunberg: +1 AP.' });
+    enqueue({ type: 'LOG', msg: 'Greta Thunberg: Erste Regierungskarte pro Zug gibt +1 AP (Aura).' });
     log('🟢 public.greta_thunberg.first_gov_ap1');
   },
 
   // --- PUBLIC
+  // Elon Musk — draw 1 on play; the once-per-round +1 AP fires on INITIATIVE_ACTIVATED
   'public.elon.draw_ap': ({ enqueue, player, log }) => {
     enqueue({ type: 'DRAW_CARDS', player, amount: 1 });
-    enqueue({ type: 'ADD_AP', player, amount: 1 });
-    enqueue({ type: 'LOG', msg: 'Elon Musk: draw 1 card, +1 AP.' });
+    enqueue({ type: 'LOG', msg: 'Elon Musk: +1 Karte. Einmal pro Runde: +1 AP nach Initiative-Aktivierung.' });
     log('🟢 public.elon.draw_ap');
   },
 
-  // Oprah Winfrey — Media buff: +1 influence to strongest gov per Media card on board (max +3)
-  'public.oprah_winfrey.media_buff': ({ enqueue, player, log }) => {
-    // Stateless intent: resolver computes actual buff based on media on board
-    enqueue({ type: 'LOG', msg: 'Oprah Winfrey: applying media buff (resolver will compute +1 per media, max 3).' });
-    // Intent marker — resolver must detect reason 'OPRAH_MEDIA_BUFF_INTENT' and compute amount
-    enqueue({ type: 'BUFF_STRONGEST_GOV', player, amount: 0, reason: 'OPRAH_MEDIA_BUFF_INTENT' } as any);
-    log('🟢 public.oprah_winfrey.media_buff');
-  },
-
   'public.zuck.once_ap_on_activation': ({ enqueue, player, log }) => {
-    enqueue({ type: 'LOG', msg: 'Mark Zuckerberg: +1 AP on next initiative activation.' });
+    // Aura: +1 AP once per turn on INITIATIVE_ACTIVATED (handled in queue)
+    enqueue({ type: 'LOG', msg: 'Mark Zuckerberg: Aura aktiv – +1 AP bei nächster Initiative-Aktivierung (1×/Zug).' });
     log('🟢 public.zuck.once_ap_on_activation');
   },
 
   'public.doudna.aura_science': ({ enqueue, player, log }) => {
-    enqueue({ type: 'LOG', msg: 'Jennifer Doudna: Science aura activated.' });
+    enqueue({ type: 'AURA_SCIENCE', player, active: true });
+    enqueue({ type: 'LOG', msg: 'Jennifer Doudna: Science-Aura aktiv – Initiativen stärken die Regierung.' });
     log('🟢 public.doudna.aura_science');
   },
 
   'public.fauci.aura_health': ({ enqueue, player, log }) => {
-    enqueue({ type: 'LOG', msg: 'Anthony Fauci: Health aura activated.' });
+    enqueue({ type: 'AURA_HEALTH', player, active: true });
+    enqueue({ type: 'LOG', msg: 'Anthony Fauci: Health-Aura aktiv – Initiativen stärken die Regierung.' });
     log('🟢 public.fauci.aura_health');
   },
 
   'public.chomsky.aura_military_penalty': ({ enqueue, player, log }) => {
-    enqueue({ type: 'LOG', msg: 'Noam Chomsky: Military penalty aura activated.' });
+    enqueue({ type: 'AURA_MILITARY_PENALTY', player, active: true });
+    enqueue({ type: 'LOG', msg: 'Noam Chomsky: Military-Penalty-Aura aktiv – gegnerische Initiativen schwächen deren Regierung.' });
     log('🟢 public.chomsky.aura_military_penalty');
   },
 
   'public.aiweiwei.on_activate_draw_ap': ({ enqueue, player, log }) => {
-    enqueue({ type: 'LOG', msg: 'Ai Weiwei: +1 card +1 AP on initiative activation.' });
+    enqueue({ type: 'ON_ACTIVATE_DRAW_AP', player });
+    enqueue({ type: 'LOG', msg: 'Ai Weiwei: Aura aktiv – einmal pro Zug bei Initiative-Aktivierung +1 Karte +1 AP.' });
     log('🟢 public.aiweiwei.on_activate_draw_ap');
   },
 
   // --- INITIATIVES — INSTANT
   // Shadow Lobbying – buff per Oligarch (computed in resolver)
   'init.shadow_lobbying.per_oligarch': ({ enqueue, player, log }) => {
+    enqueue({ type: 'SHADOW_LOBBYING_BUFF', player });
     enqueue({ type: 'INITIATIVE_ACTIVATED', player });
-    enqueue({ type: 'LOG', msg: 'Shadow Lobbying: will buff based on Oligarch tags.' });
     log('🟢 init.shadow_lobbying.per_oligarch');
+  },
+
+  // Digitaler Wahlkampf – draw 1 per own media/platform card (computed in resolver)
+  'init.digital_campaign.per_media': ({ enqueue, player, log }) => {
+    enqueue({ type: 'DIGITAL_CAMPAIGN_DRAW', player });
+    enqueue({ type: 'INITIATIVE_ACTIVATED', player });
+    enqueue({ type: 'LOG', msg: 'Digitaler Wahlkampf: ziehe 1 pro Medien/Plattform (max 2).' });
+    log('🟢 init.digital_campaign.per_media');
+  },
+
+  // Whataboutism – reactivate one own deactivated card; gov gets -2 influence
+  'init.whataboutism.reactivate_minus1': ({ enqueue, player, log }) => {
+    enqueue({ type: 'WHATABOUTISM_REACTIVATE', player });
+    enqueue({ type: 'INITIATIVE_ACTIVATED', player });
+    enqueue({ type: 'LOG', msg: 'Whataboutism: reaktiviere eigene Karte (−2 Einfluss bei Regierung).' });
+    log('🟢 init.whataboutism.reactivate_minus1');
   },
 
   'init.spin_doctor.buff_strongest_gov2': ({ enqueue, player, log }) => {
@@ -244,27 +256,29 @@ export const EFFECTS: Record<string, EffectHandler> = {
   'init.party_offensive.deactivate_gov': ({ enqueue, player, log }) => {
     enqueue({ type: 'DEACTIVATE_STRONGEST_ENEMY_GOV', player });
     enqueue({ type: 'INITIATIVE_ACTIVATED', player });
+    enqueue({ type: 'LOG', msg: 'Partei-Offensive: stärkste gegnerische Regierung −3 Einfluss.' });
     log('🟢 init.party_offensive.deactivate_gov');
   },
 
   'init.opposition_blockade.lock_initiatives': ({ enqueue, player, log }) => {
     enqueue({ type: 'LOCK_OPPONENT_INITIATIVES_EOT', player });
     enqueue({ type: 'INITIATIVE_ACTIVATED', player });
+    enqueue({ type: 'LOG', msg: 'Oppositionsblockade: Gegner kann keine Sofort-Initiativen spielen.' });
     log('🟢 init.opposition_blockade.lock_initiatives');
   },
 
   'init.delay_tactics.ap_or_draw': ({ enqueue, player, log }) => {
     enqueue({ type: 'ADD_AP', player, amount: 1 });
     enqueue({ type: 'INITIATIVE_ACTIVATED', player });
-    enqueue({ type: 'LOG', msg: 'Delay Tactics: +1 AP (placeholder for AP/Draw choice).' });
+    enqueue({ type: 'LOG', msg: 'Verzögerungsverfahren: +1 AP.' });
     log('🟢 init.delay_tactics.ap_or_draw');
   },
 
   'init.think_tank.draw1_buff_gov2': ({ enqueue, player, log }) => {
     enqueue({ type: 'DRAW_CARDS', player, amount: 1 });
-    enqueue({ type: 'BUFF_STRONGEST_GOV', player, amount: 2 });
+    enqueue({ type: 'SET_NEXT_GOV_PLUS2', player });
     enqueue({ type: 'INITIATIVE_ACTIVATED', player });
-    enqueue({ type: 'LOG', msg: 'Think Tank: draw 1; strongest Government +2.' });
+    enqueue({ type: 'LOG', msg: 'Think-tank: ziehe 1; nächste Regierungskarte +2 Einfluss.' });
     log('🟢 init.think_tank.draw1_buff_gov2');
   },
 
@@ -275,9 +289,9 @@ export const EFFECTS: Record<string, EffectHandler> = {
   },
 
   'init.system_critical.shield1': ({ enqueue, player, log }) => {
-    enqueue({ type: 'GRANT_SHIELD', player, amount: 1 } as EffectEvent);
-    enqueue({ type: 'INITIATIVE_ACTIVATED', player } as EffectEvent);
-    enqueue({ type: 'LOG', msg: 'System-Critical: grant 1 shield (applied to Public per resolver rule).' });
+    enqueue({ type: 'PROTECT_STRONGEST_GOV', player });
+    enqueue({ type: 'INITIATIVE_ACTIVATED', player });
+    enqueue({ type: 'LOG', msg: 'Systemrelevant: Schützt die stärkste Regierungskarte einmalig vor Deaktivierung.' });
     log('🟢 init.system_critical.shield1');
   },
 
@@ -311,9 +325,10 @@ export const EFFECTS: Record<string, EffectHandler> = {
   },
 
   'trap.cyber_attack.destroy_platform': ({ enqueue, player, log }) => {
-    enqueue({ type: 'REGISTER_TRAP', player, key: 'trap.cyber_attack.destroy_platform' } as any);
-    enqueue({ type: 'LOG', msg: 'Trap set: Cyber Attack (destroy platform).' });
-    log('🟢 trap.cyber_attack.destroy_platform');
+    // Legacy key → deactivate behavior
+    enqueue({ type: 'REGISTER_TRAP', player, key: 'trap.cyber_attack.deactivate_platform' } as any);
+    enqueue({ type: 'LOG', msg: 'Trap set: Cyber-Attacke (deaktiviert Plattform).' });
+    log('🟢 trap.cyber_attack.destroy_platform (legacy → deactivate)');
   },
 
 
@@ -325,9 +340,8 @@ export const EFFECTS: Record<string, EffectHandler> = {
     // Begin corruption flow: open UI modal + mark pending selection
     enqueue({ type: 'CORRUPTION_STEAL_GOV_START', player } as any);
     enqueue({ type: 'INITIATIVE_ACTIVATED', player });
-    enqueue({ type: 'LOG', msg: 'Bribery Scandal 2.0: Wähle eine gegnerische Regierungskarte und würfle einen W6.' });
-    // Provide UI hint message for modal (handled by frontend)
-    enqueue({ type: 'LOG', msg: '🔔 Corruption Modal: select target then press Würfeln.' });
+    enqueue({ type: 'LOG', msg: 'Bestechungsskandal 2.0: Wähle eine gegnerische Regierungskarte; Erfolg bei W6 ≥ Einfluss.' });
+    enqueue({ type: 'LOG', msg: '🔔 Corruption Modal: Ziel wählen, dann Würfeln.' });
     log('🟢 corruption.bribery_v2.steal_gov_w6');
   },
 
@@ -379,8 +393,14 @@ export const EFFECTS: Record<string, EffectHandler> = {
 
   'trap.cancel_culture.deactivate_public': ({ enqueue, player, log }) => {
     enqueue({ type: 'REGISTER_TRAP', player, key: 'trap.cancel_culture.deactivate_public' } as any);
-    enqueue({ type: 'LOG', msg: 'Trap set: Cancel Culture (deactivate public).' });
+    enqueue({ type: 'LOG', msg: 'Trap set: Cancel Culture (deaktiviert Oligarch/Medien).' });
     log('🟢 trap.cancel_culture.deactivate_public');
+  },
+
+  'trap.cyber_attack.deactivate_platform': ({ enqueue, player, log }) => {
+    enqueue({ type: 'REGISTER_TRAP', player, key: 'trap.cyber_attack.deactivate_platform' } as any);
+    enqueue({ type: 'LOG', msg: 'Trap set: Cyber-Attacke (deaktiviert Plattform).' });
+    log('🟢 trap.cyber_attack.deactivate_platform');
   },
 
   'trap.lobby_leak.force_discard_on_ngo': ({ enqueue, player, log }) => {
@@ -397,8 +417,8 @@ export const EFFECTS: Record<string, EffectHandler> = {
   },
 
   'init.tunnel_vision.gov_probe_system': ({ enqueue, player, log }) => {
-    enqueue({ type: 'LOG', msg: 'Tunnelvision: Dauerhafte Initiative aktiviert - Regierungskarten benötigen Probe.' });
-    enqueue({ type: 'LOG', msg: '🔔 Tunnelvision: W6 ≥4 (≥5 bei Einfluss 9+) - bei Misserfolg Karte bleibt in Hand.' });
+    enqueue({ type: 'LOG', msg: 'Tunnelvision: Gegner muss bei Regierungskarten eine Probe bestehen.' });
+    enqueue({ type: 'LOG', msg: '🔔 Tunnelvision: W6 ≥4 (≥5 bei Einfluss 9+) – bei Misserfolg bleibt die Karte in der Hand.' });
     log('🟢 init.tunnel_vision.gov_probe_system');
   },
 
@@ -416,7 +436,7 @@ export const EFFECTS: Record<string, EffectHandler> = {
 
   // === ONGOING INITIATIVES ===
   'init.napoleon_komplex.tier1_gov_plus1': ({ enqueue, player, log }) => {
-    enqueue({ type: 'LOG', msg: 'Napoleon Komplex: Tier-1 Government aura activated.' });
+    enqueue({ type: 'LOG', msg: 'Napoleon Komplex: stärkste Tier-1-Regierung +1 Einfluss.' });
     log('🟢 init.napoleon_komplex.tier1_gov_plus1');
   },
 
@@ -439,15 +459,14 @@ export const EFFECTS: Record<string, EffectHandler> = {
   // === PUBLIC KARTEN - Registry Keys für Legacy Handler ===
   'public.oprah_winfrey.deactivate_hands': ({ enqueue, player, log }) => {
     const otherPlayer = player === 1 ? 2 : 1;
-    enqueue({ type: 'DEACTIVATE_RANDOM_HAND', player, amount: 1 });
-    enqueue({ type: 'DEACTIVATE_RANDOM_HAND', player: otherPlayer, amount: 1 });
-    enqueue({ type: 'LOG', msg: 'Oprah Winfrey: jeweils 1 zufällige Handkarte beider Spieler deaktiviert' });
+    enqueue({ type: 'DISCARD_RANDOM_FROM_HAND', player, amount: 1 });
+    enqueue({ type: 'DISCARD_RANDOM_FROM_HAND', player: otherPlayer, amount: 1 });
+    enqueue({ type: 'LOG', msg: 'Oprah Winfrey: Beide Spieler verlieren 1 zufällige Handkarte.' });
     log('🟢 public.oprah_winfrey.deactivate_hands');
   },
 
   'public.george_soros.ap1': ({ enqueue, player, log }) => {
-    enqueue({ type: 'ADD_AP', player, amount: 1 });
-    enqueue({ type: 'LOG', msg: 'George Soros: +1 AP' });
+    enqueue({ type: 'SOROS_AP_CHECK', player });
     log('🟢 public.george_soros.ap1');
   },
 
@@ -459,85 +478,83 @@ export const EFFECTS: Record<string, EffectHandler> = {
 
   'public.zhang_yiming.draw1_ap1': ({ enqueue, player, log }) => {
     enqueue({ type: 'DRAW_CARDS', player, amount: 1 });
-    enqueue({ type: 'ADD_AP', player, amount: 1 });
-    enqueue({ type: 'LOG', msg: 'Zhang Yiming: +1 Karte, +1 AP' });
+    enqueue({ type: 'SET_NEXT_INITIATIVE_AP_BONUS', player, amount: 1 });
+    enqueue({ type: 'LOG', msg: 'Zhang Yiming: +1 Karte; nächste Initiative gibt +1 AP.' });
     log('🟢 public.zhang_yiming.draw1_ap1');
   },
 
   'public.mukesh_ambani.ap1': ({ enqueue, player, log }) => {
-    enqueue({ type: 'ADD_AP', player, amount: 1 });
-    enqueue({ type: 'LOG', msg: 'Mukesh Ambani: +1 AP' });
+    const otherPlayer = player === 1 ? 2 : 1;
+    enqueue({ type: 'DRAW_CARDS', player, amount: 1 });
+    enqueue({ type: 'SET_DRAW_PENALTY', player: otherPlayer });
+    enqueue({ type: 'LOG', msg: 'Mukesh Ambani: +1 Karte; Gegner zieht 1 Karte weniger nach.' });
     log('🟢 public.mukesh_ambani.ap1');
   },
 
   'public.roman_abramovich.ap1': ({ enqueue, player, log }) => {
-    enqueue({ type: 'ADD_AP', player, amount: 1 });
-    enqueue({ type: 'LOG', msg: 'Roman Abramovich: +1 AP' });
+    enqueue({ type: 'LOG', msg: 'Roman Abramovich: Aura – ziehe 1 Karte, wenn eine Regierungskarte mit Einfluss ≤5 gespielt wird.' });
     log('🟢 public.roman_abramovich.ap1');
   },
 
   'public.alisher_usmanov.draw1': ({ enqueue, player, log }) => {
-    enqueue({ type: 'DRAW_CARDS', player, amount: 1 });
-    enqueue({ type: 'LOG', msg: 'Alisher Usmanov: +1 Karte' });
+    enqueue({ type: 'PROTECT_STRONGEST_GOV', player });
+    enqueue({ type: 'LOG', msg: 'Alisher Usmanov: +1 Schutz für eine Regierungskarte.' });
     log('🟢 public.alisher_usmanov.draw1');
   },
 
   'public.warren_buffett.draw2_ap1': ({ enqueue, player, log }) => {
-    // Reworked: remove draw effect. Now: +1 AP on play and aura (handled separately in start-of-turn hooks)
-    enqueue({ type: 'ADD_AP', player, amount: 1 });
-    enqueue({ type: 'LOG', msg: 'Warren Buffett: +1 AP on play. Aura: +1 influence each turn if no government card played.' });
-    log('🟢 public.warren_buffett.draw2_ap1 (reworked)');
+    // Balance: aura only (start-of-turn) — no on-play AP
+    enqueue({ type: 'LOG', msg: 'Warren Buffett: Aura – +1 Einfluss auf stärkste Regierung, wenn du keine Regierungskarte spielst.' });
+    log('🟢 public.warren_buffett.draw2_ap1 (aura only)');
   },
 
   'public.jeff_bezos.oligarch_removal': ({ enqueue, player, log }) => {
-    // Jeff Bezos entfernt alle anderen Oligarchen vom Spielfeld
     enqueue({ type: 'REMOVE_OTHER_OLIGARCHS', player });
-    enqueue({ type: 'LOG', msg: 'Jeff Bezos: Entfernt alle anderen Oligarchen vom Spielfeld' });
+    enqueue({ type: 'LOG', msg: 'Jeff Bezos: Entfernt gegnerische Oligarchen vom Spielfeld' });
     log('🟢 public.jeff_bezos.oligarch_removal');
   },
 
+  'public.tim_cook.ap1_or_platform': ({ enqueue, player, log }) => {
+    enqueue({ type: 'TIM_COOK_AP', player } as any);
+    log('🟢 public.tim_cook.ap1_or_platform');
+  },
 
+  // Legacy key → same Tim Cook behavior
   'public.tim_cook.ap2': ({ enqueue, player, log }) => {
-    // Tim Cook grants +2 AP; emit as two +1 events for atomicity
-    enqueue({ type: 'ADD_AP', player, amount: 1 });
-    enqueue({ type: 'ADD_AP', player, amount: 1 });
-    enqueue({ type: 'LOG', msg: 'Tim Cook: +2 AP' });
-    log('🟢 public.tim_cook.ap2');
+    enqueue({ type: 'TIM_COOK_AP', player } as any);
+    log('🟢 public.tim_cook.ap2 (legacy → ap1_or_platform)');
   },
 
   // === GOVERNMENT KARTEN - ENTFERNT (nur Einfluss, keine Effekte) ===
 
   // === PUBLIC KARTEN - Neue Effekte ===
   'public.sam_altman.ai_boost': ({ enqueue, player, log }) => {
-    enqueue({ type: 'DRAW_CARDS', player, amount: 1 });
-    enqueue({ type: 'ADD_AP', player, amount: 1 });
-    enqueue({ type: 'LOG', msg: 'Sam Altman: +1 Karte, +1 AP (AI Boost)' });
+    enqueue({ type: 'LOG', msg: 'Sam Altman: Aura – bei KI-Initiative +1 Karte und +1 AP.' });
     log('🟢 public.sam_altman.ai_boost');
   },
 
   'public.malala_yousafzai.education_aura': ({ enqueue, player, log }) => {
-    enqueue({ type: 'DRAW_CARDS', player, amount: 1 });
-    enqueue({ type: 'LOG', msg: 'Malala Yousafzai: +1 Karte (Education Aura)' });
+    enqueue({ type: 'LOG', msg: 'Malala Yousafzai: Aura – wenn du eine NGO/Think-Tank spielst, ziehe 1 Karte.' });
     log('🟢 public.malala_yousafzai.education_aura');
   },
 
   'public.edward_sn0wden.whistleblower': ({ enqueue, player, log }) => {
     const otherPlayer = player === 1 ? 2 : 1;
     enqueue({ type: 'DISCARD_RANDOM_FROM_HAND', player: otherPlayer, amount: 1 });
-    enqueue({ type: 'LOG', msg: 'Edward Snowden: Gegner verwirft 1 Karte (Whistleblower)' });
+    enqueue({ type: 'SNOWDEN_DEBUFF_US_GOV', player });
+    enqueue({ type: 'LOG', msg: 'Edward Snowden: Gegner verwirft 1 Karte; US-Regierungskarte -1 Einfluss.' });
     log('🟢 public.edward_sn0wden.whistleblower');
   },
 
   'public.julian_assange.leak': ({ enqueue, player, log }) => {
-    const otherPlayer = player === 1 ? 2 : 1;
-    enqueue({ type: 'DISCARD_RANDOM_FROM_HAND', player: otherPlayer, amount: 1 });
-    enqueue({ type: 'LOG', msg: 'Julian Assange: Gegner verwirft 1 Karte (Leak)' });
+    enqueue({ type: 'ASSANGE_DRAW', player });
     log('🟢 public.julian_assange.leak');
   },
 
   'public.yuval_noah_harari.academia': ({ enqueue, player, log }) => {
-    enqueue({ type: 'DRAW_CARDS', player, amount: 1 });
-    enqueue({ type: 'LOG', msg: 'Yuval Noah Harari: +1 Karte (Academia)' });
+    enqueue({ type: 'SET_NEXT_INITIATIVE_AP_BONUS', player, amount: 1 });
+    enqueue({ type: 'HARARI_PLATFORM_AP', player });
+    enqueue({ type: 'LOG', msg: 'Yuval Noah Harari: Nächste Initiative gibt +1 AP (+1 AP bei Plattform).' });
     log('🟢 public.yuval_noah_harari.academia');
   },
 
@@ -548,9 +565,9 @@ export const EFFECTS: Record<string, EffectHandler> = {
   },
 
   'public.gautam_adani.oligarch': ({ enqueue, player, log }) => {
-    // Reworked: Adani provides a corruption-probe bonus when sole oligarch on your public row
-    enqueue({ type: 'LOG', msg: 'Gautam Adani: corruption bonus intent registered (resolved during corruption probes).' });
-    log('🟢 public.gautam_adani.oligarch (reworked)');
+    // Balance: no corruption probe bonus; counts as Oligarch for synergies only
+    enqueue({ type: 'LOG', msg: 'Gautam Adani: Oligarch – zählt für Oligarchen-Synergien.' });
+    log('🟢 public.gautam_adani.oligarch');
   },
 
   // === GOVERNMENT KARTEN - ENTFERNT (nur Einfluss, keine Effekte) ===
@@ -563,17 +580,39 @@ export const EFFECTS: Record<string, EffectHandler> = {
   },
 
   'init.algorithmischer_diskurs.media_aura': ({ enqueue, player, log }) => {
-    enqueue({ type: 'LOG', msg: 'Algorithmischer Diskurs: Media aura activated.' });
+    // On play: -1 influence on opponent's strongest gov per opposing platform/AI card
+    enqueue({ type: 'ALGO_DISCOURSE_DEBUFF', player });
     log('🟢 init.algorithmischer_diskurs.media_aura');
   },
 
   'init.wirtschaftlicher_druck.gov_penalty': ({ enqueue, player, log }) => {
-    enqueue({ type: 'LOG', msg: 'Wirtschaftlicher Druck: Government penalty aura activated.' });
+    enqueue({ type: 'LOG', msg: 'Wirtschaftlicher Druck: Aura – Oligarchen-Karten geben +1 Einfluss auf stärkste Regierung.' });
     log('🟢 init.wirtschaftlicher_druck.gov_penalty');
   },
 
+  'init.zivilgesellschaft.movement_aura': ({ enqueue, player, log }) => {
+    enqueue({ type: 'LOG', msg: 'Zivilgesellschaft: Aura – Bewegungen +1 Einfluss; NGOs geben +1 AP auf nächste Initiative.' });
+    log('🟢 init.zivilgesellschaft.movement_aura');
+  },
+
+  'init.milchglas_transparenz.no_ngo_bonus': ({ enqueue, player, log }) => {
+    enqueue({ type: 'LOG', msg: 'Milchglas Transparenz: Aura – +1 Einfluss, solange keine NGO/Bewegung liegt.' });
+    log('🟢 init.milchglas_transparenz.no_ngo_bonus');
+  },
+
+  'init.alternative_fakten.intervention_dampen': ({ enqueue, player, log }) => {
+    enqueue({ type: 'LOG', msg: 'Alternative Fakten: Aura – gegnerische Interventionen haben -1 Wirkung.' });
+    log('🟢 init.alternative_fakten.intervention_dampen');
+  },
+
+  'init.konzernfreundlicher_algorithmus.platform_aura': ({ enqueue, player, log }) => {
+    enqueue({ type: 'LOG', msg: 'Konzernfreundlicher Algorithmus: Aura – bei Plattform-Karten ziehe 1 Karte, Oligarchen-Buff.' });
+    log('🟢 init.konzernfreundlicher_algorithmus.platform_aura');
+  },
+
   'init.propaganda_network.buff_aura': ({ enqueue, player, log }) => {
-    enqueue({ type: 'LOG', msg: 'Propaganda Network: Buff aura activated.' });
+    enqueue({ type: 'BUFF_STRONGEST_GOV', player, amount: 1 });
+    enqueue({ type: 'LOG', msg: 'Propaganda Network: stärkste Regierung +1 Einfluss.' });
     log('🟢 init.propaganda_network.buff_aura');
   },
 
@@ -585,22 +624,28 @@ export const EFFECTS: Record<string, EffectHandler> = {
   },
 
   'init.permanent_lobby_office.ap_aura': ({ enqueue, player, log }) => {
-    enqueue({ type: 'LOG', msg: 'Permanent Lobby Office: AP aura activated.' });
+    enqueue({ type: 'SET_NEXT_INITIATIVE_AP_BONUS', player, amount: 1 });
+    enqueue({ type: 'LOG', msg: 'Permanent Lobby Office: nächste Initiative gibt +1 AP.' });
     log('🟢 init.permanent_lobby_office.ap_aura');
   },
 
   'init.military_show.penalty_aura': ({ enqueue, player, log }) => {
-    enqueue({ type: 'LOG', msg: 'Military Show: Penalty aura activated.' });
+    const opp = player === 1 ? 2 : 1;
+    enqueue({ type: 'BUFF_STRONGEST_GOV', player: opp, amount: -1 });
+    enqueue({ type: 'LOG', msg: 'Military Show: gegnerische stärkste Regierung -1 Einfluss.' });
     log('🟢 init.military_show.penalty_aura');
   },
 
   'init.censorship_apparatus.deactivate_aura': ({ enqueue, player, log }) => {
-    enqueue({ type: 'LOG', msg: 'Censorship Apparatus: Deactivate aura activated.' });
+    const opp = player === 1 ? 2 : 1;
+    enqueue({ type: 'DEACTIVATE_RANDOM_HAND', player: opp, amount: 1 });
+    enqueue({ type: 'LOG', msg: 'Censorship Apparatus: 1 zufällige gegnerische Handkarte deaktiviert.' });
     log('🟢 init.censorship_apparatus.deactivate_aura');
   },
 
   'init.thinktank_pipeline.draw_aura': ({ enqueue, player, log }) => {
-    enqueue({ type: 'LOG', msg: 'Think Tank Pipeline: Draw aura activated.' });
+    enqueue({ type: 'DRAW_CARDS', player, amount: 1 });
+    enqueue({ type: 'LOG', msg: 'Think Tank Pipeline: ziehe 1 Karte.' });
     log('🟢 init.thinktank_pipeline.draw_aura');
   },
 
@@ -630,7 +675,8 @@ export const LEGACY_NAME_TO_KEY: Record<string, string> = {
 
   // INITIATIVES — INSTANT
   'Spin Doctor': 'init.spin_doctor.buff_strongest_gov2',
-  'Digitaler Wahlkampf': 'init.digital_campaign.draw2',
+  'Digitaler Wahlkampf': 'init.digital_campaign.per_media',
+  'Scandal Spiral': 'trap.scandal_spiral.cancel_one_of_two',
   'Surprise Funding': 'init.surprise_funding.ap2',
   'Grassroots Blitz': 'init.grassroots_blitz.draw1_buff1',
   'Strategic Leaks': 'init.strategic_leaks.opp_discard1',
@@ -647,6 +693,15 @@ export const LEGACY_NAME_TO_KEY: Record<string, string> = {
   'Napoleon Komplex': 'init.napoleon_komplex.tier1_gov_plus1',
   'Opportunist': 'init.opportunist.mirror_ap_effects',
   'Skandalspirale': 'init.skandalspirale.w6_check',
+  'Whataboutism': 'init.whataboutism.reactivate_minus1',
+
+  // INITIATIVES — ONGOING (Dauerhaft)
+  'Algorithmischer Diskurs': 'init.algorithmischer_diskurs.media_aura',
+  'Wirtschaftlicher Druck': 'init.wirtschaftlicher_druck.gov_penalty',
+  'Zivilgesellschaft': 'init.zivilgesellschaft.movement_aura',
+  'Milchglas Transparenz': 'init.milchglas_transparenz.no_ngo_bonus',
+  'Alternative Fakten': 'init.alternative_fakten.intervention_dampen',
+  'Konzernfreundlicher Algorithmus': 'init.konzernfreundlicher_algorithmus.platform_aura',
 
   // Strategic Disclosure is a trap but legacy name mapping kept for compatibility
   'Strategische Enthüllung': 'trap.strategic_disclosure.return_gov',
@@ -664,7 +719,7 @@ export const LEGACY_NAME_TO_KEY: Record<string, string> = {
   'Interne Fraktionskämpfe': 'trap.internal_faction_strife.cancel_big_initiative',
   'Boykott-Kampagne': 'trap.boycott.deactivate_ngo_movement',
   'Deepfake-Skandal': 'trap.deepfake.lock_diplomat_transfer',
-  'Cyber-Attacke': 'trap.cyber_attack.destroy_platform',
+  'Cyber-Attacke': 'trap.cyber_attack.deactivate_platform',
   'Bestechungsskandal 2.0': 'corruption.bribery_v2.steal_gov_w6',
   'Grassroots-Widerstand': 'trap.grassroots_resistance.deactivate_public',
   'Massenproteste': 'trap.mass_protests.debuff_two_govs',
@@ -690,7 +745,14 @@ export const LEGACY_NAME_TO_KEY: Record<string, string> = {
   'George Soros': 'public.george_soros.ap1',
   'Warren Buffett': 'public.warren_buffett.draw2_ap1',
   'Jeff Bezos': 'public.jeff_bezos.oligarch_removal',
-  'Tim Cook': 'public.tim_cook.ap2',
+  'Tim Cook': 'public.tim_cook.ap1_or_platform',
+  'Sam Altman': 'public.sam_altman.ai_boost',
+  'Malala Yousafzai': 'public.malala_yousafzai.education_aura',
+  'Edward Snowden': 'public.edward_sn0wden.whistleblower',
+  'Julian Assange': 'public.julian_assange.leak',
+  'Yuval Noah Harari': 'public.yuval_noah_harari.academia',
+  'Alexei Navalny': 'public.alexei_navalny.opposition',
+  'Gautam Adani': 'public.gautam_adani.oligarch',
   'Koalitionszwang': 'gov.koalitionszwang.coalition_bonus',
   // Government cards removed - no effects, only influence
 };

@@ -21,6 +21,7 @@ import { emptyBoard } from '../state/board';
 import type { EffectEvent } from '../types/effects';
 import { logger } from '../debug/logger';
 import { useVisualEffects, useVisualEffectsSafe } from '../context/VisualEffectsContext';
+import { feedbackFail, feedbackInfo, feedbackSuccess, emitFeedback } from '../utils/feedback';
 // TS: sometimes asset module resolution fails in some setups — ignore typecheck for this import
 // @ts-ignore
 import slotGovGif from '../ui/layout/slot_gov.webm';
@@ -140,10 +141,15 @@ function reallyEndTurn(gameState: GameState, log: (msg: string) => void): GameSt
 
   // ✅ Karte nachziehen am Ende eines Zugs (nur wenn NICHT "pass")
   if (!gameState.passed[current]) {
-    const drawnCard = gameState.decks[current].shift();
-    if (drawnCard) {
-      gameState.hands[current].push(drawnCard);
-      log(`🔥 Zug-Ende: +1 Karte gezogen (${ drawnCard.name })`);
+    if (gameState.effectFlags?.[current]?.drawPenaltyNextDraw) {
+      gameState.effectFlags[current].drawPenaltyNextDraw = false;
+      log(`🚫 Mukesh Ambani: P${ current } zieht am Zugende keine Karte nach.`);
+    } else {
+      const drawnCard = gameState.decks[current].shift();
+      if (drawnCard) {
+        gameState.hands[current].push(drawnCard);
+        log(`🔥 Zug-Ende: +1 Karte gezogen (${ drawnCard.name })`);
+      }
     }
   } else {
     log(`⏭️ P${ current } hat gepasst – kein Nachziehen.`);
@@ -194,6 +200,43 @@ function resolveRound(gameState: GameState, log: (msg: string) => void): GameSta
     // Tie - current player wins
     roundWinner = gameState.current;
     log(`🤝 Unentschieden! Spieler ${ roundWinner } gewinnt als aktiver Spieler.`);
+  }
+
+  const provisionalRoundsWon = {
+    ...gameState.roundsWon,
+    [roundWinner]: gameState.roundsWon[roundWinner] + 1,
+  };
+  const matchOver = provisionalRoundsWon[1] >= 2 || provisionalRoundsWon[2] >= 2;
+  if (typeof window !== 'undefined') {
+    try {
+      window.dispatchEvent(new CustomEvent('pc:round_resolved', {
+        detail: {
+          winner: roundWinner,
+          p1Influence,
+          p2Influence,
+          roundsWon: provisionalRoundsWon,
+          round: gameState.round,
+          matchOver,
+        },
+      }));
+    } catch { /* ignore */ }
+  }
+  if (!matchOver) {
+    emitFeedback({
+      tone: 'success',
+      title: `Spieler ${roundWinner} gewinnt Runde ${gameState.round}`,
+      body: `${p1Influence} : ${p2Influence} Einfluss`,
+      flash: true,
+      durationMs: 2800,
+    });
+  } else {
+    emitFeedback({
+      tone: 'lead',
+      title: `Spieler ${provisionalRoundsWon[1] >= 2 ? 1 : 2} gewinnt das Match!`,
+      body: `Endstand ${provisionalRoundsWon[1]} : ${provisionalRoundsWon[2]}`,
+      flash: true,
+      durationMs: 3200,
+    });
   }
 
   // Collect all cards to move to discard
@@ -624,12 +667,14 @@ export function useGameActions(
         if (prev.current !== player) {
           log(`❌ ERROR: Not player turn - Current: ${ prev.current }, Attempted: ${ player }`);
           logger.warn(`playCard abort: wrong turn`);
+          feedbackFail('Nicht dein Zug', `Spieler ${prev.current} ist am Zug.`);
           return prev;
         }
 
         const hand = prev.hands[player];
         if (handIndex < 0 || handIndex >= hand.length) {
           log(`❌ ERROR: Invalid hand index - Index: ${ handIndex }, Hand length: ${ hand.length }`);
+          feedbackFail('Ungültige Karte', 'Diese Handposition ist leer.');
           return prev;
         }
 
@@ -647,6 +692,7 @@ export function useGameActions(
         const selectedCard = hand[handIndex];
         if (!canPlayCard(prev, player, selectedCard)) {
           log('🚫 Kann Karte nicht spielen (keine AP verfügbar).');
+          feedbackFail('Keine Aktionspunkte', `${(selectedCard as any).name || 'Karte'} kostet AP.`);
           return prev;
         }
 
@@ -658,6 +704,20 @@ export function useGameActions(
         // AP will be deducted AFTER queue processing to avoid showing 0 AP temporarily
         // Store the cost for later deduction
         (newState as any)._pendingApCost = cost;
+
+        // Helper: charge the stored AP cost exactly once (call before returning a played state)
+        const chargePendingAp = () => {
+          const pc = (newState as any)._pendingApCost;
+          if (pc !== undefined) {
+            newState.actionPoints[player] = Math.max(0, newState.actionPoints[player] - pc);
+            log(`💳 Kosten abgezogen: AP ${ newState.actionPoints[player] + pc }→${ newState.actionPoints[player] }`);
+            delete (newState as any)._pendingApCost;
+          }
+        };
+        // Helper: cancel the stored AP cost without charging (rollback paths)
+        const cancelPendingAp = () => {
+          delete (newState as any)._pendingApCost;
+        };
 
         // Enhanced AP counter logging
         const cardName = (selectedCard as any).name || 'Unknown Card';
@@ -706,22 +766,33 @@ export function useGameActions(
 
           if (newState.board[player][targetLane].length >= 5) {
             log(`❌ ERROR: Lane full - Lane: ${ targetLane }, Current: ${ newState.board[player][targetLane].length }/5`);
+            feedbackFail('Spur voll', `${targetLane === 'aussen' ? 'Regierung' : 'Öffentlichkeit'} hat keinen freien Slot.`);
+            cancelPendingAp();
             return prev;
           }
 
-          // Check for Tunnelvision probe requirement (only for government cards)
-          if (targetLane === 'aussen') {
-            const tunnelvisionActive = (newState.permanentSlots[1].government?.name === 'Tunnelvision') ||
-              (newState.permanentSlots[2].government?.name === 'Tunnelvision') ||
-              (newState.permanentSlots[1].public?.name === 'Tunnelvision') ||
-              (newState.permanentSlots[2].public?.name === 'Tunnelvision');
+          // Parlament geschlossen: keine weiteren Regierungskarten bis zum nächsten eigenen Zug
+          if (targetLane === 'aussen' && newState.effectFlags[player]?.cannotPlayMoreGovernment) {
+            log(`🚫 Parlament geschlossen – P${ player } kann bis zum nächsten Zug keine weiteren Regierungskarten spielen.`);
+            feedbackFail('Parlament geschlossen', 'Keine weiteren Regierungskarten bis zu deinem nächsten Zug.');
+            cancelPendingAp();
+            return prev;
+          }
 
-            if (tunnelvisionActive) {
+          // Tunnelvision: only taxes the opponent of the Tunnelvision owner
+          if (targetLane === 'aussen') {
+            const opponent: 1 | 2 = player === 1 ? 2 : 1;
+            const tunnelvisionOwnedByEnemy =
+              newState.permanentSlots[opponent].government?.name === 'Tunnelvision' ||
+              newState.permanentSlots[opponent].public?.name === 'Tunnelvision';
+
+            if (tunnelvisionOwnedByEnemy) {
               // Trigger Tunnelvision probe
               const influence = polCard.influence || 0;
               const requiredRoll = influence >= 9 ? 5 : 4;
 
               log(`🔮 Tunnelvision: Regierungskarte ${ playedCard.name } benötigt Probe. W6 ≥${ requiredRoll } (Einfluss ${ influence }).`);
+              feedbackInfo('Tunnelvision-Probe', `${playedCard.name}: W6 ≥ ${requiredRoll} nötig.`);
 
               // Enqueue tunnelvision probe event and process immediately
               newState._effectQueue = newState._effectQueue || [];
@@ -740,9 +811,10 @@ export function useGameActions(
                 console.error('Error resolving tunnelvision probe queue:', e);
               }
 
-              // Return the card to hand and refund AP until probe is resolved
+              // Return the card to hand until probe is resolved.
+              // Tunnelvision: 1 AP wird immer abgezogen (auch bei Misserfolg).
               newState.hands[player] = [...newState.hands[player], playedCard];
-              newState.actionPoints[player] += cost; // Refund AP
+              chargePendingAp();
 
               // Don't add card to board yet - wait for probe result
               // The card will be added to board or kept in hand based on probe result
@@ -750,10 +822,30 @@ export function useGameActions(
             }
           }
 
+          // Think-tank: nächste Regierungskarte +2 Einfluss
+          if (targetLane === 'aussen' && newState.effectFlags[player]?.nextGovPlus2) {
+            newState.effectFlags[player].nextGovPlus2 = false;
+            (playedCard as any).tempBuffs = ((playedCard as any).tempBuffs || 0) + 2;
+            log(`🧠 Think-tank: ${ playedCard.name } erhält +2 Einfluss.`);
+          }
+
           // Add to board (immutable clone to avoid accidental double references)
           const laneArray = [...newState.board[player][targetLane], playedCard];
           const playerBoardCloned = { ...newState.board[player], [targetLane]: laneArray } as any;
           newState.board = { ...newState.board, [player]: playerBoardCloned } as any;
+
+          // Greta Thunberg: erste Regierungskarte pro Zug gibt +1 AP
+          if (targetLane === 'aussen' && !newState.effectFlags[player]?.gretaFirstGovApUsed) {
+            const gretaActive = newState.board[player].innen.some(c =>
+              c.kind === 'spec' && c.name === 'Greta Thunberg' && !(c as any).deactivated
+            );
+            if (gretaActive) {
+              newState.effectFlags[player].gretaFirstGovApUsed = true;
+              if (!newState._effectQueue) newState._effectQueue = [];
+              newState._effectQueue.push({ type: 'ADD_AP', player, amount: 1 } as any);
+              newState._effectQueue.push({ type: 'LOG', msg: 'Greta Thunberg: Erste Regierungskarte des Zuges → +1 AP.' } as any);
+            }
+          }
 
           // VISUAL: spawn GIF overlay centered over the government slot icon when placing a government card
           try {
@@ -785,6 +877,10 @@ export function useGameActions(
             console.debug('[GameActions] GOV overlay failed', e);
           }
           log(`🃏 Player ${ player }: ${ playedCard.name } gespielt in ${ targetLane === 'aussen' ? 'Regierung' : 'Öffentlichkeit' }`);
+          feedbackSuccess(
+            `${playedCard.name} platziert`,
+            targetLane === 'aussen' ? 'In der Regierung' : 'In der Öffentlichkeit',
+          );
 
           // 3) Nachdem die Karte gelegt wurde: gegnerische Traps prüfen
           applyTrapsOnCardPlayed(
@@ -834,21 +930,18 @@ export function useGameActions(
 
           // Release playing UID after queue resolved — removed (was breaking React Strict Mode)
 
-          // 🔥 ROMAN ABRAMOVICH EFFEKT: Wenn Regierungskarte mit Einfluss ≤5 gespielt wird
+          // 🔥 ROMAN ABRAMOVICH EFFEKT: Wenn Regierungskarte mit Einfluss ≤5 gespielt wird,
+          // zieht jeder Spieler mit aktivem Abramovich 1 Karte.
           if (playedCard.kind === 'pol' && (playedCard as any).influence <= 5) {
-            const opponent = player === 1 ? 2 : 1;
-            const opponentBoard = newState.board[opponent];
-            const romanAbramovich = opponentBoard.innen.find(card =>
-              card.kind === 'spec' && (card as any).name === 'Roman Abramovich'
-            );
-
-            if (romanAbramovich) {
-              // Ziehe eine Karte für den Gegner
-              if (newState.decks[opponent].length > 0) {
-                const drawnCard = newState.decks[opponent].shift();
+            for (const p of [1, 2] as const) {
+              const abramovich = newState.board[p].innen.find(card =>
+                card.kind === 'spec' && (card as any).name === 'Roman Abramovich' && !(card as any).deactivated
+              );
+              if (abramovich && newState.decks[p].length > 0) {
+                const drawnCard = newState.decks[p].shift();
                 if (drawnCard) {
-                  newState.hands[opponent].push(drawnCard);
-                  log(`🔥 ROMAN ABRAMOVICH EFFEKT: P${ opponent } zieht 1 Karte (${ drawnCard.name }) - Regierungskarte mit Einfluss ≤5 gespielt`);
+                  newState.hands[p].push(drawnCard);
+                  log(`🔥 ROMAN ABRAMOVICH: P${ p } zieht 1 Karte (${ drawnCard.name }) – Regierungskarte mit Einfluss ≤5 gespielt`);
                 }
               }
             }
@@ -885,43 +978,56 @@ export function useGameActions(
         } else if (playedCard.kind === 'spec') {
           const specCard = playedCard as any;
           const typeStr = String(specCard.type || '').toLowerCase();
-          const isInitiative = /initiative/.test(typeStr); // matcht "Initiative", "Sofort-Initiative", etc.
+          const isInitiative = /initiative/.test(typeStr);
 
-          // 1) Falls es eine "Systemrelevant" ist (sofortiger Buff auf letzte eigene Regierungskarte)
-          if (playedCard.kind === 'spec' && (playedCard as any).type?.toLowerCase().includes('systemrelevant')) {
-            const ownBoard = newState.board[player];
-            const candidates = [...ownBoard.aussen, ...ownBoard.innen].filter(c => c.kind === 'pol') as PoliticianCard[];
-            const target = candidates[candidates.length - 1]; // letzte eigene Regierungskarte
-            if (target) {
-              (target as any).protected = true;
-              log(`🛡️ ${ target.name } erhält einmaligen Schutz.`);
-            } else {
-              log('🛈 Systemrelevant: Keine eigene Regierungskarte im Spiel – Effekt verpufft.');
-            }
-            // danach die Spezialkarte normal entsorgen
-            newState.discard.push(playedCard);
-            return newState;
+          // Oppositionsblockade: gesperrte Spieler können keine Sofort-Initiativen spielen
+          const isSofortInitiative = typeStr.includes('sofort') || typeStr.includes('instant');
+          if (isSofortInitiative && newState.effectFlags[player]?.initiativesLocked) {
+            log(`🚫 Sofort-Initiativen gesperrt (Oppositionsblockade) – ${ playedCard.name } kann nicht gespielt werden.`);
+            feedbackFail('Oppositionsblockade', 'Sofort-Initiativen sind gesperrt.');
+            cancelPendingAp();
+            return prev;
           }
 
           // 1) Dauerhaft-Initiative (Ongoing)
           if (typeStr.includes('dauerhaft')) {
             // Slot-Mapping: Dauerhaft-Initiativen → map to permanentSlots.government or .public
-            // Prefer explicit metadata on the card, fallback to tag-based heuristic, default to 'government'
-            const preferredSlot: 'government' | 'public' = (specCard.permanentSlot as 'government' | 'public') || ((specCard.tags || []).includes('Public') ? 'public' : 'government');
+            // Prefer explicit metadata, then cardDetails subcategory ('Öffentlichkeit'/'Regierung'), default government
+            let preferredSlot: 'government' | 'public' = (specCard.permanentSlot as 'government' | 'public') || ((specCard.tags || []).includes('Public') ? 'public' : 'government');
+            if (!specCard.permanentSlot) {
+              try {
+                const { getSubcategories } = require('../utils/cardClassification');
+                const subs: string[] = getSubcategories(playedCard.name);
+                if (subs.includes('Öffentlichkeit')) preferredSlot = 'public';
+                else if (subs.includes('Regierung')) preferredSlot = 'government';
+              } catch (e) { /* fallback to heuristic */ }
+            }
             if (!newState.permanentSlots[player][preferredSlot]) {
               // ensure card is stored as a shallow clone to avoid accidental shared references
               newState.permanentSlots[player] = { ...newState.permanentSlots[player], [preferredSlot]: { ...playedCard } } as any;
               log(`P${ player } spielt ${ playedCard.name } als Dauerhafte Initiative (Slot: ${ preferredSlot })`);
+              feedbackSuccess(`${playedCard.name} aktiv`, `Dauerhaft-Initiative (${preferredSlot === 'government' ? 'Regierung' : 'Öffentlichkeit'}).`);
             } else {
               log(`⚠️ WARN: Slot occupied - Slot ${ preferredSlot } already has ${ newState.permanentSlots[player][preferredSlot]?.name }`);
-              // Return the card to hand and refund AP as graceful fallback
+              feedbackFail('Slot belegt', `${newState.permanentSlots[player][preferredSlot]?.name} liegt bereits dort.`);
+              // Return the card to hand as graceful fallback (AP was not yet charged)
               newState.hands[player] = [...newState.hands[player], playedCard];
-              newState.actionPoints[player] += cost;
+              cancelPendingAp();
               return newState;
             }
 
-            // 6) Karteneffekte enqueuen + Queue auflösen
+            // 6) Karteneffekte enqueuen + Traps prüfen + Queue auflösen
             triggerCardEffects(newState, player, playedCard);
+
+            // Check for trap triggers (vor der Auflösung)
+            applyTrapsOnCardPlayed(
+              newState,
+              player,
+              playedCard,
+              (e) => (newState._effectQueue ??= []).push(e),
+              (m) => (newState._effectQueue ??= []).push({ type: 'LOG', msg: m })
+            );
+
             // Migration Helper verwenden
             migrateLegacyQueue(newState);
             // Nur noch _effectQueue verwenden
@@ -935,15 +1041,7 @@ export function useGameActions(
               log(`DEBUG AP after resolve (spec ongoing): P1=${ newState.actionPoints[1] } P2=${ newState.actionPoints[2] }`);
             }
 
-            // Check for trap triggers
-            applyTrapsOnCardPlayed(
-              newState,
-              player,
-              playedCard,
-              (e) => (newState._effectQueue ??= []).push(e),
-              (m) => (newState._effectQueue ??= []).push({ type: 'LOG', msg: m })
-            );
-
+            chargePendingAp();
             return newState;
           }
 
@@ -960,11 +1058,10 @@ export function useGameActions(
               // Prüfe ob bereits eine Sofort-Initiative im Slot liegt
               if (newState.board[player].sofort.length > 0) {
                 log(`❌ ERROR: Sofort-Initiative-Slot bereits besetzt - ${ newState.board[player].sofort[0]?.name } muss erst aktiviert werden`);
-                // Karte zurück in die Hand
+                feedbackFail('Sofort-Slot belegt', `Aktiviere zuerst ${newState.board[player].sofort[0]?.name}.`);
+                // Karte zurück in die Hand (AP war noch nicht abgezogen)
                 newState.hands[player] = [...newState.hands[player], playedCard];
-                // AP zurückgeben
-                newState.actionPoints[player] += cost;
-                // AP zurückgegeben, keine Aktion rückgängig zu machen
+                cancelPendingAp();
                 return newState;
               }
 
@@ -977,6 +1074,7 @@ export function useGameActions(
                 },
               };
               log(`🎯 P${ player } legt ${ playedCard.name } in Sofort-Initiative-Slot (kann später aktiviert werden)`);
+              feedbackSuccess(`${playedCard.name} bereit`, 'Klicke den Slot zum Aktivieren.');
 
               if (!newState._effectQueue) newState._effectQueue = [];
               newState._effectQueue.push({ type: 'LOG', msg: `🔔 Sofort-Initiative bereit: ${ playedCard.name } (zum Aktivieren anklicken oder „Aktivieren")` });
@@ -998,9 +1096,20 @@ export function useGameActions(
             newState.discard = [...newState.discard, playedCard];
             log(`P${ player } spielt Initiative: ${ playedCard.name }`);
 
-            // 6) Karteneffekte enqueuen + Queue auflösen
+            // 6) Karteneffekte enqueuen + Traps prüfen + Queue auflösen
             console.log('🔥 ABOUT TO TRIGGER CARD EFFECTS (INITIATIVE):', playedCard.name, 'effectKey:', (playedCard as any).effectKey);
+            (newState as any)._lastActivatedInitiative = playedCard.name;
             triggerCardEffects(newState, player, playedCard);
+
+            // Check for trap triggers (vor der Auflösung)
+            applyTrapsOnCardPlayed(
+              newState,
+              player,
+              playedCard,
+              (e) => (newState._effectQueue ??= []).push(e),
+              (m) => (newState._effectQueue ??= []).push({ type: 'LOG', msg: m })
+            );
+
             // Migration Helper verwenden
             migrateLegacyQueue(newState);
             // Nur noch _effectQueue verwenden
@@ -1011,25 +1120,10 @@ export function useGameActions(
               afterQueueResolved?.();
             }
 
-            // Check for trap triggers
-            applyTrapsOnCardPlayed(
-              newState,
-              player,
-              playedCard,
-              (e) => (newState._effectQueue ??= []).push(e),
-              (m) => (newState._effectQueue ??= []).push({ type: 'LOG', msg: m })
-            );
-
             // 🔥 CLUSTER 3: Auren-Flags neu berechnen (nach Kartenspielen)
             recomputeAuraFlags(newState);
 
-            // 🔥 CLUSTER 3: Ai Weiwei Bonus wird bei Aktivierung angewendet (nicht beim Spielen)
-
-            // 🔥 PASSIVE EFFEKTE NACH INITIATIVE: Mark Zuckerberg & Sam Altman
-            // Diese Effekte werden jetzt über INITIATIVE_ACTIVATED Event + Board-Check gehandhabt
-            // Keine direkten Flag-Mutationen mehr - alles über Events
-
-
+            chargePendingAp();
             return newState;
           }
 
@@ -1049,18 +1143,44 @@ export function useGameActions(
               // Sofort Auren prüfen (z.B. JF +1, wenn JF schon liegt)
               applyAurasForPlayer(newState, player, log);
 
-              // 6) Karteneffekte enqueuen + Queue auflösen
+              // 6) Karteneffekte enqueuen (alle Karteneffekte laufen über die Registry)
               triggerCardEffects(newState, player, playedCard);
-              // Migration Helper verwenden
-              migrateLegacyQueue(newState);
-              if (newState._effectQueue && newState._effectQueue.length > 0) {
-                resolveQueue(newState, newState._effectQueue);
-                newState._effectQueue = [];
-                // Nach Queue-Auflösung: Hand-Arrays immutabel neu zuweisen
-                afterQueueResolved?.();
-              }
 
-              // Check for trap triggers
+              // 🔗 Aura-Hooks: Reaktionen anderer Karten auf die gespielte Öffentlichkeitskarte
+              try {
+                const { isNgoCard, isOligarchCard, isPlatformCard } = require('../utils/cardClassification');
+                const enqueueHook = (e: any) => (newState._effectQueue ??= []).push(e);
+
+                // Malala Yousafzai: Wenn du eine NGO/Think-Tank spielst, ziehe 1 Karte
+                if (isNgoCard(playedCard)) {
+                  const malala = newState.board[player].innen.find(c =>
+                    c.kind === 'spec' && c.name === 'Malala Yousafzai' && !(c as any).deactivated && c.uid !== (playedCard as any).uid
+                  );
+                  if (malala) {
+                    enqueueHook({ type: 'DRAW_CARDS', player, amount: 1 });
+                    enqueueHook({ type: 'LOG', msg: 'Malala Yousafzai: NGO gespielt → +1 Karte.' });
+                  }
+                }
+
+                // Wirtschaftlicher Druck (Dauerhaft): Oligarch gespielt → +1 Einfluss auf stärkste Regierung
+                const permGov = newState.permanentSlots[player].government;
+                const permPub = newState.permanentSlots[player].public;
+                const hasWirtschaftsDruck = permGov?.name === 'Wirtschaftlicher Druck' || permPub?.name === 'Wirtschaftlicher Druck';
+                if (hasWirtschaftsDruck && isOligarchCard(playedCard)) {
+                  enqueueHook({ type: 'BUFF_STRONGEST_GOV', player, amount: 1 });
+                  enqueueHook({ type: 'LOG', msg: 'Wirtschaftlicher Druck: Oligarch gespielt → stärkste Regierung +1 Einfluss.' });
+                }
+
+                // Konzernfreundlicher Algorithmus (Dauerhaft): Plattform gespielt → ziehe 1 Karte
+                const hasKonzernAlgo = permGov?.name === 'Konzernfreundlicher Algorithmus' || permPub?.name === 'Konzernfreundlicher Algorithmus';
+                if (hasKonzernAlgo && isPlatformCard(playedCard)) {
+                  enqueueHook({ type: 'DRAW_CARDS', player, amount: 1 });
+                  enqueueHook({ type: 'BUFF_STRONGEST_GOV', player, amount: 1 });
+                  enqueueHook({ type: 'LOG', msg: 'Konzernfreundlicher Algorithmus: Plattform gespielt → +1 Karte, +1 Einfluss.' });
+                }
+              } catch (e) { /* hooks are best-effort */ }
+
+              // Check for trap triggers (vor der Queue-Auflösung, damit alles zusammen aufgelöst wird)
               applyTrapsOnCardPlayed(
                 newState,
                 player,
@@ -1069,82 +1189,13 @@ export function useGameActions(
                 (m) => (newState._effectQueue ??= []).push({ type: 'LOG', msg: m })
               );
 
-
-
-              // 🔥 PUBLIC CARD EFFECTS - Passive effects when played
-
-              // Helper function to draw a card for the player
-              const drawCardForPlayer = (cardName: string) => {
-                if (newState.decks[player].length > 0) {
-                  const drawnCard = newState.decks[player].shift();
-                  if (drawnCard) {
-                    newState.hands[player].push(drawnCard);
-                    log(`🔥 ${ cardName.toUpperCase() } EFFEKT: +1 Karte gezogen (${ drawnCard.name })`);
-                    return true;
-                  }
-                }
-                return false;
-              };
-
-              if (specCard.name === 'Elon Musk') {
-                // Effect: "Ziehe 1 Karte. Deine erste Initiative pro Runde kostet 1 Aktionspunkt weniger."
-                drawCardForPlayer('Elon Musk');
-                // 🔥 QUEUE-SYSTEM: Erste Initiative pro Runde → Refund wird über triggerCardEffects gehandhabt
-
-              } else if (specCard.name === 'Bill Gates') {
-                // Effect: "Ziehe 1 Karte. Deine nächste Initiative kostet 1 Aktionspunkt weniger."
-                drawCardForPlayer('Bill Gates');
-                // 🔥 QUEUE-SYSTEM: Nächste Initiative → Refund wird über triggerCardEffects gehandhabt
-
-              } else if (specCard.name === 'Jeff Bezos') {
-                // Effect: "Ziehe 1 Karte beim Ausspielen. Wenn eine Plattform liegt: +1 Aktionspunkt."
-                drawCardForPlayer('Jeff Bezos');
-                const hasPlatform = newState.board[player].innen.some(c =>
-                  c.kind === 'spec' && (c as any).tag === 'Plattform'
-                );
-                if (hasPlatform) {
-                  newState.actionPoints[player] += 1;
-                  log(`🔥 JEFF BEZOS: +1 AP durch Plattform-Synergie! (${ newState.actionPoints[player] - 1 } → ${ newState.actionPoints[player] })`);
-                }
-
-              } else if (specCard.name === 'Warren Buffett') {
-                // Effect: "Ziehe 1 Karte. Bei einer Wirtschafts-Initiative: +1 Effekt."
-                drawCardForPlayer('Warren Buffett');
-                // TODO: Implement "Wirtschafts-Initiative +1 Effect" logic
-                log(`📊 WARREN BUFFETT: Bei Wirtschafts-Initiativen +1 Effekt! (TODO: Implementierung)`);
-
-              } else if (specCard.name === 'Gautam Adani') {
-                // Effect: "Ziehe 1 Karte. Bei einer Infrastruktur-Initiative: +1 Effekt."
-                drawCardForPlayer('Gautam Adani');
-                // TODO: Implement "Infrastruktur-Initiative +1 Effect" logic
-                log(`📊 GAUTAM ADANI: Bei Infrastruktur-Initiativen +1 Effekt! (TODO: Implementierung)`);
-
-              } else if (specCard.name === 'Zhang Yiming') {
-                // Effect: "Ziehe 1 Karte. Bei Medien auf dem Feld: -1 Aktionspunkt auf deine nächste Initiative."
-                drawCardForPlayer('Zhang Yiming');
-                const hasMedia = newState.board[player].innen.some(c =>
-                  c.kind === 'spec' && (c as any).tag === 'Medien'
-                );
-                if (hasMedia) {
-                  // TODO: Implement "nächste Initiative -1 AP" logic
-                  log(`🔥 ZHANG YIMING: Nächste Initiative kostet 1 AP weniger durch Medien-Synergie! (TODO: Implementierung)`);
-                }
-
-              } else if (specCard.name === 'George Soros') {
-                // Effect: "+1 Aktionspunkt wenn der Gegner eine autoritäre Regierungskarte hat."
-                const opponent = player === 1 ? 2 : 1;
-                const hasAuthoritarianCard = newState.board[opponent].aussen.some(card => {
-                  const polCard = card as any;
-                  return polCard.tag === 'Staatsoberhaupt' && polCard.influence >= 8; // High influence leaders
-                });
-
-                if (hasAuthoritarianCard) {
-                  newState.actionPoints[player] += 1;
-                  log(`🔥 GEORGE SOROS EFFEKT: +1 AP durch autoritäre Regierung des Gegners!`);
-                  log(`📊 SOROS: Aktionspunkte ${ newState.actionPoints[player] - 1 } → ${ newState.actionPoints[player] }`);
-                } else {
-                  log(`💭 George Soros: Keine autoritären Karten beim Gegner - Effekt nicht ausgelöst`);
-                }
+              // Migration Helper verwenden
+              migrateLegacyQueue(newState);
+              if (newState._effectQueue && newState._effectQueue.length > 0) {
+                resolveQueue(newState, newState._effectQueue);
+                newState._effectQueue = [];
+                // Nach Queue-Auflösung: Hand-Arrays immutabel neu zuweisen
+                afterQueueResolved?.();
               }
 
               // 🔗 NGO-Synergie: Wenn eine NGO gelegt wird und Joschka Fischer liegt, erhält P${player} +1 Einfluss (Rundenauswertung)
@@ -1156,9 +1207,13 @@ export function useGameActions(
               }
             } else {
               log(`❌ ERROR: Lane full - Öffentlichkeit ist voll (5/5)`);
+              // Karte zurück in die Hand (AP war noch nicht abgezogen)
+              newState.hands[player] = [...newState.hands[player], playedCard];
+              cancelPendingAp();
+              return newState;
             }
 
-            // Simplified AP system: No refunds
+            chargePendingAp();
             return newState;
           }
 
@@ -1167,11 +1222,13 @@ export function useGameActions(
           if (playedCard.kind === 'spec' && (playedCard as any).type?.toLowerCase().includes('trap')) {
             registerTrap(newState, player, playedCard.key || playedCard.name.toLowerCase().replace(/[- ]/g, '_'));
             // NICHT sofort checken – sie wartet auf den Gegner
+            chargePendingAp();
             return newState;
           }
 
           newState.traps[player] = [...newState.traps[player], playedCard];
           log(`P${ player } spielt ${ playedCard.name } als ${ specCard.type }`);
+          feedbackSuccess(`${playedCard.name} gelegt`, String(specCard.type || 'Intervention'));
 
           // 6) Karteneffekte enqueuen + Queue auflösen
           console.log('🔥 ABOUT TO TRIGGER CARD EFFECTS:', playedCard.name, 'effectKey:', (playedCard as any).effectKey);
@@ -1197,8 +1254,13 @@ export function useGameActions(
             (e) => (newState._effectQueue ??= []).push(e),
             (m) => (newState._effectQueue ??= []).push({ type: 'LOG', msg: m })
           );
+          if (newState._effectQueue && newState._effectQueue.length > 0) {
+            resolveQueue(newState, newState._effectQueue);
+            newState._effectQueue = [];
+            afterQueueResolved?.();
+          }
 
-          // Simplified AP system: No refunds
+          chargePendingAp();
           return newState;
         }
 
@@ -1225,11 +1287,15 @@ export function useGameActions(
           (e) => (newState._effectQueue ??= []).push(e),
           (m) => (newState._effectQueue ??= []).push({ type: 'LOG', msg: m })
         );
+        if (newState._effectQueue && newState._effectQueue.length > 0) {
+          resolveQueue(newState, newState._effectQueue);
+          newState._effectQueue = [];
+          afterQueueResolved?.();
+        }
 
-        // Simplified AP system: No refunds
+        chargePendingAp();
 
         // Kein Aktionenlimit mehr → automatischer Turnwechsel entfällt
-
 
         return newState;
       })();
@@ -1244,23 +1310,53 @@ export function useGameActions(
       const result = ((): GameState => {
         if (prev.current !== player) {
           log(`❌ ERROR: Not player turn - Current: ${ prev.current }, Attempted: ${ player }`);
+          feedbackFail('Nicht dein Zug', `Spieler ${prev.current} ist am Zug.`);
           return prev;
         }
 
         const instantCard = prev.board[player].sofort[0];
         if (!instantCard) {
           log(`❌ ERROR: No Sofort-Initiative in slot for player ${ player }`);
+          feedbackFail('Kein Sofort-Slot', 'Lege zuerst eine Sofort-Initiative.');
           return prev;
         }
 
         const newState = cloneStateForMutation(prev);
 
-        // 1) Karte SOFORT aus dem Slot entfernen (BEVOR Effekte ausgeführt werden)
+        // 1) Gegnerische Fallen prüfen BEVOR Effekte gefeuert werden (Annullierung möglich)
+        const trapResult = applyTrapsOnCardPlayed(
+          newState,
+          player,
+          newState.board[player].sofort[0] || instantCard,
+          (e) => (newState._effectQueue ??= []).push(e),
+          (m) => (newState._effectQueue ??= []).push({ type: 'LOG', msg: m })
+        );
+
+        if (trapResult.cancelled) {
+          // Initiative wurde annulliert: Queue (inkl. CANCEL_CARD) auflösen, keine Effekte feuern
+          if (newState._effectQueue && newState._effectQueue.length > 0) {
+            resolveQueue(newState, [...newState._effectQueue]);
+            newState._effectQueue = [];
+            afterQueueResolved?.();
+          }
+          // Falls die Karte noch im Slot liegt (z.B. Flag-Block ohne CANCEL_CARD), entsorgen
+          if (newState.board[player].sofort.length > 0) {
+            const [blocked] = newState.board[player].sofort.splice(0, 1);
+            newState.discard = [...newState.discard, blocked];
+          }
+          log(`❌ ${ instantCard.name } wurde annulliert – Effekte werden nicht ausgeführt.`);
+          feedbackFail(`${instantCard.name} annulliert`, 'Gegnerische Intervention hat die Aktivierung gestoppt.');
+          return newState;
+        }
+
+        // 2) Karte aus dem Slot entfernen (BEVOR Effekte ausgeführt werden)
         const [played] = newState.board[player].sofort.splice(0, 1);
         newState.discard = [...newState.discard, played];
 
-        // 2) Normale Karten-Effekte der Sofort-Karte feuern
+        // 3) Normale Karten-Effekte der Sofort-Karte feuern
+        (newState as any)._lastActivatedInitiative = instantCard.name;
         triggerCardEffects(newState, player, instantCard);
+        feedbackSuccess(`${instantCard.name} aktiviert`, 'Effekt wird ausgeführt.');
 
         // UI visual: initiative ripple + AP pop (prototype hook)
         try {
@@ -1280,16 +1376,7 @@ export function useGameActions(
           }
         } catch (e) { }
 
-        // Check for trap triggers
-        applyTrapsOnCardPlayed(
-          newState,
-          player,
-          instantCard,
-          (e) => (newState._effectQueue ??= []).push(e),
-          (m) => (newState._effectQueue ??= []).push({ type: 'LOG', msg: m })
-        );
-
-        // 3) Queue auflösen
+        // 4) Queue auflösen
         if (newState._effectQueue && newState._effectQueue.length > 0) {
           resolveQueue(newState, [...newState._effectQueue]);
           newState._effectQueue = [];

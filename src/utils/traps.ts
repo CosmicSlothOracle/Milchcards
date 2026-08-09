@@ -1,6 +1,18 @@
 import type { GameState, Player, Card } from '../types/game';
 import type { EffectEvent } from '../types/effects';
-import { CARD_BY_ID } from '../data/cards';
+import {
+  isGovernmentCard,
+  isPublicCard,
+  isInitiativeCard,
+  isBigInitiativeCard,
+  isMediaLikeCard,
+  isPlatformCard,
+  isOligarchCard,
+  isNgoCard,
+  isMovementCard,
+  isDiplomatCard,
+} from './cardClassification';
+import { isInstantInitiative } from './tags';
 
 export function registerTrap(state: GameState, player: Player, key: string) {
   if (!state.traps) state.traps = { 1: [], 2: [] } as any;
@@ -9,16 +21,21 @@ export function registerTrap(state: GameState, player: Player, key: string) {
   (state.traps as any)[player].push({ owner: player, key });
 }
 
+export interface TrapCheckResult {
+  /** true when the played card itself was cancelled/negated by a trap */
+  cancelled: boolean;
+}
+
 export function applyTrapsOnCardPlayed(
   state: GameState,
   playedBy: Player,
   card: Card,
   enqueue: (e: EffectEvent) => void,
   log: (m: string) => void
-) {
+): TrapCheckResult {
   const opp: Player = playedBy === 1 ? 2 : 1;
   const traps = (state.traps as any)?.[opp] as Array<{ owner: Player; key: string }> | undefined;
-  if (!traps || traps.length === 0) return;
+  if (!traps || traps.length === 0) return { cancelled: false };
 
   // Diagnostics: log existing traps for opponent when a card is played
   try {
@@ -26,24 +43,22 @@ export function applyTrapsOnCardPlayed(
     enqueue({ type: 'LOG', msg: `DEBUG: applyTrapsOnCardPlayed opp=${opp} traps=[${keys}] playedCard=${(card as any).name || (card as any).key || 'unknown'}` });
   } catch (e) {}
 
-  // Hard rule: Opposition Blockade – if current player is locked, cancel initiative card immediately
-  if ((card as any)?.type === 'initiative' && state.effectFlags[playedBy]?.initiativesLocked) {
+  // Robust runtime classification (live cards from gameData don't match CARD_BY_ID ids)
+  const isInitiative = isInitiativeCard(card);
+  const isPublic = isPublicCard(card);
+  const isGovernment = isGovernmentCard(card);
+  const isMediaLike = isMediaLikeCard(card);
+
+  // Hard rule: Oppositionsblockade – lock Sofort-Initiativen only
+  if (isInstantInitiative(card) && state.effectFlags[playedBy]?.initiativesLocked) {
     if ((card as any).uid != null) {
       enqueue({ type: 'CANCEL_CARD', player: playedBy, targetUid: (card as any).uid } as any);
     }
-    enqueue({ type: 'LOG', msg: 'Blocked: initiatives are locked (Opposition Blockade).' });
-    return; // skip further trap processing
+    enqueue({ type: 'LOG', msg: 'Blocked: Sofort-Initiativen gesperrt (Oppositionsblockade).' });
+    return { cancelled: true }; // skip further trap processing
   }
 
-  // Get card definition to access type and tags
-  const cardDef = CARD_BY_ID[card.key];
-  const isInitiative = cardDef?.type === 'initiative';
-  const isPublic = cardDef?.type === 'public';
-  const isGovernment = cardDef?.type === 'government';
-  const isMediaLike = cardDef?.tags?.includes('Media') ||
-                     cardDef?.tags?.includes('Platform') ||
-                     (card as any)?.tag === 'Media'; // Fallback für Legacy-Karten
-
+  let playedCardCancelled = false;
   const consumed: Array<{ key: string }> = [];
   traps.forEach(t => {
     switch (t.key) {
@@ -61,6 +76,188 @@ export function applyTrapsOnCardPlayed(
         if (isInitiative && (card as any).uid != null) {
           enqueue({ type: 'CANCEL_CARD', player: opp, targetUid: (card as any).uid });
           log('Trap: Legal Injunction – cancelled initiative.');
+          playedCardCancelled = true;
+          consumed.push(t);
+        }
+        break;
+
+      // Interne Fraktionskämpfe: große Initiative (3+ BP) wird annulliert
+      case 'trap.internal_faction_strife.cancel_big_initiative':
+        if (isBigInitiativeCard(card) && (card as any).uid != null) {
+          enqueue({ type: 'CANCEL_CARD', player: opp, targetUid: (card as any).uid });
+          log('Trap: Interne Fraktionskämpfe – große Initiative annulliert.');
+          playedCardCancelled = true;
+          consumed.push(t);
+        }
+        break;
+
+      // Boykott-Kampagne: NGO/Bewegung wird deaktiviert
+      case 'trap.boycott.deactivate_ngo_movement':
+        if ((isNgoCard(card) || isMovementCard(card)) && (card as any).uid != null) {
+          enqueue({ type: 'DEACTIVATE_CARD', player: opp, targetUid: (card as any).uid });
+          log('Trap: Boykott-Kampagne – NGO/Bewegung deaktiviert.');
+          consumed.push(t);
+        }
+        break;
+
+      // Deepfake-Skandal: bei Diplomat – kein Einflusstransfer mehr möglich
+      case 'trap.deepfake.lock_diplomat_transfer':
+        if (isDiplomatCard(card)) {
+          state.effectFlags[playedBy].influenceTransferBlocked = true;
+          enqueue({ type: 'LOG', msg: 'Trap: Deepfake-Skandal – Einflusstransfer blockiert.' });
+          log('Trap: Deepfake-Skandal – influence transfer blocked.');
+          consumed.push(t);
+        }
+        break;
+
+      // Cyber-Attacke: Plattform-Karte wird deaktiviert (Balance: no destroy)
+      case 'trap.cyber_attack.destroy_platform':
+      case 'trap.cyber_attack.deactivate_platform':
+        if (isPlatformCard(card) && (card as any).uid != null) {
+          enqueue({ type: 'DEACTIVATE_CARD', player: opp, targetUid: (card as any).uid });
+          log('Trap: Cyber-Attacke – Plattform deaktiviert.');
+          consumed.push(t);
+        }
+        break;
+
+      // Grassroots-Widerstand: bei >2 Öffentlichkeitskarten – die gespielte wird deaktiviert
+      case 'trap.grassroots_resistance.deactivate_public':
+        if (isPublic && (card as any).uid != null && (state.board[playedBy]?.innen?.length || 0) >= 3) {
+          enqueue({ type: 'DEACTIVATE_CARD', player: opp, targetUid: (card as any).uid });
+          log('Trap: Grassroots-Widerstand – Öffentlichkeitskarte deaktiviert.');
+          consumed.push(t);
+        }
+        break;
+
+      // Massenproteste: bei 2. Regierungskarte in der Runde – beide stärksten Regierungen -1
+      case 'trap.mass_protests.debuff_two_govs':
+        if (isGovernment && (state.board[playedBy]?.aussen?.length || 0) >= 2) {
+          const govs = (state.board[playedBy].aussen || [])
+            .filter(c => c.kind === 'pol' && !(c as any).deactivated)
+            .slice()
+            .sort((a: any, b: any) => (b.influence + (b.tempBuffs||0) - (b.tempDebuffs||0)) - (a.influence + (a.tempBuffs||0) - (a.tempDebuffs||0)))
+            .slice(0, 2);
+          govs.forEach((g: any) => {
+            enqueue({ type: 'DEBUFF_CARD', player: opp, targetUid: g.uid, amount: 1, fromIntervention: true } as any);
+          });
+          log('Trap: Massenproteste – zwei Regierungskarten -1 Einfluss.');
+          consumed.push(t);
+        }
+        break;
+
+      // Berater-Affäre: Tier-1-Regierungskarte -2 Einfluss
+      case 'trap.advisor_scandal.minus2_gov_tier1':
+        if (isGovernment && ((card as any).T === 1 || (card as any).tier === 1) && (card as any).uid != null) {
+          enqueue({ type: 'DEBUFF_CARD', player: opp, targetUid: (card as any).uid, amount: 2, fromIntervention: true } as any);
+          log('Trap: Berater-Affäre – Tier-1-Regierung -2 Einfluss.');
+          consumed.push(t);
+        }
+        break;
+
+      // Parlament geschlossen: bei ≥2 Regierungskarten – keine weiteren Regierungskarten bis zum nächsten Zug des Spielers
+      case 'trap.parliament_closed.stop_more_gov':
+        if (isGovernment && (state.board[playedBy]?.aussen?.length || 0) >= 2) {
+          state.effectFlags[playedBy].cannotPlayMoreGovernment = true;
+          enqueue({ type: 'LOG', msg: `Trap: Parlament geschlossen – P${playedBy} kann bis zu seinem nächsten Zug keine weiteren Regierungskarten spielen.` });
+          log('Trap: Parlament geschlossen – government plays locked until next turn.');
+          consumed.push(t);
+        }
+        break;
+
+      // "Unabhängige" Untersuchung: gegnerische Intervention wird annulliert
+      case 'trap.independent_investigation.cancel_trap': {
+        const typeStr = String((card as any).type || '').toLowerCase();
+        if (typeStr.includes('intervention')) {
+          // Remove the just-registered trap (registration + card object) of playedBy
+          const list = ((state.traps as any)[playedBy] || []) as any[];
+          const cardName = (card as any).name;
+          const filtered = list.filter(entry => {
+            if (!entry) return false;
+            if (entry.name && entry.name === cardName) return false;
+            if (entry.key && typeof entry.key === 'string' && (card as any).effectKey && entry.key === (card as any).effectKey) return false;
+            return true;
+          });
+          if (filtered.length !== list.length) {
+            (state.traps as any)[playedBy] = filtered;
+            state.discard = state.discard || [];
+            state.discard.push(card);
+            enqueue({ type: 'LOG', msg: `Trap: "Unabhängige" Untersuchung – ${cardName} wurde annulliert.` });
+            log('Trap: Independent Investigation – intervention cancelled.');
+            playedCardCancelled = true;
+            consumed.push(t);
+          }
+        }
+        break;
+      }
+
+      // Soft Power-Kollaps: Diplomat -3 Einfluss
+      case 'trap.soft_power_collapse.minus3_diplomat':
+        if (isDiplomatCard(card) && (card as any).uid != null) {
+          enqueue({ type: 'DEBUFF_CARD', player: opp, targetUid: (card as any).uid, amount: 3, fromIntervention: true } as any);
+          log('Trap: Soft Power-Kollaps – Diplomat -3 Einfluss.');
+          consumed.push(t);
+        }
+        break;
+
+      // Cancel Culture: nur Oligarch/Medien-Öffentlichkeitskarten
+      case 'trap.cancel_culture.deactivate_public':
+        if (isPublic && (card as any).uid != null && (isOligarchCard(card) || isMediaLikeCard(card))) {
+          enqueue({ type: 'DEACTIVATE_CARD', player: opp, targetUid: (card as any).uid });
+          log('Trap: Cancel Culture – Oligarch/Medien-Karte deaktiviert.');
+          consumed.push(t);
+        }
+        break;
+
+      // Lobby Leak: bei NGO – Gegner muss 1 Karte abwerfen
+      case 'trap.lobby_leak.force_discard_on_ngo':
+        if (isNgoCard(card)) {
+          enqueue({ type: 'DISCARD_RANDOM_FROM_HAND', player: playedBy, amount: 1 });
+          log('Trap: Lobby Leak – Gegner wirft 1 Karte ab.');
+          consumed.push(t);
+        }
+        break;
+
+      // Satire-Show: bei Regierungskarte, wenn Gegner mehr Einfluss hat – -2 Einfluss
+      case 'trap.satire_show.minus2_enemy_gov':
+        if (isGovernment && (card as any).uid != null) {
+          try {
+            const { sumGovernmentInfluenceWithAuras } = require('./gameUtils');
+            const playedByTotal = sumGovernmentInfluenceWithAuras(state, playedBy);
+            const ownerTotal = sumGovernmentInfluenceWithAuras(state, opp);
+            if (playedByTotal >= ownerTotal) {
+              enqueue({ type: 'DEBUFF_CARD', player: opp, targetUid: (card as any).uid, amount: 2, fromIntervention: true } as any);
+              log('Trap: Satire-Show – Regierungskarte -2 Einfluss.');
+              consumed.push(t);
+            }
+          } catch (e) {
+            enqueue({ type: 'DEBUFF_CARD', player: opp, targetUid: (card as any).uid, amount: 2, fromIntervention: true } as any);
+            consumed.push(t);
+          }
+        }
+        break;
+
+      // Counterintelligence Sting: gegnerische Hand wird aufgedeckt
+      case 'trap.counterintel.reveal_hand':
+        enqueue({ type: 'REVEAL_OPPONENT_HAND', player: opp });
+        log('Trap: Counterintelligence Sting – Hand aufgedeckt.');
+        consumed.push(t);
+        break;
+
+      // Public Scandal: Regierungskarte -1 Einfluss
+      case 'trap.public_scandal.influence_penalty':
+        if (isGovernment && (card as any).uid != null) {
+          enqueue({ type: 'DEBUFF_CARD', player: opp, targetUid: (card as any).uid, amount: 1, fromIntervention: true } as any);
+          log('Trap: Public Scandal – Regierungskarte -1 Einfluss.');
+          consumed.push(t);
+        }
+        break;
+
+      // Scandal Spiral: when opponent already has a public card and plays another, cancel the new one
+      case 'trap.scandal_spiral.cancel_one_of_two':
+        if (isPublic && (card as any).uid != null && (state.board[playedBy]?.innen?.length || 0) >= 2) {
+          enqueue({ type: 'CANCEL_CARD', player: opp, targetUid: (card as any).uid });
+          log('Trap: Scandal Spiral – zweite Öffentlichkeitskarte annulliert.');
+          playedCardCancelled = true;
           consumed.push(t);
         }
         break;
@@ -173,7 +370,7 @@ export function applyTrapsOnCardPlayed(
         const totalDebuffMagnitude = Math.min(6, 2 + activistCount);
         const amount = -totalDebuffMagnitude;
 
-        enqueue({ type: 'DEBUFF_CARD', player: opp, targetUid: (card as any).uid, amount } as any);
+        enqueue({ type: 'DEBUFF_CARD', player: opp, targetUid: (card as any).uid, amount, fromIntervention: true } as any);
         const debuffMsg = `Trap: Whistleblower – government card gets ${amount} Influence (base -2 + activists ${activistCount}, capped at -6).`;
         enqueue({ type: 'LOG', msg: debuffMsg });
         // Immediate console log for better chronological trace before warnings
@@ -363,7 +560,8 @@ export function applyTrapsOnCardPlayed(
   // logic, attempt a more permissive board scan to remove any visual objects
   // that look like trap cards. This covers cases where visual card objects use
   // a simplified key or have no effectKey attached.
-  try {
+  // Only run when a trap actually fired this call.
+  if (consumed.length) try {
     // Build permissive fallback lists directly from `consumed` (available in
     // this scope) to avoid relying on the inner-scope `consumedKeys`/`consumedNames`.
     const fallbackKeysSet = new Set(consumed.map(c => (c as any).key).filter(Boolean).map(String));
@@ -411,4 +609,6 @@ export function applyTrapsOnCardPlayed(
       }
     }
   } catch (e) {}
+
+  return { cancelled: playedCardCancelled };
 }

@@ -181,7 +181,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         el.innerHTML = `<div style="display:flex;flex-direction:column;gap:8px;min-width:260px;">
           <div style="font-weight:700">Maulwurf — Ziel automatisch gewählt</div>
           <div>Gewähltes Ziel: <b>${targetName || 'Unbekannt'}</b></div>
-          <div>Probe: W6 ≥ ${requiredRoll || 2} (2 + Anzahl Regierungskarten)</div>
+          <div>Probe: W6 ≥ ${requiredRoll || 3} (3 + Anzahl Regierungskarten)</div>
           <div style="display:flex;gap:8px;justify-content:flex-end;">
             <button id="pc-maulwurf-roll" style="background:#2563eb;color:white;border:none;padding:6px 10px;border-radius:6px;cursor:pointer;">Würfeln</button>
             <button id="pc-maulwurf-cancel" style="background:#374151;color:white;border:none;padding:6px 10px;border-radius:6px;cursor:pointer;">Abbrechen</button>
@@ -251,7 +251,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
           <div style="font-weight:700">Tunnelvision — Regierungskarte Probe</div>
           <div>Einfluss: <b>${influence || 'Unbekannt'}</b></div>
           <div>Probe: W6 ≥ ${requiredRoll || 4} ${(influence || 0) >= 9 ? '(Einfluss 9+)' : '(Standard)'}</div>
-          <div style="font-size:12px;color:#666;">Bei Misserfolg: 2-3 Karte bleibt in Hand, 1 kritischer Misserfolg entfernt Karte dauerhaft</div>
+          <div style="font-size:12px;color:#666;">Bei Misserfolg bleibt die Karte in der Hand (1 AP wird abgezogen).</div>
           <div style="display:flex;gap:8px;justify-content:flex-end;">
             <button id="pc-tunnelvision-roll" style="background:#2563eb;color:white;border:none;padding:6px 10px;border-radius:6px;cursor:pointer;">Würfeln</button>
             <button id="pc-tunnelvision-cancel" style="background:#374151;color:white;border:none;padding:6px 10px;border-radius:6px;cursor:pointer;">Abbrechen</button>
@@ -854,7 +854,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         el.innerHTML = `<div style="display:flex;flex-direction:column;gap:8px;min-width:260px;">
           <div style="font-weight:700">Bestechungsskandal 2.0 — Ziel gewählt</div>
           <div>Gewähltes Ziel: <b>${card ? card.name : 'UID '+targetUid}</b></div>
-          <div>Probe: W6 ≥ Einfluss (inkl. Oligarch-Bonus)</div>
+          <div>Probe: W6 ≥ Einfluss</div>
           <div style="display:flex;gap:8px;justify-content:flex-end;">
             <button id="pc-corruption-roll" style="background:#2563eb;color:white;border:none;padding:6px 10px;border-radius:6px;cursor:pointer;">Würfeln</button>
             <button id="pc-corruption-cancel" style="background:#374151;color:white;border:none;padding:6px 10px;border-radius:6px;cursor:pointer;">Abbrechen</button>

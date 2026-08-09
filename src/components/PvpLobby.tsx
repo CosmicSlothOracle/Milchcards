@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { PvpStatus } from '../hooks/usePvpSession';
 import { PvpRole } from '../pvp/pvpRole';
+import { PRESET_DECKS } from '../data/presetDecks';
 
 interface PvpLobbyProps {
   configured: boolean;
@@ -10,7 +11,7 @@ interface PvpLobbyProps {
   error: string | null;
   onCreateRoom: () => void;
   onJoinRoom: (code: string) => void;
-  onStartMatch: () => void;
+  onStartMatch: (p1DeckName: string, p2DeckName: string) => void;
   onBack: () => void;
 }
 
@@ -26,6 +27,16 @@ const buttonBase: React.CSSProperties = {
   transition: 'all 0.2s',
 };
 
+const selectStyle: React.CSSProperties = {
+  background: 'rgba(15, 23, 42, 0.8)',
+  border: '1px solid rgba(148, 163, 184, 0.3)',
+  borderRadius: '8px',
+  padding: '10px 14px',
+  color: '#e8f0f8',
+  fontSize: '14px',
+  minWidth: '240px',
+};
+
 export const PvpLobby: React.FC<PvpLobbyProps> = ({
   configured,
   role,
@@ -38,10 +49,19 @@ export const PvpLobby: React.FC<PvpLobbyProps> = ({
   onBack,
 }) => {
   const [joinCode, setJoinCode] = useState('');
+  const [p1Deck, setP1Deck] = useState<string>('__random__');
+  const [p2Deck, setP2Deck] = useState<string>('__random__');
   const isHost = role === 'host';
   const isHostWaiting = isHost && status === 'waiting';
   const isReady = status === 'ready';
   const inRoom = Boolean(roomCode);
+
+  const resolveDeck = (value: string) => {
+    if (value === '__random__') {
+      return PRESET_DECKS[Math.floor(Math.random() * PRESET_DECKS.length)].name;
+    }
+    return value;
+  };
 
   return (
     <div
@@ -85,9 +105,8 @@ export const PvpLobby: React.FC<PvpLobbyProps> = ({
           lineHeight: 1.6,
         }}>
           <strong>PvP ist nicht konfiguriert.</strong><br />
-          Es fehlen die Firebase-Umgebungsvariablen
-          (<code>REACT_APP_FB_API_KEY</code>, <code>REACT_APP_FB_DATABASE_URL</code>).
-          Siehe <code>.env.example</code>.
+          Starte den lokalen Relay-Server mit <code>npm run pvp</code>
+          oder setze <code>REACT_APP_WS_URL</code>.
         </div>
       )}
 
@@ -102,7 +121,7 @@ export const PvpLobby: React.FC<PvpLobbyProps> = ({
               minWidth: '300px',
             }}
           >
-            🛠️ Raum erstellen (Host)
+            Raum erstellen (Host)
           </button>
 
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
@@ -168,25 +187,52 @@ export const PvpLobby: React.FC<PvpLobbyProps> = ({
 
           {isHostWaiting && (
             <div style={{ color: '#94a3b8', fontSize: '14px' }}>
-              ⏳ Warte auf Mitspieler … Teile den Code!
+              Warte auf Mitspieler … Teile den Code!
             </div>
           )}
 
           {isReady && isHost && (
             <div style={{ color: '#10b981', fontSize: '14px', fontWeight: 700 }}>
-              ✅ Mitspieler verbunden!
+              Mitspieler verbunden!
             </div>
           )}
 
           {isReady && !isHost && (
             <div style={{ color: '#10b981', fontSize: '14px', fontWeight: 700 }}>
-              ✅ Verbunden – warte auf Spielstart durch den Host…
+              Verbunden – warte auf Spielstart durch den Host…
+            </div>
+          )}
+
+          {isHost && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', alignItems: 'center' }}>
+              <label style={{ fontSize: '12px', color: '#94a3b8', letterSpacing: '1px' }}>
+                DECK SPIELER 1 (Host)
+                <div style={{ marginTop: 6 }}>
+                  <select value={p1Deck} onChange={(e) => setP1Deck(e.target.value)} style={selectStyle}>
+                    <option value="__random__">Zufällig</option>
+                    {PRESET_DECKS.map((d) => (
+                      <option key={d.name} value={d.name}>{d.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </label>
+              <label style={{ fontSize: '12px', color: '#94a3b8', letterSpacing: '1px' }}>
+                DECK SPIELER 2 (Gast)
+                <div style={{ marginTop: 6 }}>
+                  <select value={p2Deck} onChange={(e) => setP2Deck(e.target.value)} style={selectStyle}>
+                    <option value="__random__">Zufällig</option>
+                    {PRESET_DECKS.map((d) => (
+                      <option key={d.name} value={d.name}>{d.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </label>
             </div>
           )}
 
           {isHost && (
             <button
-              onClick={onStartMatch}
+              onClick={() => onStartMatch(resolveDeck(p1Deck), resolveDeck(p2Deck))}
               disabled={!isReady}
               style={{
                 ...buttonBase,
@@ -196,13 +242,13 @@ export const PvpLobby: React.FC<PvpLobbyProps> = ({
                 minWidth: '300px',
               }}
             >
-              🎮 Spiel starten
+              Spiel starten
             </button>
           )}
 
-          {isReady && (
+          {isReady && isHost && (
             <div style={{ color: '#64748b', fontSize: '12px', maxWidth: '380px', textAlign: 'center' }}>
-              Beide Spieler erhalten ein zufälliges Premade-Deck.
+              Wähle Premade-Decks für beide Spieler oder lasse sie zufällig zuweisen.
             </div>
           )}
         </div>
@@ -210,7 +256,7 @@ export const PvpLobby: React.FC<PvpLobbyProps> = ({
 
       {error && (
         <div style={{ color: '#fca5a5', fontSize: '14px', maxWidth: '420px', textAlign: 'center' }}>
-          ❌ {error}
+          {error}
         </div>
       )}
 

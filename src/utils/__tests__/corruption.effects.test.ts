@@ -22,26 +22,23 @@ function makeEmptyState(): any {
   } as any;
 }
 
-describe('Corruption effects - Adani / Navalny / Buffett', () => {
-  test('Adani sole oligarch grants +1 corruption bonus', () => {
+describe('Corruption effects - Navalny / balance', () => {
+  test('Adani no longer grants corruption bonus (raw W6 vs influence)', () => {
     const state = makeEmptyState();
-    // Actor is player 1
     state.board[1].innen.push({ uid: 101, name: 'Gautam Adani', kind: 'spec' });
-    // Victim has a government card of influence 3
     state.board[2].aussen.push({ uid: 201, name: 'Small Gov', kind: 'pol', influence: 3 });
 
-    // Resolve corruption steal resolve event
     resolveQueue(state, [{ type: 'CORRUPTION_STEAL_GOV_RESOLVE', player: 1, targetUid: 201 } as any]);
 
-    // Expect a log entry indicating Adani bonus applied
-    const found = state.log.find((l:string) => typeof l === 'string' && l.includes('Gautam Adani'));
-    expect(found).toBeDefined();
+    const adaniLog = state.log.find((l:string) => typeof l === 'string' && l.includes('Gautam Adani'));
+    expect(adaniLog).toBeUndefined();
+    const rollLog = state.log.find((l:string) => typeof l === 'string' && l.includes('Bribery Scandal 2.0: Roll'));
+    expect(rollLog).toBeDefined();
+    expect(rollLog).not.toMatch(/\+/); // no oligarch stacking in roll line
   });
 
   test('Navalny on victim subtracts 1 from corruption total', () => {
     const state = makeEmptyState();
-    // Actor has no oligarchs
-    // Victim has Navalny in public
     state.board[2].innen.push({ uid: 301, name: 'Alexei Navalny', kind: 'spec' });
     state.board[2].aussen.push({ uid: 302, name: 'Target Gov', kind: 'pol', influence: 6 });
 
@@ -56,7 +53,6 @@ describe('Corruption effects - Adani / Navalny / Buffett', () => {
     state.board[1].innen.push({ uid: 401, name: 'Warren Buffett', kind: 'spec' });
     (state as any)._playedGovernmentThisTurn = {1:false,2:false};
 
-    // No events but ensure presence and flags accessible
     const hasBuffett = state.board[1].innen.some((c:any)=>c.name==='Warren Buffett');
     expect(hasBuffett).toBe(true);
   });

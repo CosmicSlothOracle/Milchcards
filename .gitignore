@@ -1,3 +1,6 @@
+# Local toolchain (portable Node etc.)
+.tools/
+
 # Dependencies
 node_modules/
 npm-debug.log*

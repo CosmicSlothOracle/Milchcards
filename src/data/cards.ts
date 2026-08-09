@@ -111,7 +111,7 @@ export const CARDS: CardDef[] = [
   T('trap.internal_faction_strife', 'Internal Faction Strife', ['Trap','Cancel'], 5, 'trap.internal_faction_strife.cancel_big_initiative'),
   T('trap.boycott', 'Boycott Campaign', ['Trap','Deactivate'], 4, 'trap.boycott.deactivate_ngo_movement'),
   T('trap.deepfake', 'Deepfake Scandal', ['Trap','Lock'], 5, 'trap.deepfake.lock_diplomat_transfer'),
-  T('trap.cyber_attack', 'Cyber Attack', ['Trap','Destroy'], 5, 'trap.cyber_attack.destroy_platform'),
+  T('trap.cyber_attack', 'Cyber Attack', ['Trap','Deactivate'], 5, 'trap.cyber_attack.deactivate_platform'),
   I('corruption.bribery_v2', 'Bribery Scandal 2.0', ['Corruption','Dice','Control'], 5, 'corruption.bribery_v2.steal_gov_w6'),
   T('trap.grassroots_resistance', 'Grassroots Resistance', ['Trap','Deactivate'], 4, 'trap.grassroots_resistance.deactivate_public'),
   T('trap.mass_protests', 'Mass Protests', ['Trap','Debuff'], 4, 'trap.mass_protests.debuff_two_govs'),

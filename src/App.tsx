@@ -20,10 +20,12 @@ import { MainMenu } from './components/MainMenu';
 import { Credits } from './components/Credits';
 import { RotateDeviceOverlay } from './components/RotateDeviceOverlay';
 import { PvpLobby } from './components/PvpLobby';
+import { ActionFeedback } from './components/ActionFeedback';
+import { VictoryOverlay } from './components/VictoryOverlay';
 import { useMobileLayout } from './hooks/useMobileLayout';
 import { usePvpSession } from './hooks/usePvpSession';
 import { PvpAction, RELAYED_ENGINE_EVENTS } from './pvp/types';
-import { presetToBuilderEntries, randomPresetDeck } from './data/presetDecks';
+import { presetToBuilderEntries, PRESET_DECKS, randomPresetDeck } from './data/presetDecks';
 
 type AppState = 'intro' | 'menu' | 'deckbuilder' | 'game' | 'credits' | 'pvp-lobby';
 
@@ -110,9 +112,9 @@ function AppContent() {
     }
   }, [gameState, pvpRole, pvp.status, pvpPublishState]);
 
-  const handleStartPvpMatch = useCallback(() => {
-    const p1Preset = randomPresetDeck();
-    const p2Preset = randomPresetDeck();
+  const handleStartPvpMatch = useCallback((p1DeckName: string, p2DeckName: string) => {
+    const p1Preset = PRESET_DECKS.find(d => d.name === p1DeckName) || randomPresetDeck();
+    const p2Preset = PRESET_DECKS.find(d => d.name === p2DeckName) || randomPresetDeck();
     log(`🌐 PvP: P1 erhält "${ p1Preset.name }", P2 erhält "${ p2Preset.name }"`);
     setAiEnabled(false);
     startMatchWithDecks(
@@ -127,6 +129,7 @@ function AppContent() {
   const pendingAbility = pendingAbilitySelect?.type;
   const corruptionActive = pendingAbility === 'corruption_steal';
   const maulwurfActive = pendingAbility === 'maulwurf_steal';
+  const tunnelvisionActive = pendingAbility === 'tunnelvision_probe';
 
   const requestPendingDiceRoll = useCallback(() => {
     const sel = pendingAbilitySelect;
@@ -138,6 +141,15 @@ function AppContent() {
     } else if (sel.type === 'corruption_steal' && sel.targetUid) {
       window.dispatchEvent(new CustomEvent('pc:corruption_request_roll', {
         detail: { player: sel.actorPlayer, targetUid: sel.targetUid },
+      }));
+    } else if (sel.type === 'tunnelvision_probe') {
+      window.dispatchEvent(new CustomEvent('pc:tunnelvision_request_roll', {
+        detail: {
+          player: sel.actorPlayer,
+          targetUid: sel.targetUid,
+          requiredRoll: sel.requiredRoll,
+          influence: sel.influence,
+        },
       }));
     }
   }, [pendingAbilitySelect]);
@@ -164,9 +176,11 @@ function AppContent() {
     };
 
     window.addEventListener('pc:corruption_resolved', handleCorruptionResolved as EventListener);
+    window.addEventListener('pc:probe_resolved', handleCorruptionResolved as EventListener);
     window.addEventListener('pc:corruption_roll_started', handleCorruptionRoll as EventListener);
     return () => {
       window.removeEventListener('pc:corruption_resolved', handleCorruptionResolved as EventListener);
+      window.removeEventListener('pc:probe_resolved', handleCorruptionResolved as EventListener);
       window.removeEventListener('pc:corruption_roll_started', handleCorruptionRoll as EventListener);
     };
   }, []);
@@ -192,6 +206,12 @@ function AppContent() {
         body: 'Ziel ist markiert. Würfle, um die Übernahme zu prüfen.',
       };
     }
+    if (tunnelvisionActive) {
+      return {
+        title: 'Tunnelvision-Probe',
+        body: 'Würfle, um die Regierungskarte platzieren zu dürfen.',
+      };
+    }
     if (selectedHandIndex !== null) {
       return {
         title: 'Slot wählen',
@@ -202,7 +222,7 @@ function AppContent() {
       title: 'Handkarte auswählen',
       body: 'Wähle eine Karte aus deiner Hand, um eine Aktion zu starten.',
     };
-  }, [appState, corruptionActive, maulwurfActive, selectedHandIndex]);
+  }, [appState, corruptionActive, maulwurfActive, tunnelvisionActive, selectedHandIndex]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -648,20 +668,35 @@ function AppContent() {
                 onPlayCard={handlePlayCardFromModal}
               />
 
-              {actionHint && (
+              {actionHint && !gameState.gameWinner && (
                 <div className={`action-hint${ mobile.isMobile ? ' action-hint--mobile' : '' }`}>
                   <div className="action-hint__title">{actionHint.title}</div>
                   <div className="action-hint__body">{actionHint.body}</div>
                 </div>
               )}
 
+              <ActionFeedback />
+              <VictoryOverlay
+                gameState={gameState}
+                localPlayer={pvpRole === 'guest' ? 2 : 1}
+                onBackToMenu={() => {
+                  if (pvpRole) pvp.leaveRoom();
+                  setAppState('menu');
+                }}
+                onPlayAgain={() => {
+                  if (pvpRole) pvp.leaveRoom();
+                  startNewGame();
+                  setAppState('menu');
+                }}
+              />
+
               {!mobile.isTouch && <CardHoverInfoPanel hovered={hoveredCard} />}
 
               {/* Dice Roller centered for events */}
-              <div className={`game-dice${ corruptionActive || maulwurfActive ? ' game-dice--highlight' : '' }${ diceOutcome === 'success' ? ' game-dice--success' : '' }${ diceOutcome === 'fail' ? ' game-dice--fail' : '' }${ diceRolling ? ' game-dice--rolling' : '' }${ mobile.isMobile ? ' game-dice--mobile' : '' }`}>
+              <div className={`game-dice${ corruptionActive || maulwurfActive || tunnelvisionActive ? ' game-dice--highlight' : '' }${ diceOutcome === 'success' ? ' game-dice--success' : '' }${ diceOutcome === 'fail' ? ' game-dice--fail' : '' }${ diceRolling ? ' game-dice--rolling' : '' }${ mobile.isMobile ? ' game-dice--mobile' : '' }`}>
                 <SimpleDice
                   size={diceSize}
-                  onClick={corruptionActive || maulwurfActive ? requestPendingDiceRoll : undefined}
+                  onClick={corruptionActive || maulwurfActive || tunnelvisionActive ? requestPendingDiceRoll : undefined}
                   onRoll={(f) => {
                     try {
                       window.dispatchEvent(new CustomEvent('pc:dice_result', { detail: { roll: f } }));

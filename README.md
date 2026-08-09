@@ -90,8 +90,19 @@ Turn-based game engine with AI opponent, deck builder, and 600+ simulated balanc
 git clone https://github.com/CosmicSlothOracle/Milchcards.git
 cd Milchcards
 npm install
-npm run dev
+npm run pvp:install   # once: WebSocket relay deps
+npm run dev           # CRA client on :3000
+# in a second terminal:
+npm run pvp           # 1v1 relay on :8081
+# or both together:
+npm run dev:all
 ```
+
+Set `REACT_APP_WS_URL` (see `.env.example`) if the relay is not on `ws://localhost:8081`.
+
+### 1v1 Online PvP
+
+Host-authoritative WebSocket relay in [`server/`](server/). Create/join a room code, pick premade decks, play. Deploy the relay with [`render.yaml`](render.yaml) (binds `0.0.0.0:$PORT`).
 
 Production build deploys via [`netlify.toml`](netlify.toml) — push to `main` and Netlify rebuilds automatically.
 

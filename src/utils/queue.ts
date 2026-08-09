@@ -10,6 +10,17 @@ import {
 } from './logs';
 import { getGlobalRNG } from '../services/rng';
 import { logger } from '../debug/logger';
+import {
+  consumeProtection,
+  findActivePublicCard,
+  isAiRelatedInitiativeName,
+  isMediaLikeCard,
+  isNgoCard,
+  isOligarchCard,
+  isPlatformCard,
+  isUsGovernmentCard,
+  strongestActiveGov,
+} from './cardClassification';
 // Helper to find strongest government uid for new intents
 function strongestGovernmentUid(state: GameState, p: Player): number | null {
   const govRow = state.board[p]?.aussen as PoliticianCard[];
@@ -190,6 +201,10 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
       case 'DEACTIVATE_CARD': {
         const card = findCardByUidOnBoard(state, ev.targetUid);
         if (card) {
+          if (consumeProtection(card, state.shields as Set<number> | undefined)) {
+            logPush(state, `🛡️ ${card.name} war geschützt – Deaktivierung verhindert (Schutz verbraucht).`);
+            break;
+          }
           (card as any).deactivated = true;
           logPush(state, logDeactivateCard(card.name));
 
@@ -253,30 +268,29 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
       }
 
       case 'REMOVE_OTHER_OLIGARCHS': {
+        // Balance: only remove opponent oligarchs (not both boards / self)
+        const actor = (ev as any).player as Player;
+        const victim = other(actor);
         const oligarchNames = ['Elon Musk', 'Bill Gates', 'George Soros', 'Warren Buffett', 'Mukesh Ambani', 'Jeff Bezos', 'Alisher Usmanov', 'Gautam Adani', 'Jack Ma', 'Zhang Yiming', 'Roman Abramovich'];
         let removedCount = 0;
 
-        // Durchsuche alle Spieler und alle Lanes nach Oligarchen (außer Jeff Bezos selbst)
-        for (const p of [1, 2] as const) {
-          for (const lane of ['innen', 'aussen', 'sofort'] as const) {
-            const cards = state.board[p][lane];
-            for (let i = cards.length - 1; i >= 0; i--) {
-              const card = cards[i];
-              if (oligarchNames.includes(card.name) && card.name !== 'Jeff Bezos') {
-                // Entferne die Karte vom Spielfeld
-                const removedCard = cards.splice(i, 1)[0];
-                state.discard.push(removedCard);
-                removedCount++;
-                logPush(state, `🗑️ ${removedCard.name} wurde von Jeff Bezos entfernt`);
-              }
+        for (const lane of ['innen', 'aussen', 'sofort'] as const) {
+          const cards = state.board[victim][lane];
+          for (let i = cards.length - 1; i >= 0; i--) {
+            const card = cards[i];
+            if (oligarchNames.includes(card.name) && card.name !== 'Jeff Bezos') {
+              const removedCard = cards.splice(i, 1)[0];
+              state.discard.push(removedCard);
+              removedCount++;
+              logPush(state, `🗑️ ${removedCard.name} wurde von Jeff Bezos entfernt`);
             }
           }
         }
 
         if (removedCount > 0) {
-          logPush(state, `🔥 Jeff Bezos hat ${removedCount} Oligarchen vom Spielfeld entfernt`);
+          logPush(state, `🔥 Jeff Bezos hat ${removedCount} gegnerische Oligarchen entfernt`);
         } else {
-          logPush(state, `ℹ️ Jeff Bezos: Keine anderen Oligarchen auf dem Spielfeld gefunden`);
+          logPush(state, `ℹ️ Jeff Bezos: Keine gegnerischen Oligarchen auf dem Spielfeld gefunden`);
         }
         break;
       }
@@ -368,9 +382,222 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
       case 'DEBUFF_CARD': {
         const card = findCardByUidOnBoard(state, ev.targetUid);
         if (card && card.kind === 'pol') {
+          if (consumeProtection(card, state.shields as Set<number> | undefined)) {
+            logPush(state, `🛡️ ${card.name} war geschützt – Debuff verhindert (Schutz verbraucht).`);
+            break;
+          }
+          let magnitude = Math.abs((ev as any).amount);
+          // Alternative Fakten: enemy interventions have -1 effect (min 0)
+          if ((ev as any).fromIntervention) {
+            const slot = findCardSlotByUid(state, ev.targetUid);
+            if (slot) {
+              const owner = slot.player;
+              const perm = state.permanentSlots?.[owner];
+              const hasAltFakten = perm?.public?.name === 'Alternative Fakten' || perm?.government?.name === 'Alternative Fakten';
+              if (hasAltFakten && magnitude > 0) {
+                magnitude -= 1;
+                logPush(state, `🪧 Alternative Fakten: Interventions-Wirkung um 1 reduziert (${magnitude}).`);
+              }
+            }
+          }
+          if (magnitude <= 0) break;
           const tgt = card as any;
-          tgt.tempDebuffs = (tgt.tempDebuffs || 0) + Math.abs((ev as any).amount);
-          logPush(state, `🔻 ${tgt.name}: -${Math.abs((ev as any).amount)} Influence`);
+          tgt.tempDebuffs = (tgt.tempDebuffs || 0) + magnitude;
+          logPush(state, `🔻 ${tgt.name}: -${magnitude} Influence`);
+        }
+        break;
+      }
+
+      // === Dynamic, board-dependent effects ===
+
+      case 'SHADOW_LOBBYING_BUFF': {
+        const p = ev.player;
+        const ownBoard = [...state.board[p].innen, ...state.board[p].aussen];
+        const oligarchCount = ownBoard.filter(c => isOligarchCard(c) && !(c as any).deactivated).length;
+        const amt = Math.min(oligarchCount, 3);
+        if (amt > 0) {
+          events.unshift({ type: 'BUFF_STRONGEST_GOV', player: p, amount: amt });
+          events.unshift({ type: 'LOG', msg: `Shadow Lobbying: stärkste Regierung +${amt} Einfluss (pro Oligarch, max 3).` });
+        } else {
+          events.unshift({ type: 'LOG', msg: 'Shadow Lobbying: Keine Oligarchen – kein Einfluss-Buff.' });
+        }
+        break;
+      }
+
+      case 'DIGITAL_CAMPAIGN_DRAW': {
+        const p = ev.player;
+        const ownBoard = [...state.board[p].innen, ...state.board[p].aussen];
+        const mediaCount = ownBoard.filter(c => isMediaLikeCard(c) && !(c as any).deactivated).length;
+        const draws = Math.min(2, mediaCount); // Balance: hard cap at 2
+        if (draws > 0) {
+          events.unshift({ type: 'DRAW_CARDS', player: p, amount: draws });
+          events.unshift({ type: 'LOG', msg: `Digitaler Wahlkampf: ziehe ${draws} Karte(n) (pro Medien-/Plattform-Karte, max 2).` });
+        } else {
+          events.unshift({ type: 'LOG', msg: 'Digitaler Wahlkampf: Keine Medien-Karten auf dem Feld – keine Karten gezogen.' });
+        }
+        break;
+      }
+
+      case 'ALGO_DISCOURSE_DEBUFF': {
+        const p = ev.player;
+        const opp = other(p);
+        const oppPublic = state.board[opp].innen || [];
+        const platformCount = oppPublic.filter(c =>
+          !(c as any).deactivated && (isPlatformCard(c) || c.name === 'Sam Altman')
+        ).length;
+        const amt = Math.min(platformCount, 3);
+        if (amt > 0) {
+          events.unshift({ type: 'BUFF_STRONGEST_GOV', player: opp, amount: -amt });
+          events.unshift({ type: 'LOG', msg: `Algorithmischer Diskurs: gegnerische stärkste Regierung -${amt} Einfluss (pro Plattform/KI-Karte).` });
+        } else {
+          events.unshift({ type: 'LOG', msg: 'Algorithmischer Diskurs: Keine gegnerischen Plattform/KI-Karten – kein Malus.' });
+        }
+        break;
+      }
+
+      case 'WHATABOUTISM_REACTIVATE': {
+        const p = ev.player;
+        const own = [...state.board[p].aussen, ...state.board[p].innen];
+        const deactivated = own.filter(c => (c as any).deactivated);
+        // Prefer the strongest deactivated government card, otherwise any public card
+        const target = (deactivated.filter(c => c.kind === 'pol') as PoliticianCard[])
+          .sort((a, b) => (b.influence || 0) - (a.influence || 0))[0] || deactivated[0];
+        if (target) {
+          (target as any).deactivated = false;
+          if (target.kind === 'pol') {
+            (target as any).tempDebuffs = ((target as any).tempDebuffs || 0) + 2; // Balance: −2
+            events.unshift({ type: 'LOG', msg: `Whataboutism: ${target.name} reaktiviert (-2 Einfluss).` });
+          } else {
+            events.unshift({ type: 'LOG', msg: `Whataboutism: ${target.name} reaktiviert.` });
+          }
+        } else {
+          events.unshift({ type: 'LOG', msg: 'Whataboutism: Keine deaktivierte eigene Karte gefunden – Effekt verpufft.' });
+        }
+        break;
+      }
+
+      case 'PROTECT_STRONGEST_GOV': {
+        const p = ev.player;
+        const target = strongestActiveGov(state.board[p].aussen);
+        if (target) {
+          (target as any).protectedOnce = true;
+          events.unshift({ type: 'LOG', msg: `🛡️ ${target.name} ist einmalig vor Deaktivierung/Debuffs geschützt.` });
+        } else {
+          events.unshift({ type: 'LOG', msg: 'Schutz: Keine eigene Regierungskarte im Spiel – Effekt verpufft.' });
+        }
+        break;
+      }
+
+      case 'SET_NEXT_INITIATIVE_AP_BONUS': {
+        const p = ev.player;
+        const flags = state.effectFlags[p];
+        flags.apBonusInitiativeNext = (flags.apBonusInitiativeNext || 0) + (ev as any).amount;
+        events.unshift({ type: 'LOG', msg: `Nächste Initiative: +${(ev as any).amount} AP vorgemerkt.` });
+        break;
+      }
+
+      case 'REVEAL_OPPONENT_HAND': {
+        const opp = other(ev.player);
+        const names = (state.hands[opp] || []).map(c => c.name).join(', ') || '(leer)';
+        events.unshift({ type: 'LOG', msg: `🕵️ Gegnerische Hand aufgedeckt: ${names}` });
+        break;
+      }
+
+      case 'DESTROY_CARD': {
+        const card = findCardByUidOnBoard(state, ev.targetUid);
+        if (card) {
+          if (consumeProtection(card, state.shields as Set<number> | undefined)) {
+            logPush(state, `🛡️ ${card.name} war geschützt – Zerstörung verhindert (Schutz verbraucht).`);
+            break;
+          }
+          for (const p of [1, 2] as const) {
+            for (const lane of ['innen', 'aussen', 'sofort'] as const) {
+              const idx = state.board[p][lane].findIndex(c => c.uid === ev.targetUid);
+              if (idx !== -1) {
+                state.board[p][lane].splice(idx, 1);
+                state.discard.push(card);
+                logPush(state, `💥 ${card.name} wurde zerstört.`);
+              }
+            }
+          }
+        }
+        break;
+      }
+
+      case 'SOROS_AP_CHECK': {
+        const p = ev.player;
+        const oppGov = state.board[other(p)].aussen.filter(c => c.kind === 'pol' && !(c as any).deactivated);
+        if (oppGov.length > 0) {
+          events.unshift({ type: 'ADD_AP', player: p, amount: 1 });
+          events.unshift({ type: 'LOG', msg: 'George Soros: Gegner hat Regierungskarte(n) → +1 AP.' });
+        } else {
+          events.unshift({ type: 'LOG', msg: 'George Soros: Gegner hat keine Regierungskarte – kein AP-Bonus.' });
+        }
+        break;
+      }
+
+      case 'SNOWDEN_DEBUFF_US_GOV': {
+        const opp = other(ev.player);
+        const target = (state.board[opp].aussen || []).find(c => isUsGovernmentCard(c) && !(c as any).deactivated);
+        if (target) {
+          events.unshift({ type: 'DEBUFF_CARD', player: opp, targetUid: (target as any).uid, amount: 1 });
+          events.unshift({ type: 'LOG', msg: `Edward Snowden: US-Regierungskarte ${target.name} -1 Einfluss.` });
+        }
+        break;
+      }
+
+      case 'ASSANGE_DRAW': {
+        const p = ev.player;
+        const hasNgo = [...state.board[p].innen, ...state.board[p].aussen].some(c => isNgoCard(c) && !(c as any).deactivated);
+        const ownDraw = hasNgo ? 2 : 1;
+        events.unshift({ type: 'DRAW_CARDS', player: other(p), amount: 1 });
+        events.unshift({ type: 'DRAW_CARDS', player: p, amount: ownDraw });
+        events.unshift({ type: 'LOG', msg: `Julian Assange: ziehe ${ownDraw} Karte(n)${hasNgo ? ' (NGO-Bonus)' : ''}, Gegner zieht 1.` });
+        break;
+      }
+
+      case 'HARARI_PLATFORM_AP': {
+        const p = ev.player;
+        const hasPlatform = state.board[p].innen.some((c: Card) => isPlatformCard(c) && !(c as any).deactivated);
+        if (hasPlatform) {
+          events.unshift({ type: 'ADD_AP', player: p, amount: 1 });
+          events.unshift({ type: 'LOG', msg: 'Yuval Noah Harari: Plattform vorhanden → +1 AP.' });
+        }
+        break;
+      }
+
+      case 'SET_NEXT_GOV_PLUS2': {
+        state.effectFlags[ev.player].nextGovPlus2 = true;
+        events.unshift({ type: 'LOG', msg: 'Think-tank: Nächste Regierungskarte erhält +2 Einfluss.' });
+        break;
+      }
+
+      case 'SET_DRAW_PENALTY': {
+        state.effectFlags[ev.player].drawPenaltyNextDraw = true;
+        events.unshift({ type: 'LOG', msg: `P${ev.player} zieht am Zugende 1 Karte weniger (Mukesh Ambani).` });
+        break;
+      }
+
+      case 'SKANDALSPIRALE_TRIGGER': {
+        const sumGov = (p: Player) => (state.board[p].aussen || []).reduce((a, c) => {
+          if (c.kind !== 'pol' || (c as any).deactivated) return a;
+          const pc = c as PoliticianCard;
+          return a + pc.influence + (pc.tempBuffs || 0) - (pc.tempDebuffs || 0);
+        }, 0);
+        const p1 = sumGov(1);
+        const p2 = sumGov(2);
+        const loser: Player = p1 <= p2 ? 1 : 2;
+        const roll = 1 + rng.randomInt(6);
+        if (typeof window !== 'undefined') {
+          try {
+            window.dispatchEvent(new CustomEvent('pc:engine_dice_result', { detail: { roll, player: loser } }));
+          } catch (e) { /* UI only */ }
+        }
+        if (roll <= 3) {
+          events.unshift({ type: 'BUFF_STRONGEST_GOV', player: loser, amount: -roll });
+          events.unshift({ type: 'LOG', msg: `Skandalspirale: P${loser} (weniger Einfluss) würfelt ${roll} → stärkste Regierung -${roll}.` });
+        } else {
+          events.unshift({ type: 'LOG', msg: `Skandalspirale: P${loser} würfelt ${roll} → keine Auswirkung.` });
         }
         break;
       }
@@ -378,21 +605,40 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
       // ===== New intent event handlers =====
 
       case 'DEACTIVATE_STRONGEST_ENEMY_GOV': {
+        // Balance: −3 influence instead of full deactivate
         const opp: Player = ev.player === 1 ? 2 : 1;
         const uid = strongestGovernmentUid(state, opp);
         if (uid !== null) {
-          events.unshift({ type: 'DEACTIVATE_CARD', player: opp, targetUid: uid });
-          events.unshift({ type: 'LOG', msg: 'Party Offensive: strongest enemy Government deactivated.' });
+          events.unshift({ type: 'DEBUFF_CARD', player: opp, targetUid: uid, amount: 3 });
+          events.unshift({ type: 'LOG', msg: 'Partei-Offensive: stärkste gegnerische Regierung −3 Einfluss.' });
         } else {
-          events.unshift({ type: 'LOG', msg: 'Party Offensive: no enemy Government to deactivate.' });
+          events.unshift({ type: 'LOG', msg: 'Partei-Offensive: keine gegnerische Regierung gefunden.' });
         }
         break;
       }
 
       case 'LOCK_OPPONENT_INITIATIVES_EOT': {
+        // Balance: lock Sofort-Initiativen only (not Dauerhaft / traps)
         const opp: Player = ev.player === 1 ? 2 : 1;
         state.effectFlags[opp].initiativesLocked = true;
-        events.unshift({ type: 'LOG', msg: 'Opposition Blockade: opponent initiatives locked until end of turn.' });
+        events.unshift({ type: 'LOG', msg: 'Oppositionsblockade: Gegner kann keine Sofort-Initiativen spielen (bis zu seinem nächsten Zug).' });
+        break;
+      }
+
+      case 'TIM_COOK_AP': {
+        const p = ev.player as Player;
+        // +1 AP, or +2 if another Platform is already on board (exclude Tim Cook himself)
+        const hasOtherPlatform = (state.board[p].innen || []).some(
+          (c: Card) => isPlatformCard(c) && !(c as any).deactivated && c.name !== 'Tim Cook'
+        );
+        const amount = hasOtherPlatform ? 2 : 1;
+        events.unshift({ type: 'ADD_AP', player: p, amount });
+        events.unshift({
+          type: 'LOG',
+          msg: hasOtherPlatform
+            ? 'Tim Cook: +2 AP (Plattform bereits auf dem Feld).'
+            : 'Tim Cook: +1 AP.',
+        });
         break;
       }
 
@@ -460,28 +706,11 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
         }
         const target = state.board[victim].aussen[targetIdx] as any;
 
-        // Oligarch bonus (existing) + special Gautam Adani rule
-        const pubCards = state.board[actor as Player].innen || [];
-        const oligarchList = pubCards.filter((c: any) => {
-          const sub = (require('../data/cardDetails') as any).getCardDetails?.(c.name)?.subcategories as string[] | undefined;
-          const hasNewTag = Array.isArray(sub) && sub.includes('Oligarch');
-          const legacy = (c as any).tag === 'Oligarch';
-          return hasNewTag || legacy;
-        });
-        const oligarchCount = oligarchList.length;
-
-        // Adani special: if the actor has exactly one oligarch and it's Gautam Adani, grant +1 to the corruption roll
-        let adaniBonus = 0;
-        if (oligarchCount === 1 && oligarchList[0] && (oligarchList[0] as any).name === 'Gautam Adani' && !(oligarchList[0] as any).deactivated) {
-          adaniBonus = 1;
-          events.unshift({ type: 'LOG', msg: 'Gautam Adani: sole oligarch -> +1 corruption bonus applied.' });
-        }
-
-        // Apply oligarchCount as existing bonus and Adani bonus (Adani stacks with count to allow future designs)
-        const total = roll + oligarchCount + adaniBonus;
+        // Balance: raw W6 vs influence only (no oligarch/Adani stacking)
+        const total = roll;
         const targetInfluence = target.influence + (target.tempBuffs||0) - (target.tempDebuffs||0);
 
-        // Dispatch the calculated roll to UI for 3D dice display (send raw roll without modifiers for visual fidelity)
+        // Dispatch the calculated roll to UI for 3D dice display
         if (typeof window !== 'undefined') {
           try {
             console.log('🎲 ENGINE: Dispatching calculated roll to UI:', roll);
@@ -492,9 +721,9 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
             console.error('🎲 ENGINE: Error dispatching dice result:', e);
           }
         }
-        events.unshift({ type: 'LOG', msg: `Bribery Scandal 2.0: Roll ${roll} +${oligarchCount}${adaniBonus ? ' +Adani' : ''} = ${total} vs ${targetInfluence} (${target.name}).` });
+        events.unshift({ type: 'LOG', msg: `Bribery Scandal 2.0: Roll ${roll} vs ${targetInfluence} (${target.name}).` });
 
-        // Navalny defensive effect: if victim has Alexei Navalny on board, subtract 1 from total (applies before comparison)
+        // Navalny defensive effect: if victim has Alexei Navalny on board, subtract 1 from total
         const victimPub = state.board[victim].innen || [];
         const hasNavalny = victimPub.some((c:any) => c.kind === 'spec' && c.name === 'Alexei Navalny' && !c.deactivated);
         let navalnyPenalty = 0;
@@ -539,6 +768,11 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
                 type: 'bribery'
               }
             }));
+            try {
+              const { feedbackSuccess, feedbackFail } = require('./feedback');
+              if (corruptionSuccess) feedbackSuccess('Bestechung erfolgreich', 'Regierungskarte übernommen.');
+              else feedbackFail('Bestechung gescheitert', 'Wurf zu niedrig.');
+            } catch { /* ignore */ }
           } catch (e) {
             console.error('🎲 ENGINE: Error dispatching corruption resolved', e);
           }
@@ -567,8 +801,8 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
           current.influence < weakest.influence ? current : weakest
         );
 
-        // Calculate required roll: base 2 + number of opponent government cards
-        const requiredRoll = 2 + oppGovCards.length;
+        // Balance: base 3 + opponent government count (harder probe)
+        const requiredRoll = 3 + oppGovCards.length;
 
         // Signal UI that player must roll dice for the automatically selected target
         (state as any).pendingAbilitySelect = {
@@ -580,7 +814,7 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
 
         console.log('🔥 SET pendingAbilitySelect for Maulwurf:', (state as any).pendingAbilitySelect);
         events.unshift({ type: 'LOG', msg: `Maulwurf: Schwächste Regierungskarte ${weakestCard.name} (Einfluss ${weakestCard.influence}) automatisch gewählt.` });
-        events.unshift({ type: 'LOG', msg: `Maulwurf: Würfle mindestens ${requiredRoll} (2 + ${oppGovCards.length} Regierungskarten).` });
+        events.unshift({ type: 'LOG', msg: `Maulwurf: Würfle mindestens ${requiredRoll} (3 + ${oppGovCards.length} Regierungskarten).` });
 
         // Trigger UI hook to show dice roll
         if (typeof window !== 'undefined') {
@@ -627,9 +861,9 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
         }
         const target = state.board[victim].aussen[targetIdx] as any;
 
-        // Calculate required roll: base 2 + number of opponent government cards
+        // Balance: base 3 + opponent government count
         const oppGovCards = state.board[victim].aussen.filter(c => c.kind === 'pol') as any[];
-        const requiredRoll = 2 + oppGovCards.length;
+        const requiredRoll = 3 + oppGovCards.length;
 
         // Dispatch the calculated roll to UI for 3D dice display
         if (typeof window !== 'undefined') {
@@ -680,6 +914,11 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
                 type: 'mole'
               }
             }));
+            try {
+              const { feedbackSuccess, feedbackFail } = require('./feedback');
+              if (corruptionSuccess) feedbackSuccess('Maulwurf erfolgreich', 'Regierungskarte übernommen.');
+              else feedbackFail('Maulwurf gescheitert', 'Wurf zu niedrig.');
+            } catch { /* ignore */ }
           } catch (e) {
             console.error('🎲 ENGINE: Error dispatching maulwurf resolved', e);
           }
@@ -747,25 +986,23 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
             hand.splice(cardIndex, 1);
             state.board[actor as Player].aussen.push(card as any);
             events.unshift({ type: 'LOG', msg: `Tunnelvision: ${card.name} erfolgreich in Regierung platziert.` });
+            if (typeof window !== 'undefined') {
+              try {
+                const { feedbackSuccess } = require('./feedback');
+                feedbackSuccess('Probe bestanden', `${card.name} in der Regierung.`);
+                window.dispatchEvent(new CustomEvent('pc:probe_resolved', { detail: { success: true, targetUid, type: 'tunnelvision' } }));
+              } catch { /* ignore */ }
+            }
           }
         } else {
-          // Failure: Different outcomes based on roll
-          if (roll === 1) {
-            // Critical failure: Remove card from game permanently
-            events.unshift({ type: 'LOG', msg: 'Tunnelvision: Kritischer Misserfolg! Regierungskarte wird dauerhaft aus dem Spiel entfernt.' });
-
-            // Remove card from hand and add to discard
-            const hand = state.hands[actor as Player];
-            const cardIndex = hand.findIndex(c => c.uid === targetUid);
-            if (cardIndex !== -1) {
-              const card = hand[cardIndex];
-              hand.splice(cardIndex, 1);
-              state.discard.push(card as any);
-              events.unshift({ type: 'LOG', msg: `Tunnelvision: ${card.name} dauerhaft aus dem Spiel entfernt.` });
-            }
-          } else {
-            // Normal failure: Card stays in hand
-            events.unshift({ type: 'LOG', msg: 'Tunnelvision: Probe misslungen - Regierungskarte bleibt in der Hand.' });
+          // Failure: card stays in hand (no critical-fail exile)
+          events.unshift({ type: 'LOG', msg: 'Tunnelvision: Probe misslungen - Regierungskarte bleibt in der Hand.' });
+          if (typeof window !== 'undefined') {
+            try {
+              const { feedbackFail } = require('./feedback');
+              feedbackFail('Probe misslungen', 'Regierungskarte bleibt in der Hand.');
+              window.dispatchEvent(new CustomEvent('pc:probe_resolved', { detail: { success: false, targetUid, type: 'tunnelvision' } }));
+            } catch { /* ignore */ }
           }
         }
 
@@ -779,135 +1016,112 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
       }
 
       case 'INITIATIVE_ACTIVATED': {
-        // Initiative activation event - trigger reactions from public cards
-        logPush(state, 'Initiative activated.');
+        // Initiative activation event - trigger reactions from public cards & flags
+        const p = ev.player;
+        const flags = state.effectFlags[p];
+        const publicCards = state.board[p]?.innen || [];
+        const oppPublicCards = state.board[other(p)]?.innen || [];
+        const initiativeName = (state as any)._lastActivatedInitiative as string | undefined;
 
-        // Check for public cards that react to initiative activation
-        const publicCards = state.board[ev.player]?.innen || [];
-
-        // Shadow Lobbying: +1 influence per own Oligarch-tag on board (max +3)
-        // Detect if the activating initiative was Shadow Lobbying by checking the last played instant in slot
-        const instantSlot = state.board[ev.player]?.sofort || [];
-        const lastInstant = instantSlot[0] as any;
-        if (lastInstant && (lastInstant.effectKey === 'init.shadow_lobbying.per_oligarch' || lastInstant.name === 'Shadow Lobbying')) {
-          const ownBoard = [
-            ...state.board[ev.player].innen,
-            ...state.board[ev.player].aussen,
-          ];
-          const oligarchCount = ownBoard.filter(c => {
-            const details = (c as any).name ? require('../data/cardDetails') as any : null;
-            // Fallback: try BaseSpecial tag if available
-            const sub = (require('../data/cardDetails') as any).getCardDetails?.((c as any).name)?.subcategories as string[] | undefined;
-            const hasNewTag = Array.isArray(sub) && sub.includes('Oligarch');
-            const legacyTag = (c as any).tag === 'Oligarch';
-            return hasNewTag || legacyTag;
-          }).length;
-          const amt = Math.min(oligarchCount, 3);
-          if (amt > 0) {
-            events.unshift({ type: 'BUFF_STRONGEST_GOV', player: ev.player, amount: amt });
-            events.unshift({ type: 'LOG', msg: `Shadow Lobbying: stärkste Regierung +${amt} Einfluss (pro Oligarch, max 3).` });
-          } else {
-            events.unshift({ type: 'LOG', msg: `Shadow Lobbying: Keine Oligarchen – kein Einfluss-Buff.` });
-          }
+        // Pre-registered AP bonus for the next initiative (Bill Gates, Zhang Yiming, ...)
+        if (flags && (flags.apBonusInitiativeNext || 0) > 0) {
+          const amt = flags.apBonusInitiativeNext!;
+          flags.apBonusInitiativeNext = 0;
+          events.unshift({ type: 'ADD_AP', player: p, amount: amt });
+          events.unshift({ type: 'LOG', msg: `Vorgemerkter Initiative-Bonus eingelöst: +${amt} AP.` });
         }
 
-        // Elon Musk: +1 AP on initiative activation
-        const elonMusk = publicCards.find(card =>
-          card.kind === 'spec' && (card as any).name === 'Elon Musk'
-        );
-        if (elonMusk) {
-          events.unshift({ type: 'ADD_AP', player: ev.player, amount: 1 });
-          events.unshift({ type: 'LOG', msg: 'Elon Musk: +1 AP on initiative activation.' });
+        // Elon Musk: +1 AP on initiative activation (once per round)
+        if (findActivePublicCard(publicCards, 'Elon Musk') && !(flags as any)?.elonInitiativeApUsed) {
+          (flags as any).elonInitiativeApUsed = true;
+          events.unshift({ type: 'ADD_AP', player: p, amount: 1 });
+          events.unshift({ type: 'LOG', msg: 'Elon Musk: +1 AP für Initiative-Aktivierung (1×/Runde).' });
         }
 
         // Mark Zuckerberg: +1 AP on initiative activation (once per turn)
-        const markZuckerberg = publicCards.find(card =>
-          card.kind === 'spec' && (card as any).name === 'Mark Zuckerberg'
-        );
-        if (markZuckerberg && !state.effectFlags[ev.player]?.markZuckerbergUsed) {
-          events.unshift({ type: 'ADD_AP', player: ev.player, amount: 1 });
-          events.unshift({ type: 'LOG', msg: 'Mark Zuckerberg: +1 AP on initiative activation.' });
-          if (!state.effectFlags[ev.player]) {
-            state.effectFlags[ev.player] = { markZuckerbergUsed: false };
-          }
-          state.effectFlags[ev.player].markZuckerbergUsed = true;
+        if (findActivePublicCard(publicCards, 'Mark Zuckerberg') && !flags?.markZuckerbergUsed) {
+          flags.markZuckerbergUsed = true;
+          events.unshift({ type: 'ADD_AP', player: p, amount: 1 });
+          events.unshift({ type: 'LOG', msg: 'Mark Zuckerberg: +1 AP für Initiative-Aktivierung.' });
         }
 
-        // Ai Weiwei: +1 card +1 AP on initiative activation
-        const aiWeiwei = publicCards.find(card =>
-          card.kind === 'spec' && (card as any).name === 'Ai Weiwei'
-        );
-        if (aiWeiwei) {
-          events.unshift({ type: 'DRAW_CARDS', player: ev.player, amount: 1 });
-          events.unshift({ type: 'ADD_AP', player: ev.player, amount: 1 });
-          events.unshift({ type: 'LOG', msg: 'Ai Weiwei: +1 card +1 AP on initiative activation.' });
+        // Ai Weiwei: +1 card +1 AP on initiative activation (once per turn)
+        if (findActivePublicCard(publicCards, 'Ai Weiwei') && !(flags as any)?.aiWeiweiInitiativeUsed) {
+          (flags as any).aiWeiweiInitiativeUsed = true;
+          events.unshift({ type: 'DRAW_CARDS', player: p, amount: 1 });
+          events.unshift({ type: 'ADD_AP', player: p, amount: 1 });
+          events.unshift({ type: 'LOG', msg: 'Ai Weiwei: +1 Karte +1 AP für Initiative-Aktivierung (1×/Zug).' });
         }
 
-        // Sam Altman: +1 card +1 AP on AI-related initiative activation
-        const samAltman = publicCards.find(card =>
-          card.kind === 'spec' && (card as any).name === 'Sam Altman'
-        );
-        if (samAltman) {
-          // Check if the activated initiative is AI-related (would need to be passed as context)
-          // For now, this is handled via the initiative card's tag check in the activation flow
-          events.unshift({ type: 'LOG', msg: 'Sam Altman: AI initiative detected - bonus ready.' });
+        // Jennifer Doudna / Anthony Fauci: +1 influence on strongest gov per initiative
+        if (findActivePublicCard(publicCards, 'Jennifer Doudna')) {
+          events.unshift({ type: 'BUFF_STRONGEST_GOV', player: p, amount: 1 });
+          events.unshift({ type: 'LOG', msg: 'Jennifer Doudna: stärkste Regierung +1 Einfluss (Initiative).' });
+        }
+        if (findActivePublicCard(publicCards, 'Anthony Fauci')) {
+          events.unshift({ type: 'BUFF_STRONGEST_GOV', player: p, amount: 1 });
+          events.unshift({ type: 'LOG', msg: 'Anthony Fauci: stärkste Regierung +1 Einfluss (Initiative).' });
         }
 
-        // Digitaler Wahlkampf: draw 1 card per own Media-tag on board
-        if (lastInstant && (lastInstant.effectKey === 'init.digital_campaign.per_media' || lastInstant.name === 'Digitaler Wahlkampf')) {
-          const ownBoard = [
-            ...state.board[ev.player].innen,
-            ...state.board[ev.player].aussen,
-          ];
-          const mediaCount = ownBoard.filter(c => {
-            const sub = (require('../data/cardDetails') as any).getCardDetails?.((c as any).name)?.subcategories as string[] | undefined;
-            const legacy = (c as any).tag === 'Medien' || (c as any).tag === 'Media';
-            return (Array.isArray(sub) && sub.includes('Medien')) || legacy || (Array.isArray(sub) && sub.includes('Medien')) || (Array.isArray(sub) && sub.includes('Medien'));
-          }).length;
-          if (mediaCount > 0) {
-            events.unshift({ type: 'DRAW_CARDS', player: ev.player, amount: mediaCount });
-            events.unshift({ type: 'LOG', msg: `Digitaler Wahlkampf: ziehe ${mediaCount} Karte(n) (pro Medien-Karte).` });
-          } else {
-            events.unshift({ type: 'LOG', msg: `Digitaler Wahlkampf: Keine Medien-Karten auf dem Feld.` });
+        // Noam Chomsky (opponent side): activator's strongest gov -1 per initiative
+        if (findActivePublicCard(oppPublicCards, 'Noam Chomsky')) {
+          events.unshift({ type: 'BUFF_STRONGEST_GOV', player: p, amount: -1 });
+          events.unshift({ type: 'LOG', msg: 'Noam Chomsky (Gegner): stärkste Regierung -1 Einfluss (Initiative).' });
+        }
+
+        // Sam Altman: +1 card +1 AP when activating an AI-related initiative
+        if (findActivePublicCard(publicCards, 'Sam Altman') && isAiRelatedInitiativeName(initiativeName)) {
+          events.unshift({ type: 'DRAW_CARDS', player: p, amount: 1 });
+          events.unshift({ type: 'ADD_AP', player: p, amount: 1 });
+          events.unshift({ type: 'LOG', msg: 'Sam Altman: KI-Initiative → +1 Karte +1 AP.' });
+        }
+
+        // Zivilgesellschaft (ongoing): active NGO grants +1 AP on initiative (once per turn)
+        const permPublic = (state.permanentSlots?.[p]?.public as any) || null;
+        if (permPublic?.name === 'Zivilgesellschaft' && !(flags as any)?.zivilgesellschaftApUsed) {
+          const hasNgo = [...state.board[p].innen, ...state.board[p].aussen]
+            .some(c => isNgoCard(c) && !(c as any).deactivated);
+          if (hasNgo) {
+            (flags as any).zivilgesellschaftApUsed = true;
+            events.unshift({ type: 'ADD_AP', player: p, amount: 1 });
+            events.unshift({ type: 'LOG', msg: 'Zivilgesellschaft: NGO aktiv → +1 AP für Initiative.' });
           }
         }
-
-        // After handling public reactions, enqueue a UI-only event to trigger hit animation on opponent's effected slots
-        // We'll compute effected slots conservatively: all opponent's government and public slots that are occupied.
-        try {
-          const opp: Player = ev.player === 1 ? 2 : 1;
-          const effectedSlots: Array<{ player: Player; lane: string; index: number } > = [];
-          (state.board[opp].aussen || []).forEach((c, idx) => { if (c) effectedSlots.push({ player: opp, lane: 'aussen', index: idx }); });
-          (state.board[opp].innen || []).forEach((c, idx) => { if (c) effectedSlots.push({ player: opp, lane: 'innen', index: idx }); });
-
-          // enqueue one LOG and one UI_TRIGGER per slot (UI_TRIGGER is handled by the frontend canvas to play hit animation)
-          effectedSlots.forEach(s => {
-            events.unshift({ type: 'UI_TRIGGER_HIT_ANIM', player: s.player, lane: s.lane, index: s.index } as any);
-          });
-        } catch (e) {
-          // ignore UI enqueue failures
-        }
-
         break;
       }
 
-      // ONCE_AP_ON_ACTIVATION removed - use standard ADD_AP events instead
-
-      // ON_ACTIVATE_DRAW_AP removed - use standard ADD_AP and DRAW_CARDS events instead
-
-      // Simplified AP system: No initiative-specific bonuses
-      // All AP bonuses are now immediate ADD_AP events
+      case 'AURA_SCIENCE': {
+        state.effectFlags[ev.player].scienceInitiativeBonus = !!ev.active;
+        state.effectFlags[ev.player].auraScience = ev.active ? 1 : 0;
+        break;
+      }
+      case 'AURA_HEALTH': {
+        state.effectFlags[ev.player].healthInitiativeBonus = !!ev.active;
+        state.effectFlags[ev.player].auraHealth = ev.active ? 1 : 0;
+        break;
+      }
+      case 'AURA_MILITARY_PENALTY': {
+        state.effectFlags[ev.player].militaryInitiativePenalty = !!ev.active;
+        state.effectFlags[ev.player].auraMilitaryPenalty = ev.active ? 1 : 0;
+        break;
+      }
+      case 'ON_ACTIVATE_DRAW_AP': {
+        // Marks Ai Weiwei aura as present; actual draw/AP fires on INITIATIVE_ACTIVATED
+        state.effectFlags[ev.player].cultureInitiativeBonus = true;
+        state.effectFlags[ev.player].aiWeiweiOnActivate = true;
+        break;
+      }
 
       case 'KOALITIONSZWANG_CALCULATE_BONUS': {
         const player = ev.player;
         const opponent = other(player);
 
-        // Get all government cards for both players
-        const ownGov = state.board[player].innen.filter(c => c.kind === 'pol') as PoliticianCard[];
-        const oppGov = state.board[opponent].innen.filter(c => c.kind === 'pol') as PoliticianCard[];
+        // Government cards live in aussen; public cards in innen
+        const ownGov = state.board[player].aussen.filter(c => c.kind === 'pol') as PoliticianCard[];
+        const oppGov = state.board[opponent].aussen.filter(c => c.kind === 'pol') as PoliticianCard[];
 
         // Get public slots for activist/denker cards
-        const ownPublic = state.board[player].aussen;
+        const ownPublic = state.board[player].innen;
         const cd = require('../data/cardDetails') as any;
 
         let totalBonus = 0;
@@ -941,6 +1155,11 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
           }
         }
         totalBonus += activistDenkerCount;
+        // Balance: hard cap total calculated bonus at +2
+        if (totalBonus > 2) {
+          events.unshift({ type: 'LOG', msg: `Koalitionszwang: Bonus auf +2 begrenzt (roh ${totalBonus}).` });
+          totalBonus = 2;
+        }
 
         // Apply bonus to strongest government card
         if (totalBonus > 0) {

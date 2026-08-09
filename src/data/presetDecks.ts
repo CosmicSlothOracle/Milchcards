@@ -30,7 +30,7 @@ export const PRESET_DECKS: PresetDeck[] = [
     name: 'Initiative Rush',
     cards: [
       'Benjamin Netanyahu', 'Volodymyr Zelenskyy', 'Ursula von der Leyen', 'Olaf Scholz', 'Kamala Harris',
-      'Greta Thunberg', 'Verzoegerungsverfahren', 'Symbolpolitik', 'Shadow Lobbying', 'Opportunist'
+      'Greta Thunberg', 'Verzögerungsverfahren', 'Symbolpolitik', 'Shadow Lobbying', 'Opportunist'
     ]
   },
   {

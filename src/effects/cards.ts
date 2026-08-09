@@ -17,13 +17,16 @@ export const LEGACY_NAME_TO_KEY: Record<string, string> = {
   'Symbolpolitik':           'init.symbolic_politics.draw1',
   'Opportunist':             'init.opportunist.mirror_ap_effects',
   // vorhanden
-  'Digitaler Wahlkampf':     'init.digital_campaign.draw2',
+  'Digitaler Wahlkampf':     'init.digital_campaign.per_media',
+  'Whataboutism':            'init.whataboutism.reactivate_minus1',
+  'Scandal Spiral':          'trap.scandal_spiral.cancel_one_of_two',
+  'Skandalspirale':          'init.skandalspirale.w6_check',
 
   // --- Traps ---
   'Interne Fraktionskämpfe': 'trap.internal_faction_strife.cancel_big_initiative',
   'Boykott-Kampagne':        'trap.boycott.deactivate_ngo_movement',
   'Deepfake-Skandal':        'trap.deepfake.lock_diplomat_transfer',
-  'Cyber-Attacke':           'trap.cyber_attack.destroy_platform',
+  'Cyber-Attacke':           'trap.cyber_attack.deactivate_platform',
 
   'Grassroots-Widerstand':   'trap.grassroots_resistance.deactivate_public',
   'Massenproteste':          'trap.mass_protests.debuff_two_govs',

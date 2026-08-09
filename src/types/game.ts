@@ -124,6 +124,14 @@ export interface EffectFlags {
   // Opportunist system
   opportunistActive?: boolean;       // Opportunist mirror effect active
 
+  // Per-turn effect tracking (reset in startOfTurn unless noted)
+  gretaFirstGovApUsed?: boolean;     // Greta Thunberg: first government card each turn grants +1 AP
+  elonInitiativeApUsed?: boolean;    // Elon Musk: once per round +1 AP on initiative activation
+  aiWeiweiInitiativeUsed?: boolean;  // Ai Weiwei: once per turn draw+AP on initiative activation
+  zivilgesellschaftApUsed?: boolean; // Zivilgesellschaft: NGO grants +1 AP on next initiative (once per turn)
+  cannotPlayMoreGovernment?: boolean; // Parlament geschlossen: no further government until next turn
+  drawPenaltyNextDraw?: boolean;     // Mukesh Ambani: player draws one card less at next end-of-turn draw
+
   // Legacy AP system flags (for backward compatibility)
   nextGovPlus2?: boolean;             // Next government card gets +2 influence
   diplomatInfluenceTransferUsed?: boolean; // Diplomat influence transfer used this turn

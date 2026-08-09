@@ -1,0 +1,2269 @@
+{
+  "counts": {
+    "pols": 63,
+    "specs": 66,
+    "total": 129
+  },
+  "tierCounts": {
+    "impossible": 15,
+    "oppressive": 27,
+    "strong": 16,
+    "acceptable": 45,
+    "weak": 26,
+    "dead": 0
+  },
+  "impossible": [
+    {
+      "name": "Werner Maihofer",
+      "type": "Regierung",
+      "cost": 2,
+      "bp": 2,
+      "influence": 3,
+      "dens": 1.5,
+      "value": 20,
+      "score": 40,
+      "effect": "Nur Einfluss - keine weiteren Effekte",
+      "effectKey": "gov.standard",
+      "why": "hard control at deckCost≤2",
+      "notes": [
+        "high dens 1.50",
+        "hard control",
+        "vanilla"
+      ]
+    },
+    {
+      "name": "Cancel Culture",
+      "type": "Intervention",
+      "cost": 2,
+      "bp": 2,
+      "influence": null,
+      "dens": null,
+      "value": 20,
+      "score": 40,
+      "effect": "Die Öffentlichkeitskarte wird deaktiviert",
+      "effectKey": "trap.cancel_culture.deactivate_public",
+      "why": "hard control at deckCost≤2",
+      "notes": [
+        "hard control",
+        "removal/debuff"
+      ]
+    },
+    {
+      "name": "John Snow",
+      "type": "Regierung",
+      "cost": 3,
+      "bp": 3,
+      "influence": 4,
+      "dens": 1.33,
+      "value": 12.78,
+      "score": 38.33333333333333,
+      "effect": "Nur Einfluss - keine weiteren Effekte",
+      "effectKey": "gov.standard",
+      "why": "cheap hard control",
+      "notes": [
+        "high dens 1.33",
+        "hard control",
+        "vanilla"
+      ]
+    },
+    {
+      "name": "Karl Carstens",
+      "type": "Regierung",
+      "cost": 3,
+      "bp": 3,
+      "influence": 4,
+      "dens": 1.33,
+      "value": 12.78,
+      "score": 38.33333333333333,
+      "effect": "Nur Einfluss - keine weiteren Effekte",
+      "effectKey": "gov.standard",
+      "why": "cheap hard control",
+      "notes": [
+        "high dens 1.33",
+        "hard control",
+        "vanilla"
+      ]
+    },
+    {
+      "name": "Hans Eichel",
+      "type": "Regierung",
+      "cost": 3,
+      "bp": 3,
+      "influence": 4,
+      "dens": 1.33,
+      "value": 12.78,
+      "score": 38.33333333333333,
+      "effect": "Nur Einfluss - keine weiteren Effekte",
+      "effectKey": "gov.standard",
+      "why": "cheap hard control",
+      "notes": [
+        "high dens 1.33",
+        "hard control",
+        "vanilla"
+      ]
+    },
+    {
+      "name": "Edelgard Bulmahn",
+      "type": "Regierung",
+      "cost": 3,
+      "bp": 3,
+      "influence": 4,
+      "dens": 1.33,
+      "value": 12.78,
+      "score": 38.33333333333333,
+      "effect": "Nur Einfluss - keine weiteren Effekte",
+      "effectKey": "gov.standard",
+      "why": "cheap hard control",
+      "notes": [
+        "high dens 1.33",
+        "hard control",
+        "vanilla"
+      ]
+    },
+    {
+      "name": "Gerhart Baum",
+      "type": "Regierung",
+      "cost": 3,
+      "bp": 3,
+      "influence": 4,
+      "dens": 1.33,
+      "value": 12.78,
+      "score": 38.33333333333333,
+      "effect": "Nur Einfluss - keine weiteren Effekte",
+      "effectKey": "gov.standard",
+      "why": "cheap hard control",
+      "notes": [
+        "high dens 1.33",
+        "hard control",
+        "vanilla"
+      ]
+    },
+    {
+      "name": "Rainer Offergeld",
+      "type": "Regierung",
+      "cost": 3,
+      "bp": 3,
+      "influence": 4,
+      "dens": 1.33,
+      "value": 12.78,
+      "score": 38.33333333333333,
+      "effect": "Nur Einfluss - keine weiteren Effekte",
+      "effectKey": "gov.standard",
+      "why": "cheap hard control",
+      "notes": [
+        "high dens 1.33",
+        "hard control",
+        "vanilla"
+      ]
+    },
+    {
+      "name": "Interne Fraktionskämpfe",
+      "type": "Intervention",
+      "cost": 2,
+      "bp": 2,
+      "influence": null,
+      "dens": null,
+      "value": 12.5,
+      "score": 25,
+      "effect": "Die Initiative wird annulliert",
+      "effectKey": "trap.internal_faction_strife.cancel_big_initiative",
+      "why": "hard control at deckCost≤2",
+      "notes": [
+        "hard control"
+      ]
+    },
+    {
+      "name": "Deepfake-Skandal",
+      "type": "Intervention",
+      "cost": 2,
+      "bp": 2,
+      "influence": null,
+      "dens": null,
+      "value": 12.5,
+      "score": 25,
+      "effect": "Kein Einflusstransfer möglich",
+      "effectKey": "trap.deepfake.lock_diplomat_transfer",
+      "why": "hard control at deckCost≤2",
+      "notes": [
+        "hard control"
+      ]
+    },
+    {
+      "name": "\"Unabhängige\" Untersuchung",
+      "type": "Intervention",
+      "cost": 2,
+      "bp": 2,
+      "influence": null,
+      "dens": null,
+      "value": 12.5,
+      "score": 25,
+      "effect": "Die Intervention wird annulliert",
+      "effectKey": "trap.independent_investigation.cancel_trap",
+      "why": "hard control at deckCost≤2",
+      "notes": [
+        "hard control"
+      ]
+    },
+    {
+      "name": "Scandal Spiral",
+      "type": "Intervention",
+      "cost": 2,
+      "bp": 2,
+      "influence": null,
+      "dens": null,
+      "value": 12.5,
+      "score": 25,
+      "effect": "Die zweite Öffentlichkeitskarte des Gegners wird annulliert",
+      "effectKey": "trap.scandal_spiral.cancel_one_of_two",
+      "why": "hard control at deckCost≤2",
+      "notes": [
+        "hard control"
+      ]
+    },
+    {
+      "name": "Cyber-Attacke",
+      "type": "Intervention",
+      "cost": 3,
+      "bp": 3,
+      "influence": null,
+      "dens": null,
+      "value": 8.33,
+      "score": 25,
+      "effect": "Die Öffentlichkeitskarte wird zerstört",
+      "effectKey": "trap.cyber_attack.destroy_platform",
+      "why": "cheap hard control",
+      "notes": [
+        "hard control"
+      ]
+    },
+    {
+      "name": "Bestechungsskandal 2.0",
+      "type": "Sofort-Initiative",
+      "cost": 3,
+      "bp": 3,
+      "influence": null,
+      "dens": null,
+      "value": 8.33,
+      "score": 25,
+      "effect": "Du versuchst eine gegnerische Regierungskarte zu übernehmen. Wähle eine Karte und würfle einen W6. Bei Erfolg wird die Karte übernommen.",
+      "effectKey": "corruption.bribery_v2.steal_gov_w6",
+      "why": "cheap hard control",
+      "notes": [
+        "hard control"
+      ]
+    },
+    {
+      "name": "Parlament geschlossen",
+      "type": "Intervention",
+      "cost": 3,
+      "bp": 3,
+      "influence": null,
+      "dens": null,
+      "value": 8.33,
+      "score": 25,
+      "effect": "Gegner kann keine weiteren Regierungskarten spielen (diese Runde)",
+      "effectKey": "trap.parliament_closed.stop_more_gov",
+      "why": "cheap hard control",
+      "notes": [
+        "hard control",
+        "vanilla"
+      ]
+    }
+  ],
+  "oppressive": [
+    {
+      "name": "Koalitionszwang",
+      "type": "Dauerhaft-Initiative",
+      "cost": 2,
+      "bp": 2,
+      "influence": null,
+      "dens": null,
+      "value": 12.5,
+      "score": 25,
+      "effect": "Für jede deiner Regierungskarten welche einen gleichhohen Einflusswert hat wie eine gegnerische Regierungskarte bekommst du +1 Einfluss +1 für jede Aktivisten und denker Karte welche in deinen Öffentlichkeitsslots liegt. Zusätzlich: Hast du mindestens zwei Tier-2-Regierungskarten, erhalten alle deine Tier-2-Regierungskarten +1 Einfluss.",
+      "effectKey": "gov.koalitionszwang.coalition_bonus",
+      "why": "value 12.5 / removal/debuff,persistent",
+      "notes": [
+        "removal/debuff",
+        "persistent"
+      ]
+    },
+    {
+      "name": "Tunnelvision",
+      "type": "Dauerhaft-Initiative",
+      "cost": 2,
+      "bp": 2,
+      "influence": null,
+      "dens": null,
+      "value": 12.5,
+      "score": 25,
+      "effect": "Solange Tunnelvision aktiv ist, müssen beide Spieler bei Regierungskarten eine Probe bestehen. W6 ≥4 (≥5 bei Einfluss 9+). Bei Misserfolg: 1-3 Karte bleibt in Hand, 1 kritischer Misserfolg entfernt Karte dauerhaft. 1 AP wird immer abgezogen.",
+      "effectKey": "init.tunnel_vision.gov_probe_system",
+      "why": "value 12.5 / removal/debuff,persistent",
+      "notes": [
+        "removal/debuff",
+        "persistent"
+      ]
+    },
+    {
+      "name": "Heidemarie Wieczorek-Zeul",
+      "type": "Regierung",
+      "cost": 4,
+      "bp": 4,
+      "influence": 5,
+      "dens": 1.25,
+      "value": 9.38,
+      "score": 37.5,
+      "effect": "Nur Einfluss - keine weiteren Effekte",
+      "effectKey": "gov.standard",
+      "why": "T1 density 1.25",
+      "notes": [
+        "high dens 1.25",
+        "hard control",
+        "vanilla"
+      ]
+    },
+    {
+      "name": "Renate Künast",
+      "type": "Regierung",
+      "cost": 4,
+      "bp": 4,
+      "influence": 5,
+      "dens": 1.25,
+      "value": 9.38,
+      "score": 37.5,
+      "effect": "Nur Einfluss - keine weiteren Effekte",
+      "effectKey": "gov.standard",
+      "why": "T1 density 1.25",
+      "notes": [
+        "high dens 1.25",
+        "hard control",
+        "vanilla"
+      ]
+    },
+    {
+      "name": "Rudolf Scharping",
+      "type": "Regierung",
+      "cost": 4,
+      "bp": 4,
+      "influence": 5,
+      "dens": 1.25,
+      "value": 9.38,
+      "score": 37.5,
+      "effect": "Nur Einfluss - keine weiteren Effekte",
+      "effectKey": "gov.standard",
+      "why": "T1 density 1.25",
+      "notes": [
+        "high dens 1.25",
+        "hard control",
+        "vanilla"
+      ]
+    },
+    {
+      "name": "John Ashcroft",
+      "type": "Regierung",
+      "cost": 4,
+      "bp": 4,
+      "influence": 5,
+      "dens": 1.25,
+      "value": 9.38,
+      "score": 37.5,
+      "effect": "Nur Einfluss - keine weiteren Effekte",
+      "effectKey": "gov.standard",
+      "why": "T1 density 1.25",
+      "notes": [
+        "high dens 1.25",
+        "hard control",
+        "vanilla"
+      ]
+    },
+    {
+      "name": "Tedros Adhanom Ghebreyesus",
+      "type": "Regierung",
+      "cost": 4,
+      "bp": 4,
+      "influence": 5,
+      "dens": 1.25,
+      "value": 9.38,
+      "score": 37.5,
+      "effect": "Nur Einfluss - keine weiteren Effekte",
+      "effectKey": "gov.standard",
+      "why": "T1 density 1.25",
+      "notes": [
+        "high dens 1.25",
+        "hard control",
+        "vanilla"
+      ]
+    },
+    {
+      "name": "Tom Ridge",
+      "type": "Regierung",
+      "cost": 4,
+      "bp": 4,
+      "influence": 5,
+      "dens": 1.25,
+      "value": 9.38,
+      "score": 37.5,
+      "effect": "Nur Einfluss - keine weiteren Effekte",
+      "effectKey": "gov.standard",
+      "why": "T1 density 1.25",
+      "notes": [
+        "high dens 1.25",
+        "hard control",
+        "vanilla"
+      ]
+    },
+    {
+      "name": "Alberto Gonzales",
+      "type": "Regierung",
+      "cost": 4,
+      "bp": 4,
+      "influence": 5,
+      "dens": 1.25,
+      "value": 9.38,
+      "score": 37.5,
+      "effect": "Nur Einfluss - keine weiteren Effekte",
+      "effectKey": "gov.standard",
+      "why": "T1 density 1.25",
+      "notes": [
+        "high dens 1.25",
+        "hard control",
+        "vanilla"
+      ]
+    },
+    {
+      "name": "Annette Schavan",
+      "type": "Regierung",
+      "cost": 4,
+      "bp": 4,
+      "influence": 5,
+      "dens": 1.25,
+      "value": 9.38,
+      "score": 37.5,
+      "effect": "Nur Einfluss - keine weiteren Effekte",
+      "effectKey": "gov.standard",
+      "why": "T1 density 1.25",
+      "notes": [
+        "high dens 1.25",
+        "hard control",
+        "vanilla"
+      ]
+    },
+    {
+      "name": "Franz Josef Jung",
+      "type": "Regierung",
+      "cost": 4,
+      "bp": 4,
+      "influence": 5,
+      "dens": 1.25,
+      "value": 9.38,
+      "score": 37.5,
+      "effect": "Nur Einfluss - keine weiteren Effekte",
+      "effectKey": "gov.standard",
+      "why": "T1 density 1.25",
+      "notes": [
+        "high dens 1.25",
+        "hard control",
+        "vanilla"
+      ]
+    },
+    {
+      "name": "Georg Leber",
+      "type": "Regierung",
+      "cost": 4,
+      "bp": 4,
+      "influence": 5,
+      "dens": 1.25,
+      "value": 9.38,
+      "score": 37.5,
+      "effect": "Nur Einfluss - keine weiteren Effekte",
+      "effectKey": "gov.standard",
+      "why": "T1 density 1.25",
+      "notes": [
+        "high dens 1.25",
+        "hard control",
+        "vanilla"
+      ]
+    },
+    {
+      "name": "Hans Apel",
+      "type": "Regierung",
+      "cost": 4,
+      "bp": 4,
+      "influence": 5,
+      "dens": 1.25,
+      "value": 9.38,
+      "score": 37.5,
+      "effect": "Nur Einfluss - keine weiteren Effekte",
+      "effectKey": "gov.standard",
+      "why": "T1 density 1.25",
+      "notes": [
+        "high dens 1.25",
+        "hard control",
+        "vanilla"
+      ]
+    },
+    {
+      "name": "Peter Struck",
+      "type": "Regierung",
+      "cost": 4,
+      "bp": 4,
+      "influence": 5,
+      "dens": 1.25,
+      "value": 9.38,
+      "score": 37.5,
+      "effect": "Nur Einfluss - keine weiteren Effekte",
+      "effectKey": "gov.standard",
+      "why": "T1 density 1.25",
+      "notes": [
+        "high dens 1.25",
+        "hard control",
+        "vanilla"
+      ]
+    },
+    {
+      "name": "Walter Scheel",
+      "type": "Regierung",
+      "cost": 4,
+      "bp": 4,
+      "influence": 4,
+      "dens": 1,
+      "value": 8.75,
+      "score": 35,
+      "effect": "Nur Einfluss - keine weiteren Effekte",
+      "effectKey": "gov.standard",
+      "why": "value 8.8 / hard control,vanilla",
+      "notes": [
+        "hard control",
+        "vanilla"
+      ]
+    },
+    {
+      "name": "Pedro Sánchez",
+      "type": "Regierung",
+      "cost": 5,
+      "bp": 5,
+      "influence": 6,
+      "dens": 1.2,
+      "value": 7.4,
+      "score": 37,
+      "effect": "Nur Einfluss - keine weiteren Effekte",
+      "effectKey": "gov.standard",
+      "why": "T1 density 1.20",
+      "notes": [
+        "high dens 1.20",
+        "hard control",
+        "vanilla"
+      ]
+    },
+    {
+      "name": "Keir Starmer",
+      "type": "Regierung",
+      "cost": 5,
+      "bp": 5,
+      "influence": 6,
+      "dens": 1.2,
+      "value": 7.4,
+      "score": 37,
+      "effect": "Nur Einfluss - keine weiteren Effekte",
+      "effectKey": "gov.standard",
+      "why": "T1 density 1.20",
+      "notes": [
+        "high dens 1.20",
+        "hard control",
+        "vanilla"
+      ]
+    },
+    {
+      "name": "Robert Gates",
+      "type": "Regierung",
+      "cost": 5,
+      "bp": 5,
+      "influence": 6,
+      "dens": 1.2,
+      "value": 7.4,
+      "score": 37,
+      "effect": "Nur Einfluss - keine weiteren Effekte",
+      "effectKey": "gov.standard",
+      "why": "T1 density 1.20",
+      "notes": [
+        "high dens 1.20",
+        "hard control",
+        "vanilla"
+      ]
+    },
+    {
+      "name": "Karl Rove",
+      "type": "Regierung",
+      "cost": 5,
+      "bp": 5,
+      "influence": 6,
+      "dens": 1.2,
+      "value": 7.4,
+      "score": 37,
+      "effect": "Nur Einfluss - keine weiteren Effekte",
+      "effectKey": "gov.standard",
+      "why": "T1 density 1.20",
+      "notes": [
+        "high dens 1.20",
+        "hard control",
+        "vanilla"
+      ]
+    },
+    {
+      "name": "Shigeru Ishiba",
+      "type": "Regierung",
+      "cost": 5,
+      "bp": 5,
+      "influence": 6,
+      "dens": 1.2,
+      "value": 7.4,
+      "score": 37,
+      "effect": "Nur Einfluss - keine weiteren Effekte",
+      "effectKey": "gov.standard",
+      "why": "T1 density 1.20",
+      "notes": [
+        "high dens 1.20",
+        "hard control",
+        "vanilla"
+      ]
+    },
+    {
+      "name": "Henry Paulson",
+      "type": "Regierung",
+      "cost": 5,
+      "bp": 5,
+      "influence": 6,
+      "dens": 1.2,
+      "value": 7.4,
+      "score": 37,
+      "effect": "Nur Einfluss - keine weiteren Effekte",
+      "effectKey": "gov.standard",
+      "why": "T1 density 1.20",
+      "notes": [
+        "high dens 1.20",
+        "hard control",
+        "vanilla"
+      ]
+    },
+    {
+      "name": "Johannes Rau",
+      "type": "Regierung",
+      "cost": 5,
+      "bp": 5,
+      "influence": 6,
+      "dens": 1.2,
+      "value": 7.4,
+      "score": 37,
+      "effect": "Nur Einfluss - keine weiteren Effekte",
+      "effectKey": "gov.standard",
+      "why": "T1 density 1.20",
+      "notes": [
+        "high dens 1.20",
+        "hard control",
+        "vanilla"
+      ]
+    },
+    {
+      "name": "Erhard Eppler",
+      "type": "Regierung",
+      "cost": 5,
+      "bp": 5,
+      "influence": 6,
+      "dens": 1.2,
+      "value": 7.4,
+      "score": 37,
+      "effect": "Nur Einfluss - keine weiteren Effekte",
+      "effectKey": "gov.standard",
+      "why": "T1 density 1.20",
+      "notes": [
+        "high dens 1.20",
+        "hard control",
+        "vanilla"
+      ]
+    },
+    {
+      "name": "Friedrich Merz",
+      "type": "Regierung",
+      "cost": 5,
+      "bp": 5,
+      "influence": 6,
+      "dens": 1.2,
+      "value": 7.4,
+      "score": 37,
+      "effect": "Nur Einfluss - keine weiteren Effekte",
+      "effectKey": "gov.standard",
+      "why": "T1 density 1.20",
+      "notes": [
+        "high dens 1.20",
+        "hard control",
+        "vanilla"
+      ]
+    },
+    {
+      "name": "Otto Schily",
+      "type": "Regierung",
+      "cost": 5,
+      "bp": 5,
+      "influence": 6,
+      "dens": 1.2,
+      "value": 7.4,
+      "score": 37,
+      "effect": "Nur Einfluss - keine weiteren Effekte",
+      "effectKey": "gov.standard",
+      "why": "T1 density 1.20",
+      "notes": [
+        "high dens 1.20",
+        "hard control",
+        "vanilla"
+      ]
+    }
+  ],
+  "strong": [
+    {
+      "name": "Think-tank",
+      "type": "Sofort-Initiative",
+      "cost": 2,
+      "bp": 2,
+      "influence": null,
+      "dens": null,
+      "value": 9,
+      "score": 18,
+      "effect": "Ziehe 1 Karte, nächste Regierungskarte +2 Einfluss",
+      "effectKey": "init.think_tank.draw1_buff_gov2",
+      "why": "value 9.0",
+      "notes": [
+        "strong tempo",
+        "tempo"
+      ]
+    },
+    {
+      "name": "Whistleblower",
+      "type": "Intervention",
+      "cost": 3,
+      "bp": 3,
+      "influence": null,
+      "dens": null,
+      "value": 9,
+      "score": 27,
+      "effect": "-2 Einfluss auf die Regierungskarte",
+      "effectKey": "trap.whistleblower.debuff_next_gov_minus2",
+      "why": "value 9.0",
+      "notes": [
+        "removal/debuff",
+        "strong tempo"
+      ]
+    },
+    {
+      "name": "Zivilgesellschaft",
+      "type": "Dauerhaft-Initiative",
+      "cost": 2,
+      "bp": 2,
+      "influence": null,
+      "dens": null,
+      "value": 8,
+      "score": 16,
+      "effect": "Movement cards +1 influence, NGOs give +1 AP on next initiative",
+      "effectKey": "init.zivilgesellschaft.movement_aura",
+      "why": "value 8.0",
+      "notes": [
+        "tempo",
+        "persistent"
+      ]
+    },
+    {
+      "name": "Konzernfreundlicher Algorithmus",
+      "type": "Dauerhaft-Initiative",
+      "cost": 2,
+      "bp": 2,
+      "influence": null,
+      "dens": null,
+      "value": 8,
+      "score": 16,
+      "effect": "Bei Plattform-Karten: ziehe 1 Karte, Oligarchen +1 Einfluss",
+      "effectKey": "init.konzernfreundlicher_algorithmus.platform_aura",
+      "why": "value 8.0",
+      "notes": [
+        "tempo",
+        "persistent"
+      ]
+    },
+    {
+      "name": "Systemrelevant",
+      "type": "Sofort-Initiative",
+      "cost": 2,
+      "bp": 2,
+      "influence": null,
+      "dens": null,
+      "value": 7.5,
+      "score": 15,
+      "effect": "Schützt 1 Karte vor Deaktivierung (einmalig)",
+      "effectKey": "init.system_critical.shield1",
+      "why": "value 7.5",
+      "notes": [
+        "removal/debuff"
+      ]
+    },
+    {
+      "name": "Fake News-Kampagne",
+      "type": "Intervention",
+      "cost": 2,
+      "bp": 2,
+      "influence": null,
+      "dens": null,
+      "value": 7.5,
+      "score": 15,
+      "effect": "Die Öffentlichkeitskarte wird deaktiviert",
+      "effectKey": "trap.fake_news.deactivate_media",
+      "why": "value 7.5",
+      "notes": [
+        "removal/debuff"
+      ]
+    },
+    {
+      "name": "Boykott-Kampagne",
+      "type": "Intervention",
+      "cost": 2,
+      "bp": 2,
+      "influence": null,
+      "dens": null,
+      "value": 7.5,
+      "score": 15,
+      "effect": "Die Karte wird deaktiviert",
+      "effectKey": "trap.boycott.deactivate_ngo_movement",
+      "why": "value 7.5",
+      "notes": [
+        "removal/debuff"
+      ]
+    },
+    {
+      "name": "Grassroots-Widerstand",
+      "type": "Intervention",
+      "cost": 2,
+      "bp": 2,
+      "influence": null,
+      "dens": null,
+      "value": 7.5,
+      "score": 15,
+      "effect": "Eine Öffentlichkeitskarte wird deaktiviert",
+      "effectKey": "trap.grassroots_resistance.deactivate_public",
+      "why": "value 7.5",
+      "notes": [
+        "removal/debuff"
+      ]
+    },
+    {
+      "name": "Massenproteste",
+      "type": "Intervention",
+      "cost": 2,
+      "bp": 2,
+      "influence": null,
+      "dens": null,
+      "value": 7.5,
+      "score": 15,
+      "effect": "Beide Regierungskarten -1 Einfluss",
+      "effectKey": "trap.mass_protests.debuff_two_govs",
+      "why": "value 7.5",
+      "notes": [
+        "removal/debuff"
+      ]
+    },
+    {
+      "name": "Berater-Affäre",
+      "type": "Intervention",
+      "cost": 2,
+      "bp": 2,
+      "influence": null,
+      "dens": null,
+      "value": 7.5,
+      "score": 15,
+      "effect": "-2 Einfluss auf die Regierungskarte",
+      "effectKey": "trap.advisor_scandal.minus2_gov_tier1",
+      "why": "value 7.5",
+      "notes": [
+        "removal/debuff"
+      ]
+    },
+    {
+      "name": "Soft Power-Kollaps",
+      "type": "Intervention",
+      "cost": 2,
+      "bp": 2,
+      "influence": null,
+      "dens": null,
+      "value": 7.5,
+      "score": 15,
+      "effect": "-3 Einfluss auf die Diplomat-Karte",
+      "effectKey": "trap.soft_power_collapse.minus3_diplomat",
+      "why": "value 7.5",
+      "notes": [
+        "removal/debuff"
+      ]
+    },
+    {
+      "name": "Skandalspirale",
+      "type": "Sofort-Initiative",
+      "cost": 2,
+      "bp": 2,
+      "influence": null,
+      "dens": null,
+      "value": 7.5,
+      "score": 15,
+      "effect": "Bei Aktivierung: Der Spieler mit dem geringeren Gesamt-Einfluss muss einen W6 würfeln. Bei 4-6 passiert nichts; bei 1-3 verliert er entsprechend der Augenzahl -1/-2/-3 Einfluss auf seine stärkste Regierungskarte.",
+      "effectKey": "init.skandalspirale.w6_check",
+      "why": "value 7.5",
+      "notes": [
+        "removal/debuff"
+      ]
+    },
+    {
+      "name": "Satire-Show",
+      "type": "Intervention",
+      "cost": 2,
+      "bp": 2,
+      "influence": null,
+      "dens": null,
+      "value": 7.5,
+      "score": 15,
+      "effect": "Eine Regierungskarte des Gegners -2 Einfluss",
+      "effectKey": "trap.satire_show.minus2_enemy_gov",
+      "why": "value 7.5",
+      "notes": [
+        "removal/debuff"
+      ]
+    },
+    {
+      "name": "Rishi Sunak",
+      "type": "Regierung",
+      "cost": 6,
+      "bp": 6,
+      "influence": 7,
+      "dens": 1.17,
+      "value": 6.11,
+      "score": 36.66666666666667,
+      "effect": "Nur Einfluss - keine weiteren Effekte",
+      "effectKey": "gov.standard",
+      "why": "value 6.1",
+      "notes": [
+        "hard control",
+        "vanilla"
+      ]
+    },
+    {
+      "name": "Horst Köhler",
+      "type": "Regierung",
+      "cost": 6,
+      "bp": 6,
+      "influence": 7,
+      "dens": 1.17,
+      "value": 6.11,
+      "score": 36.66666666666667,
+      "effect": "Nur Einfluss - keine weiteren Effekte",
+      "effectKey": "gov.standard",
+      "why": "value 6.1",
+      "notes": [
+        "hard control",
+        "vanilla"
+      ]
+    },
+    {
+      "name": "Olaf Scholz",
+      "type": "Regierung",
+      "cost": 6,
+      "bp": 7,
+      "influence": 7,
+      "dens": 1,
+      "value": 5.83,
+      "score": 35,
+      "effect": "Nur Einfluss - keine weiteren Effekte",
+      "effectKey": "gov.standard",
+      "why": "value 5.8",
+      "notes": [
+        "hard control",
+        "vanilla"
+      ]
+    }
+  ],
+  "acceptableSample": [
+    {
+      "name": "Spin Doctor",
+      "type": "Sofort-Initiative",
+      "cost": 2,
+      "bp": 2,
+      "influence": null,
+      "dens": null,
+      "value": 6,
+      "score": 12,
+      "effect": "Beim Ausspielen: +1 Einfluss auf deine stärkste Regierungskarte.",
+      "effectKey": "init.spin_doctor.buff_strongest_gov2",
+      "why": "value 6.0",
+      "notes": [
+        "strong tempo"
+      ]
+    },
+    {
+      "name": "Verzögerungsverfahren",
+      "type": "Sofort-Initiative",
+      "cost": 1,
+      "bp": 1,
+      "influence": null,
+      "dens": null,
+      "value": 6,
+      "score": 6,
+      "effect": "When played: +1 AP.",
+      "effectKey": "init.delay_tactics.ap_or_draw",
+      "why": "value 6.0",
+      "notes": [
+        "tempo"
+      ]
+    },
+    {
+      "name": "Symbolpolitik",
+      "type": "Sofort-Initiative",
+      "cost": 1,
+      "bp": 1,
+      "influence": null,
+      "dens": null,
+      "value": 6,
+      "score": 6,
+      "effect": "Ziehe 1 Karte. Effekt: Nichts. Optik: Stark.",
+      "effectKey": "init.symbolic_politics.draw1",
+      "why": "value 6.0",
+      "notes": [
+        "tempo"
+      ]
+    },
+    {
+      "name": "Volodymyr Zelenskyy",
+      "type": "Regierung",
+      "cost": 6,
+      "bp": 13,
+      "influence": 9,
+      "dens": 0.69,
+      "value": 5.32,
+      "score": 31.923076923076923,
+      "effect": "Nur Einfluss - keine weiteren Effekte",
+      "effectKey": "gov.standard",
+      "why": "value 5.3",
+      "notes": [
+        "hard control",
+        "vanilla"
+      ]
+    },
+    {
+      "name": "Justin Trudeau",
+      "type": "Regierung",
+      "cost": 6,
+      "bp": 13,
+      "influence": 8,
+      "dens": 0.62,
+      "value": 5.19,
+      "score": 31.153846153846153,
+      "effect": "Nur Einfluss - keine weiteren Effekte",
+      "effectKey": "gov.standard",
+      "why": "value 5.2",
+      "notes": [
+        "hard control",
+        "vanilla"
+      ]
+    },
+    {
+      "name": "Ursula von der Leyen",
+      "type": "Regierung",
+      "cost": 6,
+      "bp": 15,
+      "influence": 9,
+      "dens": 0.6,
+      "value": 5.17,
+      "score": 31,
+      "effect": "Nur Einfluss - keine weiteren Effekte",
+      "effectKey": "gov.standard",
+      "why": "value 5.2",
+      "notes": [
+        "hard control",
+        "vanilla"
+      ]
+    },
+    {
+      "name": "Helmut Schmidt",
+      "type": "Regierung",
+      "cost": 6,
+      "bp": 15,
+      "influence": 9,
+      "dens": 0.6,
+      "value": 5.17,
+      "score": 31,
+      "effect": "Nur Einfluss - keine weiteren Effekte",
+      "effectKey": "gov.standard",
+      "why": "value 5.2",
+      "notes": [
+        "hard control",
+        "vanilla"
+      ]
+    },
+    {
+      "name": "Benjamin Netanyahu",
+      "type": "Regierung",
+      "cost": 6,
+      "bp": 15,
+      "influence": 9,
+      "dens": 0.6,
+      "value": 5.17,
+      "score": 31,
+      "effect": "Nur Einfluss - keine weiteren Effekte",
+      "effectKey": "gov.standard",
+      "why": "value 5.2",
+      "notes": [
+        "hard control",
+        "vanilla"
+      ]
+    },
+    {
+      "name": "Partei-Offensive",
+      "type": "Sofort-Initiative",
+      "cost": 3,
+      "bp": 3,
+      "influence": null,
+      "dens": null,
+      "value": 5,
+      "score": 15,
+      "effect": "Eine Regierungskarte des Gegners wird deaktiviert (bis Rundenende)",
+      "effectKey": "init.party_offensive.deactivate_gov",
+      "why": "value 5.0",
+      "notes": [
+        "removal/debuff"
+      ]
+    },
+    {
+      "name": "Algorithmischer Diskurs",
+      "type": "Dauerhaft-Initiative",
+      "cost": 2,
+      "bp": 2,
+      "influence": null,
+      "dens": null,
+      "value": 5,
+      "score": 10,
+      "effect": "Beim Ausspielen: Reduziert Einfluss basierend auf Plattform/KI-Karten in der Öffentlichkeit. Für jede Plattform/KI-Karte: -1 Einfluss auf stärkste Regierungskarte.",
+      "effectKey": "init.algorithmischer_diskurs.media_aura",
+      "why": "value 5.0",
+      "notes": [
+        "persistent"
+      ]
+    },
+    {
+      "name": "Wirtschaftlicher Druck",
+      "type": "Dauerhaft-Initiative",
+      "cost": 2,
+      "bp": 2,
+      "influence": null,
+      "dens": null,
+      "value": 5,
+      "score": 10,
+      "effect": "Wenn du eine Oligarchen-Karte spielst: +1 Einfluss auf eine Regierungskarte",
+      "effectKey": "init.wirtschaftlicher_druck.gov_penalty",
+      "why": "value 5.0",
+      "notes": [
+        "persistent"
+      ]
+    },
+    {
+      "name": "Milchglas Transparenz",
+      "type": "Dauerhaft-Initiative",
+      "cost": 2,
+      "bp": 2,
+      "influence": null,
+      "dens": null,
+      "value": 5,
+      "score": 10,
+      "effect": "+1 Einfluss wenn keine NGO/Bewegung liegt",
+      "effectKey": "init.milchglas_transparenz.no_ngo_bonus",
+      "why": "value 5.0",
+      "notes": [
+        "persistent"
+      ]
+    },
+    {
+      "name": "Alternative Fakten",
+      "type": "Dauerhaft-Initiative",
+      "cost": 2,
+      "bp": 2,
+      "influence": null,
+      "dens": null,
+      "value": 5,
+      "score": 10,
+      "effect": "Gegner-Interventionen -1 Wirkung (mindestens 0)",
+      "effectKey": "init.alternative_fakten.intervention_dampen",
+      "why": "value 5.0",
+      "notes": [
+        "persistent"
+      ]
+    },
+    {
+      "name": "Napoleon Komplex",
+      "type": "Dauerhaft-Initiative",
+      "cost": 2,
+      "bp": 2,
+      "influence": null,
+      "dens": null,
+      "value": 5,
+      "score": 10,
+      "effect": "Tier 1 Regierungskarten +1 Einfluss, kein Einfluss verschieben erlaubt",
+      "effectKey": "init.napoleon_komplex.tier1_gov_plus1",
+      "why": "value 5.0",
+      "notes": [
+        "persistent"
+      ]
+    },
+    {
+      "name": "Alexei Navalny",
+      "type": "Öffentlichkeitskarte",
+      "cost": 5,
+      "bp": 5,
+      "influence": null,
+      "dens": null,
+      "value": 5,
+      "score": 25,
+      "effect": "Wenn auf dem Board: Gegner erhält -1 auf W6-Proben bei Corruption-Steal-Versuchen.",
+      "effectKey": "public.alexei_navalny.opposition",
+      "why": "value 5.0",
+      "notes": [
+        "hard control"
+      ]
+    }
+  ],
+  "weak": [
+    {
+      "name": "Tim Cook",
+      "type": "Öffentlichkeitskarte",
+      "cost": 5,
+      "bp": 5,
+      "influence": null,
+      "dens": null,
+      "value": 2.4,
+      "score": 12,
+      "effect": "Beim Ausspielen: +2 AP.",
+      "effectKey": "public.tim_cook.ap2",
+      "why": "low value 2.4",
+      "notes": [
+        "strong tempo"
+      ]
+    },
+    {
+      "name": "Julian Assange",
+      "type": "Öffentlichkeitskarte",
+      "cost": 5,
+      "bp": 5,
+      "influence": null,
+      "dens": null,
+      "value": 2.4,
+      "score": 12,
+      "effect": "Beim Ausspielen: +1 Karte, aber auch Gegner zieht 1. Bei NGO auf dem Feld: Ziehe 2 statt 1.",
+      "effectKey": "public.julian_assange.leak",
+      "why": "low value 2.4",
+      "notes": [
+        "strong tempo"
+      ]
+    },
+    {
+      "name": "Digitaler Wahlkampf",
+      "type": "Sofort-Initiative",
+      "cost": 3,
+      "bp": 3,
+      "influence": null,
+      "dens": null,
+      "value": 2,
+      "score": 6,
+      "effect": "Ziehe 1 Karte für jede eigene [ICON:medien] Medien-Karte auf dem Feld. (einmalig)",
+      "effectKey": "init.digital_campaign.per_media",
+      "why": "low value 2.0",
+      "notes": [
+        "tempo"
+      ]
+    },
+    {
+      "name": "Noam Chomsky",
+      "type": "Öffentlichkeitskarte",
+      "cost": 5,
+      "bp": 5,
+      "influence": null,
+      "dens": null,
+      "value": 2,
+      "score": 10,
+      "effect": "Gegner erhalten -1 Einfluss bei Initiativen.",
+      "effectKey": "public.chomsky.aura_military_penalty",
+      "why": "low value 2.0",
+      "notes": [
+        "persistent"
+      ]
+    },
+    {
+      "name": "Anthony Fauci",
+      "type": "Öffentlichkeitskarte",
+      "cost": 5,
+      "bp": 5,
+      "influence": null,
+      "dens": null,
+      "value": 2,
+      "score": 10,
+      "effect": "Bei einer Initiative: +1 Einfluss.",
+      "effectKey": "public.fauci.aura_health",
+      "why": "low value 2.0",
+      "notes": [
+        "persistent"
+      ]
+    },
+    {
+      "name": "Greta Thunberg",
+      "type": "Öffentlichkeitskarte",
+      "cost": 4,
+      "bp": 4,
+      "influence": null,
+      "dens": null,
+      "value": 1.5,
+      "score": 6,
+      "effect": "The first time you play a Government card each turn, gain +1 AP.",
+      "effectKey": "public.greta_thunberg.first_gov_ap1",
+      "why": "low value 1.5",
+      "notes": [
+        "tempo"
+      ]
+    },
+    {
+      "name": "Mark Zuckerberg",
+      "type": "Öffentlichkeitskarte",
+      "cost": 5,
+      "bp": 5,
+      "influence": null,
+      "dens": null,
+      "value": 1.2,
+      "score": 6,
+      "effect": "Once per turn, after you activate an initiative, gain +1 AP.",
+      "effectKey": "public.zuck.once_ap_on_activation",
+      "why": "low value 1.2",
+      "notes": [
+        "tempo"
+      ]
+    },
+    {
+      "name": "Ai Weiwei",
+      "type": "Öffentlichkeitskarte",
+      "cost": 5,
+      "bp": 5,
+      "influence": null,
+      "dens": null,
+      "value": 1.2,
+      "score": 6,
+      "effect": "When you activate an initiative: draw 1 card and gain +1 AP.",
+      "effectKey": "public.aiweiwei.on_activate_draw_ap",
+      "why": "low value 1.2",
+      "notes": [
+        "tempo"
+      ]
+    },
+    {
+      "name": "Sam Altman",
+      "type": "Öffentlichkeitskarte",
+      "cost": 6,
+      "bp": 6,
+      "influence": null,
+      "dens": null,
+      "value": 1,
+      "score": 6,
+      "effect": "When you play an AI-related initiative: draw 1 card and gain +1 AP.",
+      "effectKey": "public.sam_altman.ai_boost",
+      "why": "low value 1.0",
+      "notes": [
+        "tempo"
+      ]
+    },
+    {
+      "name": "Roman Abramovich",
+      "type": "Öffentlichkeitskarte",
+      "cost": 6,
+      "bp": 6,
+      "influence": null,
+      "dens": null,
+      "value": 1,
+      "score": 6,
+      "effect": "Ziehe 1 Karte, wenn eine Regierungskarte mit Einfluss 5 oder weniger ausgespielt wird.",
+      "effectKey": "public.roman_abramovich.ap1",
+      "why": "low value 1.0",
+      "notes": [
+        "tempo"
+      ]
+    },
+    {
+      "name": "Mukesh Ambani",
+      "type": "Öffentlichkeitskarte",
+      "cost": 6,
+      "bp": 6,
+      "influence": null,
+      "dens": null,
+      "value": 1,
+      "score": 6,
+      "effect": "Ziehe 1 Karte. Gegner darf 1 Karte weniger nachziehen in der Runde.",
+      "effectKey": "public.mukesh_ambani.ap1",
+      "why": "low value 1.0",
+      "notes": [
+        "tempo"
+      ]
+    },
+    {
+      "name": "Alisher Usmanov",
+      "type": "Öffentlichkeitskarte",
+      "cost": 6,
+      "bp": 6,
+      "influence": null,
+      "dens": null,
+      "value": 1,
+      "score": 6,
+      "effect": "+1 Schutz für eine Regierungskarte.",
+      "effectKey": "public.alisher_usmanov.draw1",
+      "why": "low value 1.0",
+      "notes": [
+        "tempo"
+      ]
+    },
+    {
+      "name": "Zhang Yiming",
+      "type": "Öffentlichkeitskarte",
+      "cost": 6,
+      "bp": 6,
+      "influence": null,
+      "dens": null,
+      "value": 1,
+      "score": 6,
+      "effect": "Draw 1 card. Your next initiative this turn gives +1 AP.",
+      "effectKey": "public.zhang_yiming.draw1_ap1",
+      "why": "low value 1.0",
+      "notes": [
+        "tempo"
+      ]
+    },
+    {
+      "name": "Bill Gates",
+      "type": "Öffentlichkeitskarte",
+      "cost": 7,
+      "bp": 7,
+      "influence": null,
+      "dens": null,
+      "value": 0.86,
+      "score": 6,
+      "effect": "Draw 1 card. Your next initiative this turn gives +1 AP.",
+      "effectKey": "public.bill_gates.next_initiative_ap1",
+      "why": "low value 0.9",
+      "notes": [
+        "tempo"
+      ]
+    },
+    {
+      "name": "George Soros",
+      "type": "Öffentlichkeitskarte",
+      "cost": 7,
+      "bp": 7,
+      "influence": null,
+      "dens": null,
+      "value": 0.86,
+      "score": 6,
+      "effect": "+1 AP when the opponent has an Regierungskarte.",
+      "effectKey": "public.george_soros.ap1",
+      "why": "low value 0.9",
+      "notes": [
+        "tempo"
+      ]
+    },
+    {
+      "name": "Jack Ma",
+      "type": "Öffentlichkeitskarte",
+      "cost": 7,
+      "bp": 7,
+      "influence": null,
+      "dens": null,
+      "value": 0.86,
+      "score": 6,
+      "effect": "Beim Ausspielen: Ziehe 1 Karte.",
+      "effectKey": "public.jack_ma.draw1",
+      "why": "low value 0.9",
+      "notes": [
+        "tempo"
+      ]
+    },
+    {
+      "name": "Shadow Lobbying",
+      "type": "Sofort-Initiative",
+      "cost": 2,
+      "bp": 2,
+      "influence": null,
+      "dens": null,
+      "value": 0,
+      "score": 0,
+      "effect": "",
+      "effectKey": "init.shadow_lobbying.per_oligarch",
+      "why": "low value 0.0",
+      "notes": []
+    },
+    {
+      "name": "Opportunist",
+      "type": "Sofort-Initiative",
+      "cost": 3,
+      "bp": 3,
+      "influence": null,
+      "dens": null,
+      "value": 0,
+      "score": 0,
+      "effect": "Beim Ausspielen: Aktiviert Mirror-Effekt. Einfluss-Boni des Gegners werden auf deine stärkste Regierungskarte gespiegelt.",
+      "effectKey": "init.opportunist.mirror_ap_effects",
+      "why": "low value 0.0",
+      "notes": []
+    },
+    {
+      "name": "Whataboutism",
+      "type": "Sofort-Initiative",
+      "cost": 2,
+      "bp": 2,
+      "influence": null,
+      "dens": null,
+      "value": 0,
+      "score": 0,
+      "effect": "Reaktiviere eine Karte; sie erhält -1 Einfluss",
+      "effectKey": "init.whataboutism.reactivate_minus1",
+      "why": "low value 0.0",
+      "notes": []
+    },
+    {
+      "name": "Influencer-Kampagne",
+      "type": "Sofort-Initiative",
+      "cost": 2,
+      "bp": 2,
+      "influence": null,
+      "dens": null,
+      "value": 0,
+      "score": 0,
+      "effect": "Öffentlichkeits-Effekt zählt doppelt (einmalig)",
+      "effectKey": "init.influencer_campaign.double_public",
+      "why": "low value 0.0",
+      "notes": []
+    }
+  ],
+  "dead": [],
+  "topValue": [
+    {
+      "name": "Werner Maihofer",
+      "type": "Regierung",
+      "cost": 2,
+      "bp": 2,
+      "influence": 3,
+      "dens": 1.5,
+      "value": 20,
+      "score": 40,
+      "effect": "Nur Einfluss - keine weiteren Effekte",
+      "effectKey": "gov.standard",
+      "notes": [
+        "high dens 1.50",
+        "hard control",
+        "vanilla"
+      ]
+    },
+    {
+      "name": "Cancel Culture",
+      "type": "Intervention",
+      "cost": 2,
+      "bp": 2,
+      "influence": null,
+      "dens": null,
+      "value": 20,
+      "score": 40,
+      "effect": "Die Öffentlichkeitskarte wird deaktiviert",
+      "effectKey": "trap.cancel_culture.deactivate_public",
+      "notes": [
+        "hard control",
+        "removal/debuff"
+      ]
+    },
+    {
+      "name": "John Snow",
+      "type": "Regierung",
+      "cost": 3,
+      "bp": 3,
+      "influence": 4,
+      "dens": 1.33,
+      "value": 12.78,
+      "score": 38.33333333333333,
+      "effect": "Nur Einfluss - keine weiteren Effekte",
+      "effectKey": "gov.standard",
+      "notes": [
+        "high dens 1.33",
+        "hard control",
+        "vanilla"
+      ]
+    },
+    {
+      "name": "Karl Carstens",
+      "type": "Regierung",
+      "cost": 3,
+      "bp": 3,
+      "influence": 4,
+      "dens": 1.33,
+      "value": 12.78,
+      "score": 38.33333333333333,
+      "effect": "Nur Einfluss - keine weiteren Effekte",
+      "effectKey": "gov.standard",
+      "notes": [
+        "high dens 1.33",
+        "hard control",
+        "vanilla"
+      ]
+    },
+    {
+      "name": "Hans Eichel",
+      "type": "Regierung",
+      "cost": 3,
+      "bp": 3,
+      "influence": 4,
+      "dens": 1.33,
+      "value": 12.78,
+      "score": 38.33333333333333,
+      "effect": "Nur Einfluss - keine weiteren Effekte",
+      "effectKey": "gov.standard",
+      "notes": [
+        "high dens 1.33",
+        "hard control",
+        "vanilla"
+      ]
+    },
+    {
+      "name": "Edelgard Bulmahn",
+      "type": "Regierung",
+      "cost": 3,
+      "bp": 3,
+      "influence": 4,
+      "dens": 1.33,
+      "value": 12.78,
+      "score": 38.33333333333333,
+      "effect": "Nur Einfluss - keine weiteren Effekte",
+      "effectKey": "gov.standard",
+      "notes": [
+        "high dens 1.33",
+        "hard control",
+        "vanilla"
+      ]
+    },
+    {
+      "name": "Gerhart Baum",
+      "type": "Regierung",
+      "cost": 3,
+      "bp": 3,
+      "influence": 4,
+      "dens": 1.33,
+      "value": 12.78,
+      "score": 38.33333333333333,
+      "effect": "Nur Einfluss - keine weiteren Effekte",
+      "effectKey": "gov.standard",
+      "notes": [
+        "high dens 1.33",
+        "hard control",
+        "vanilla"
+      ]
+    },
+    {
+      "name": "Rainer Offergeld",
+      "type": "Regierung",
+      "cost": 3,
+      "bp": 3,
+      "influence": 4,
+      "dens": 1.33,
+      "value": 12.78,
+      "score": 38.33333333333333,
+      "effect": "Nur Einfluss - keine weiteren Effekte",
+      "effectKey": "gov.standard",
+      "notes": [
+        "high dens 1.33",
+        "hard control",
+        "vanilla"
+      ]
+    },
+    {
+      "name": "Koalitionszwang",
+      "type": "Dauerhaft-Initiative",
+      "cost": 2,
+      "bp": 2,
+      "influence": null,
+      "dens": null,
+      "value": 12.5,
+      "score": 25,
+      "effect": "Für jede deiner Regierungskarten welche einen gleichhohen Einflusswert hat wie eine gegnerische Regierungskarte bekommst du +1 Einfluss +1 für jede Aktivisten und denker Karte welche in deinen Öffentlichkeitsslots liegt. Zusätzlich: Hast du mindestens zwei Tier-2-Regierungskarten, erhalten alle deine Tier-2-Regierungskarten +1 Einfluss.",
+      "effectKey": "gov.koalitionszwang.coalition_bonus",
+      "notes": [
+        "removal/debuff",
+        "persistent"
+      ]
+    },
+    {
+      "name": "Interne Fraktionskämpfe",
+      "type": "Intervention",
+      "cost": 2,
+      "bp": 2,
+      "influence": null,
+      "dens": null,
+      "value": 12.5,
+      "score": 25,
+      "effect": "Die Initiative wird annulliert",
+      "effectKey": "trap.internal_faction_strife.cancel_big_initiative",
+      "notes": [
+        "hard control"
+      ]
+    },
+    {
+      "name": "Deepfake-Skandal",
+      "type": "Intervention",
+      "cost": 2,
+      "bp": 2,
+      "influence": null,
+      "dens": null,
+      "value": 12.5,
+      "score": 25,
+      "effect": "Kein Einflusstransfer möglich",
+      "effectKey": "trap.deepfake.lock_diplomat_transfer",
+      "notes": [
+        "hard control"
+      ]
+    },
+    {
+      "name": "\"Unabhängige\" Untersuchung",
+      "type": "Intervention",
+      "cost": 2,
+      "bp": 2,
+      "influence": null,
+      "dens": null,
+      "value": 12.5,
+      "score": 25,
+      "effect": "Die Intervention wird annulliert",
+      "effectKey": "trap.independent_investigation.cancel_trap",
+      "notes": [
+        "hard control"
+      ]
+    },
+    {
+      "name": "Tunnelvision",
+      "type": "Dauerhaft-Initiative",
+      "cost": 2,
+      "bp": 2,
+      "influence": null,
+      "dens": null,
+      "value": 12.5,
+      "score": 25,
+      "effect": "Solange Tunnelvision aktiv ist, müssen beide Spieler bei Regierungskarten eine Probe bestehen. W6 ≥4 (≥5 bei Einfluss 9+). Bei Misserfolg: 1-3 Karte bleibt in Hand, 1 kritischer Misserfolg entfernt Karte dauerhaft. 1 AP wird immer abgezogen.",
+      "effectKey": "init.tunnel_vision.gov_probe_system",
+      "notes": [
+        "removal/debuff",
+        "persistent"
+      ]
+    },
+    {
+      "name": "Scandal Spiral",
+      "type": "Intervention",
+      "cost": 2,
+      "bp": 2,
+      "influence": null,
+      "dens": null,
+      "value": 12.5,
+      "score": 25,
+      "effect": "Die zweite Öffentlichkeitskarte des Gegners wird annulliert",
+      "effectKey": "trap.scandal_spiral.cancel_one_of_two",
+      "notes": [
+        "hard control"
+      ]
+    },
+    {
+      "name": "Heidemarie Wieczorek-Zeul",
+      "type": "Regierung",
+      "cost": 4,
+      "bp": 4,
+      "influence": 5,
+      "dens": 1.25,
+      "value": 9.38,
+      "score": 37.5,
+      "effect": "Nur Einfluss - keine weiteren Effekte",
+      "effectKey": "gov.standard",
+      "notes": [
+        "high dens 1.25",
+        "hard control",
+        "vanilla"
+      ]
+    },
+    {
+      "name": "Renate Künast",
+      "type": "Regierung",
+      "cost": 4,
+      "bp": 4,
+      "influence": 5,
+      "dens": 1.25,
+      "value": 9.38,
+      "score": 37.5,
+      "effect": "Nur Einfluss - keine weiteren Effekte",
+      "effectKey": "gov.standard",
+      "notes": [
+        "high dens 1.25",
+        "hard control",
+        "vanilla"
+      ]
+    },
+    {
+      "name": "Rudolf Scharping",
+      "type": "Regierung",
+      "cost": 4,
+      "bp": 4,
+      "influence": 5,
+      "dens": 1.25,
+      "value": 9.38,
+      "score": 37.5,
+      "effect": "Nur Einfluss - keine weiteren Effekte",
+      "effectKey": "gov.standard",
+      "notes": [
+        "high dens 1.25",
+        "hard control",
+        "vanilla"
+      ]
+    },
+    {
+      "name": "John Ashcroft",
+      "type": "Regierung",
+      "cost": 4,
+      "bp": 4,
+      "influence": 5,
+      "dens": 1.25,
+      "value": 9.38,
+      "score": 37.5,
+      "effect": "Nur Einfluss - keine weiteren Effekte",
+      "effectKey": "gov.standard",
+      "notes": [
+        "high dens 1.25",
+        "hard control",
+        "vanilla"
+      ]
+    },
+    {
+      "name": "Tedros Adhanom Ghebreyesus",
+      "type": "Regierung",
+      "cost": 4,
+      "bp": 4,
+      "influence": 5,
+      "dens": 1.25,
+      "value": 9.38,
+      "score": 37.5,
+      "effect": "Nur Einfluss - keine weiteren Effekte",
+      "effectKey": "gov.standard",
+      "notes": [
+        "high dens 1.25",
+        "hard control",
+        "vanilla"
+      ]
+    },
+    {
+      "name": "Tom Ridge",
+      "type": "Regierung",
+      "cost": 4,
+      "bp": 4,
+      "influence": 5,
+      "dens": 1.25,
+      "value": 9.38,
+      "score": 37.5,
+      "effect": "Nur Einfluss - keine weiteren Effekte",
+      "effectKey": "gov.standard",
+      "notes": [
+        "high dens 1.25",
+        "hard control",
+        "vanilla"
+      ]
+    },
+    {
+      "name": "Alberto Gonzales",
+      "type": "Regierung",
+      "cost": 4,
+      "bp": 4,
+      "influence": 5,
+      "dens": 1.25,
+      "value": 9.38,
+      "score": 37.5,
+      "effect": "Nur Einfluss - keine weiteren Effekte",
+      "effectKey": "gov.standard",
+      "notes": [
+        "high dens 1.25",
+        "hard control",
+        "vanilla"
+      ]
+    },
+    {
+      "name": "Annette Schavan",
+      "type": "Regierung",
+      "cost": 4,
+      "bp": 4,
+      "influence": 5,
+      "dens": 1.25,
+      "value": 9.38,
+      "score": 37.5,
+      "effect": "Nur Einfluss - keine weiteren Effekte",
+      "effectKey": "gov.standard",
+      "notes": [
+        "high dens 1.25",
+        "hard control",
+        "vanilla"
+      ]
+    },
+    {
+      "name": "Franz Josef Jung",
+      "type": "Regierung",
+      "cost": 4,
+      "bp": 4,
+      "influence": 5,
+      "dens": 1.25,
+      "value": 9.38,
+      "score": 37.5,
+      "effect": "Nur Einfluss - keine weiteren Effekte",
+      "effectKey": "gov.standard",
+      "notes": [
+        "high dens 1.25",
+        "hard control",
+        "vanilla"
+      ]
+    },
+    {
+      "name": "Georg Leber",
+      "type": "Regierung",
+      "cost": 4,
+      "bp": 4,
+      "influence": 5,
+      "dens": 1.25,
+      "value": 9.38,
+      "score": 37.5,
+      "effect": "Nur Einfluss - keine weiteren Effekte",
+      "effectKey": "gov.standard",
+      "notes": [
+        "high dens 1.25",
+        "hard control",
+        "vanilla"
+      ]
+    },
+    {
+      "name": "Hans Apel",
+      "type": "Regierung",
+      "cost": 4,
+      "bp": 4,
+      "influence": 5,
+      "dens": 1.25,
+      "value": 9.38,
+      "score": 37.5,
+      "effect": "Nur Einfluss - keine weiteren Effekte",
+      "effectKey": "gov.standard",
+      "notes": [
+        "high dens 1.25",
+        "hard control",
+        "vanilla"
+      ]
+    }
+  ],
+  "bottomValue": [
+    {
+      "name": "Gautam Adani",
+      "type": "Öffentlichkeitskarte",
+      "cost": 6,
+      "bp": 6,
+      "influence": null,
+      "dens": null,
+      "value": 0,
+      "score": 0,
+      "effect": "Wenn einziger Oligarch in deiner Public-Reihe: +1 auf alle Corruption-Proben.",
+      "effectKey": "public.gautam_adani.oligarch",
+      "notes": []
+    },
+    {
+      "name": "Edward Snowden",
+      "type": "Öffentlichkeitskarte",
+      "cost": 5,
+      "bp": 5,
+      "influence": null,
+      "dens": null,
+      "value": 0,
+      "score": 0,
+      "effect": "Gegner verliert 1 Karte (zufällig). Bei US-Regierungskarte: -1 Einfluss dort.",
+      "effectKey": "public.edward_sn0wden.whistleblower",
+      "notes": []
+    },
+    {
+      "name": "Jeff Bezos",
+      "type": "Öffentlichkeitskarte",
+      "cost": 6,
+      "bp": 6,
+      "influence": null,
+      "dens": null,
+      "value": 0,
+      "score": 0,
+      "effect": "Entfernt beim Spielen alle anderen Oligarchenkarten auf dem Spielfeld.",
+      "effectKey": "public.jeff_bezos.oligarch_removal",
+      "notes": []
+    },
+    {
+      "name": "Elon Musk",
+      "type": "Öffentlichkeitskarte",
+      "cost": 8,
+      "bp": 8,
+      "influence": null,
+      "dens": null,
+      "value": 0,
+      "score": 0,
+      "effect": "",
+      "effectKey": "public.elon.draw_ap",
+      "notes": []
+    },
+    {
+      "name": "Lobby Leak",
+      "type": "Intervention",
+      "cost": 2,
+      "bp": 2,
+      "influence": null,
+      "dens": null,
+      "value": 0,
+      "score": 0,
+      "effect": "Gegner muss 1 Karte abwerfen",
+      "effectKey": "trap.lobby_leak.force_discard_on_ngo",
+      "notes": []
+    },
+    {
+      "name": "Strategische Enthüllung",
+      "type": "Intervention",
+      "cost": 3,
+      "bp": 3,
+      "influence": null,
+      "dens": null,
+      "value": 0,
+      "score": 0,
+      "effect": "Eine Regierungskarte zurück auf die Hand",
+      "effectKey": "trap.strategic_disclosure.return_gov",
+      "notes": []
+    },
+    {
+      "name": "Influencer-Kampagne",
+      "type": "Sofort-Initiative",
+      "cost": 2,
+      "bp": 2,
+      "influence": null,
+      "dens": null,
+      "value": 0,
+      "score": 0,
+      "effect": "Öffentlichkeits-Effekt zählt doppelt (einmalig)",
+      "effectKey": "init.influencer_campaign.double_public",
+      "notes": []
+    },
+    {
+      "name": "Whataboutism",
+      "type": "Sofort-Initiative",
+      "cost": 2,
+      "bp": 2,
+      "influence": null,
+      "dens": null,
+      "value": 0,
+      "score": 0,
+      "effect": "Reaktiviere eine Karte; sie erhält -1 Einfluss",
+      "effectKey": "init.whataboutism.reactivate_minus1",
+      "notes": []
+    },
+    {
+      "name": "Opportunist",
+      "type": "Sofort-Initiative",
+      "cost": 3,
+      "bp": 3,
+      "influence": null,
+      "dens": null,
+      "value": 0,
+      "score": 0,
+      "effect": "Beim Ausspielen: Aktiviert Mirror-Effekt. Einfluss-Boni des Gegners werden auf deine stärkste Regierungskarte gespiegelt.",
+      "effectKey": "init.opportunist.mirror_ap_effects",
+      "notes": []
+    },
+    {
+      "name": "Shadow Lobbying",
+      "type": "Sofort-Initiative",
+      "cost": 2,
+      "bp": 2,
+      "influence": null,
+      "dens": null,
+      "value": 0,
+      "score": 0,
+      "effect": "",
+      "effectKey": "init.shadow_lobbying.per_oligarch",
+      "notes": []
+    },
+    {
+      "name": "Jack Ma",
+      "type": "Öffentlichkeitskarte",
+      "cost": 7,
+      "bp": 7,
+      "influence": null,
+      "dens": null,
+      "value": 0.86,
+      "score": 6,
+      "effect": "Beim Ausspielen: Ziehe 1 Karte.",
+      "effectKey": "public.jack_ma.draw1",
+      "notes": [
+        "tempo"
+      ]
+    },
+    {
+      "name": "George Soros",
+      "type": "Öffentlichkeitskarte",
+      "cost": 7,
+      "bp": 7,
+      "influence": null,
+      "dens": null,
+      "value": 0.86,
+      "score": 6,
+      "effect": "+1 AP when the opponent has an Regierungskarte.",
+      "effectKey": "public.george_soros.ap1",
+      "notes": [
+        "tempo"
+      ]
+    },
+    {
+      "name": "Bill Gates",
+      "type": "Öffentlichkeitskarte",
+      "cost": 7,
+      "bp": 7,
+      "influence": null,
+      "dens": null,
+      "value": 0.86,
+      "score": 6,
+      "effect": "Draw 1 card. Your next initiative this turn gives +1 AP.",
+      "effectKey": "public.bill_gates.next_initiative_ap1",
+      "notes": [
+        "tempo"
+      ]
+    },
+    {
+      "name": "Zhang Yiming",
+      "type": "Öffentlichkeitskarte",
+      "cost": 6,
+      "bp": 6,
+      "influence": null,
+      "dens": null,
+      "value": 1,
+      "score": 6,
+      "effect": "Draw 1 card. Your next initiative this turn gives +1 AP.",
+      "effectKey": "public.zhang_yiming.draw1_ap1",
+      "notes": [
+        "tempo"
+      ]
+    },
+    {
+      "name": "Alisher Usmanov",
+      "type": "Öffentlichkeitskarte",
+      "cost": 6,
+      "bp": 6,
+      "influence": null,
+      "dens": null,
+      "value": 1,
+      "score": 6,
+      "effect": "+1 Schutz für eine Regierungskarte.",
+      "effectKey": "public.alisher_usmanov.draw1",
+      "notes": [
+        "tempo"
+      ]
+    }
+  ],
+  "criticalAssertions": [
+    {
+      "name": "Bestechungsskandal 2.0",
+      "severity": "impossible",
+      "claim": "Can steal an enemy government card via W6+oligarch bonus; permanently flips board influence. At bp3 this can win a round on the spot."
+    },
+    {
+      "name": "Maulwurf",
+      "severity": "impossible",
+      "claim": "Auto-targets weakest gov; often needs only W6≥2–3. After bp nerf to 3 still among strongest swing cards."
+    },
+    {
+      "name": "Oppositionsblockade",
+      "severity": "oppressive",
+      "claim": "Locks all opponent initiatives until EOT. With bp nerf to 3 still shuts a whole strategy pillar."
+    },
+    {
+      "name": "Parlament geschlossen",
+      "severity": "oppressive",
+      "claim": "Hard-locks further government plays for the round once ≥2 govs are down — freezes the win condition."
+    },
+    {
+      "name": "Partei-Offensive",
+      "severity": "oppressive",
+      "claim": "Deactivates strongest enemy gov for bp3 — direct score deletion with no dice."
+    },
+    {
+      "name": "Cyber-Attacke",
+      "severity": "oppressive",
+      "claim": "Destroys (not just deactivates) a Platform public — permanent resource denial."
+    },
+    {
+      "name": "Jeff Bezos",
+      "severity": "oppressive",
+      "claim": "Removes all other oligarchs from board on play — nukes entire oligarch engine for both sides asymmetrically."
+    },
+    {
+      "name": "Ai Weiwei",
+      "severity": "oppressive",
+      "claim": "Every initiative activation: +1 card +1 AP. Infinite tempo engine if left up."
+    },
+    {
+      "name": "Tim Cook",
+      "severity": "strong",
+      "claim": "Flat +2 AP on play at cost 5 — raw tempo spike, no condition."
+    },
+    {
+      "name": "Elon Musk",
+      "severity": "strong",
+      "claim": "Draw on play + once/turn AP on initiative; deckCost 8 is the main brake."
+    },
+    {
+      "name": "Whataboutism",
+      "severity": "strong",
+      "claim": "Reactivates a deactivated card for bp2 — undoes expensive removal at bargain rate."
+    },
+    {
+      "name": "Digitaler Wahlkampf",
+      "severity": "strong",
+      "claim": "Draws 1 per media/platform on board — scales with existing board, can be 3–4 cards."
+    },
+    {
+      "name": "Napoleon Komplex",
+      "severity": "acceptable",
+      "claim": "+1 to all T1 govs; strong in swarm decks but slot-limited (one Dauerhaft)."
+    },
+    {
+      "name": "Symbolpolitik",
+      "severity": "weak",
+      "claim": "Draw 1 for bp1 with no other effect — filler by design, acceptable low floor."
+    },
+    {
+      "name": "Koalitionszwang",
+      "severity": "strong",
+      "claim": "Complex matching bonus + T2 synergy; can silently add several influence if boards mirror."
+    },
+    {
+      "name": "Tunnelvision",
+      "severity": "oppressive",
+      "claim": "Forces W6 probes on every government play for both players — high variance lockdown of the scoring lane."
+    },
+    {
+      "name": "Alternative Fakten",
+      "severity": "acceptable",
+      "claim": "Dampens enemy interventions by 1 — solid hate, not game-ending."
+    },
+    {
+      "name": "Scandal Spiral",
+      "severity": "acceptable",
+      "claim": "Cancels 2nd public; situational hate that rewards holding the trap."
+    },
+    {
+      "name": "T1 gov density pack",
+      "severity": "oppressive",
+      "claim": "Many T1 pols at I/BP ≥1.2 (e.g. 5I/4BP) outclass T2 prestige cards on efficiency."
+    }
+  ]
+}

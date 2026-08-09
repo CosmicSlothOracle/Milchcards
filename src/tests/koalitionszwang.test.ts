@@ -116,8 +116,9 @@ describe('Koalitionszwang Effect', () => {
     });
 
     test('should have correct effectKey in card definition', () => {
-      const { cards } = require('../data/cards');
-      const koalitionszwangCard = cards.find((c: any) => c.name && c.name.includes('Koalitionszwang'));
+      const { CARDS } = require('../data/cards');
+      const koalitionszwangCard = CARDS.find((c: any) => c.name && c.name.includes('Koalitionszwang'))
+        || require('../data/gameData').Specials.find((c: any) => c.name === 'Koalitionszwang');
       expect(koalitionszwangCard).toBeDefined();
       expect(koalitionszwangCard.effectKey).toBe('gov.koalitionszwang.coalition_bonus');
     });
@@ -129,9 +130,10 @@ describe('Koalitionszwang Effect', () => {
       const details = getCardDetails('Koalitionszwang');
 
       expect(details).toBeDefined();
-      expect(details.gameEffect).toContain('gleichhohen Einflusswert');
-      expect(details.gameEffect).toContain('Aktivisten und denker Karte');
-      expect(details.gameEffect).toContain('Öffentlichkeitsslots');
+      expect(details.gameEffect).toContain('gleichem Einfluss');
+      expect(details.gameEffect).toContain('Aktivist/Denker');
+      expect(details.gameEffect).toContain('max. +2');
+      expect(details.gameEffect).toContain('Tier-2');
     });
 
     test('should have correct usage and example', () => {
@@ -140,7 +142,7 @@ describe('Koalitionszwang Effect', () => {
 
       expect(details.usage).toContain('Regierungskarten gleichen Einflusses');
       expect(details.usage).toContain('Aktivisten/Denkern');
-      expect(details.example).toContain('Koalition bilden');
+      expect(details.example).toContain('+2 Cap');
     });
   });
 });

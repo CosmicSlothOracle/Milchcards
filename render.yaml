@@ -1,0 +1,17 @@
+# Milchcards PvP WebSocket relay on Render.
+# Deploy this as a Web Service from the /server directory, or use this Blueprint.
+services:
+  - type: web
+    name: milchcards-pvp
+    runtime: node
+    rootDir: server
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      - key: PORT
+        generateValue: false
+        # Render injects PORT automatically; the server reads process.env.PORT

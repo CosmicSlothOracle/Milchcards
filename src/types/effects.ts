@@ -19,6 +19,21 @@ export type EffectEvent =
   | { type: 'DEBUFF_CARD'; player: Player; targetUid: number; amount: number }
 
   | { type: 'REGISTER_TRAP'; player: Player; key: string }
+  // Dynamic buffs/draws computed at resolve time (board-dependent)
+  | { type: 'SHADOW_LOBBYING_BUFF'; player: Player }
+  | { type: 'DIGITAL_CAMPAIGN_DRAW'; player: Player }
+  | { type: 'ALGO_DISCOURSE_DEBUFF'; player: Player }
+  | { type: 'WHATABOUTISM_REACTIVATE'; player: Player }
+  | { type: 'PROTECT_STRONGEST_GOV'; player: Player }
+  | { type: 'SET_NEXT_INITIATIVE_AP_BONUS'; player: Player; amount: number }
+  | { type: 'REVEAL_OPPONENT_HAND'; player: Player }
+  | { type: 'DESTROY_CARD'; player: Player; targetUid: number }
+  | { type: 'SOROS_AP_CHECK'; player: Player }
+  | { type: 'SNOWDEN_DEBUFF_US_GOV'; player: Player }
+  | { type: 'ASSANGE_DRAW'; player: Player }
+  | { type: 'HARARI_PLATFORM_AP'; player: Player }
+  | { type: 'SET_NEXT_GOV_PLUS2'; player: Player }
+  | { type: 'SET_DRAW_PENALTY'; player: Player }
   | { type: 'UI_TRIGGER_HIT_ANIM'; player: Player; lane: string; index: number }
   // New generic intent events for advanced card effects
   | { type: 'DEACTIVATE_STRONGEST_ENEMY_GOV'; player: Player }
@@ -52,6 +67,7 @@ export type EffectEvent =
   | { type: 'SKANDALSPIRALE_TRIGGER'; player: Player }
   // Koalitionszwang complex influence calculation
   | { type: 'KOALITIONSZWANG_CALCULATE_BONUS'; player: Player }
+  | { type: 'TIM_COOK_AP'; player: Player }
   // Animation System Events
   | { type: 'ANIMATION_PLAY'; characterId: string; animationName: string }
   | { type: 'ANIMATION_COMPLETE'; characterId: string; animationName: string }
