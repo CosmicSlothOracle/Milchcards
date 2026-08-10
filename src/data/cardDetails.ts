@@ -986,7 +986,7 @@ export const PUBLIC_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Elon Musk': {
     name: 'Elon Musk',
     category: 'Öffentlichkeit',
-    gameEffect: 'Ziehe 1 Karte. Einmal pro Runde: nach Aktivierung einer Initiative +1 AP.',
+    gameEffect: 'Ziehe 1 Karte. Aura: Wenn der Gegner einen Oligarchen oder eine Regierung mit Einfluss ≥7 spielt, stiehl 1 AP (1×/Zug).',
     deckCost: 8,
     subcategories: ['Oligarch', 'Plattform', 'Tech'],
     nationality: 'US-Amerikanisch',
@@ -1001,7 +1001,7 @@ export const PUBLIC_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Bill Gates': {
     name: 'Bill Gates',
     category: 'Öffentlichkeit',
-    gameEffect: 'Draw 1 card. Your next initiative this turn gives +1 AP.',
+    gameEffect: 'Ziehe 1 Karte. Aura: Wenn der Gegner NGO/Think-Tank spielt oder Think-tank aktiviert, stiehl 1 AP (1×/Zug).',
     deckCost: 7,
     subcategories: ['Oligarch', 'Tech', 'Aktivist'],
     nationality: 'US-Amerikanisch',
@@ -1016,7 +1016,7 @@ export const PUBLIC_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Mark Zuckerberg': {
     name: 'Mark Zuckerberg',
     category: 'Öffentlichkeit',
-    gameEffect: 'Once per turn, after you activate an initiative, gain +1 AP.',
+    gameEffect: 'Aura: Wenn der Gegner eine Initiative aktiviert, stiehl 1 AP (1×/Zug).',
     deckCost: 5,
     subcategories: ['Oligarch', 'Tech', 'Plattform'],
     nationality: 'US-Amerikanisch',
@@ -1031,7 +1031,7 @@ export const PUBLIC_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Greta Thunberg': {
     name: 'Greta Thunberg',
     category: 'Öffentlichkeit',
-    gameEffect: 'The first time you play a Government card each turn, gain +1 AP.',
+    gameEffect: 'Aura: Wenn der Gegner seine erste Regierungskarte im Zug spielt, stiehl 1 AP (1×/Zug).',
     deckCost: 4,
     subcategories: ['Aktivist'],
     nationality: 'Schwedisch',
@@ -1046,7 +1046,7 @@ export const PUBLIC_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'George Soros': {
     name: 'George Soros',
     category: 'Öffentlichkeit',
-    gameEffect: '+1 AP when the opponent has an Regierungskarte.',
+    gameEffect: 'Aura: Wenn der Gegner eine Regierung mit Einfluss ≥7 spielt, stiehl 1 AP (1×/Zug).',
     deckCost: 7,
     subcategories: ['Oligarch', 'Tech', 'Aktivist'],
     nationality: 'US-Amerikanisch (geboren in Ungarn)',
@@ -1061,7 +1061,7 @@ export const PUBLIC_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Sam Altman': {
     name: 'Sam Altman',
     category: 'Öffentlichkeit',
-    gameEffect: 'When you play an AI-related initiative: draw 1 card and gain +1 AP.',
+    gameEffect: 'Aura: Wenn der Gegner eine KI-Initiative aktiviert, stiehl 1 AP (1×/Zug).',
     deckCost: 6,
     subcategories: ['Tech'],
     nationality: 'US-Amerikanisch',
@@ -1121,7 +1121,7 @@ export const PUBLIC_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Tim Cook': {
     name: 'Tim Cook',
     category: 'Öffentlichkeit',
-    gameEffect: 'Beim Ausspielen: +1 AP, oder +2 AP wenn bereits eine andere Plattform auf dem Feld liegt.',
+    gameEffect: 'Aura: Wenn der Gegner eine Plattform spielt, stiehl 1 AP (1×/Zug).',
     deckCost: 5,
     subcategories: ['Tech', 'Plattform'],
     nationality: 'US-Amerikanisch',
@@ -1241,7 +1241,7 @@ export const PUBLIC_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Zhang Yiming': {
     name: 'Zhang Yiming',
     category: 'Öffentlichkeit',
-    gameEffect: 'Draw 1 card. Your next initiative this turn gives +1 AP.',
+    gameEffect: 'Ziehe 1 Karte. Aura: Wenn der Gegner Medien/Plattform spielt, stiehl 1 AP (1×/Zug).',
     deckCost: 6,
     subcategories: ['Oligarch', 'Plattform'],
     nationality: 'Chinesisch',
@@ -1286,7 +1286,7 @@ export const PUBLIC_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Yuval Noah Harari': {
     name: 'Yuval Noah Harari',
     category: 'Öffentlichkeit',
-    gameEffect: 'Your next ongoing initiative gives +1 AP. +1 AP if a platform is also present.',
+    gameEffect: 'Aura: Wenn der Gegner eine Plattform spielt, stiehl 1 AP (1×/Zug).',
     deckCost: 5,
     subcategories: ['Denker', 'Wissenschaft'],
     nationality: 'Israelisch',
@@ -1301,7 +1301,7 @@ export const PUBLIC_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Ai Weiwei': {
     name: 'Ai Weiwei',
     category: 'Öffentlichkeit',
-    gameEffect: 'Einmal pro Zug: wenn du eine Initiative aktivierst, ziehe 1 Karte und erhalte +1 AP.',
+    gameEffect: 'Aura: Wenn der Gegner eine Initiative aktiviert, stiehl 1 AP (1×/Zug).',
     deckCost: 5,
     subcategories: ['Aktivist', 'Medien', 'Denker'],
     nationality: 'Chinesisch',

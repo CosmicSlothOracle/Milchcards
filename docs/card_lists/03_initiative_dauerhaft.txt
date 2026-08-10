@@ -1,0 +1,14 @@
+Dauerhaft-Initiativen
+=====================
+
+Count: 9
+
+- Koalitionszwang: Beim Ausspielen: +1 Einfluss pro eigener Regierung mit gleichem Einfluss wie eine gegnerische, plus +1 pro Aktivist/Denker in der Öffentlichkeit (gesamter Bonus max. +2, auf stärkste Regierung). Aura: Bei ≥2 Tier-2-Regierungen erhalten alle deine Tier-2-Regierungen +1 Einfluss.
+- Algorithmischer Diskurs: Beim Ausspielen: Reduziert Einfluss basierend auf Plattform/KI-Karten in der Öffentlichkeit. Für jede Plattform/KI-Karte: -1 Einfluss auf stärkste Regierungskarte.
+- Wirtschaftlicher Druck: Wenn du eine Oligarchen-Karte spielst: +1 Einfluss auf eine Regierungskarte
+- Zivilgesellschaft: Movement cards +1 influence, NGOs give +1 AP on next initiative
+- Milchglas Transparenz: +1 Einfluss wenn keine NGO/Bewegung liegt
+- Alternative Fakten: Gegner-Interventionen -1 Wirkung (mindestens 0)
+- Napoleon Komplex: Deine stärkste Tier-1-Regierungskarte erhält +1 Einfluss. Einfluss verschieben ist nicht erlaubt.
+- Konzernfreundlicher Algorithmus: Bei Plattform-Karten: ziehe 1 Karte, Oligarchen +1 Einfluss
+- Tunnelvision: Solange aktiv: nur der Gegner muss bei Regierungskarten eine Probe bestehen (W6 ≥4, ≥5 bei Einfluss 9+). Bei Misserfolg bleibt die Karte in der Hand. 1 AP wird immer abgezogen.

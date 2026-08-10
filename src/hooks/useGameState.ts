@@ -365,6 +365,14 @@ export function useGameState() {
   }, []);
 
   const resolveRound = useCallback((state: GameState): GameState => {
+    // Safety: same W6 purge as useGameActions.resolveRound (legacy path)
+    try {
+      const { runPurgeSequence } = require('../utils/corruption');
+      runPurgeSequence(state, log);
+    } catch (e) {
+      log(`⚠️ Säuberung (legacy) fehlgeschlagen: ${String(e)}`);
+    }
+
     const [s1, s2] = scores(state);
     let winner: 1 | 2 = 1;
     let note = '';
@@ -377,7 +385,7 @@ export function useGameState() {
       note = ' (Gleichstand – früherer Pass)';
     }
 
-    log(`Runde ${ state.round } endet: P1 ${ s1 } : P2 ${ s2 }. Gewinner: P${ winner }${ note }.`);
+    log(`Runde ${ state.round } endet (nach Säuberung): P1 ${ s1 } : P2 ${ s2 }. Gewinner: P${ winner }${ note }.`);
 
     // Rundensieg zählen
     const newRoundsWon = { ...state.roundsWon };
@@ -1050,6 +1058,7 @@ export function useGameState() {
     startMatchVsAI: gameActions.startMatchVsAI,
     playCard: gameActions.playCard,
     activateInstantInitiative: gameActions.activateInstantInitiative,
+    activateGovernmentAbility: gameActions.activateGovernmentAbility,
 
     // AI functionality
     runAITurn: gameAI.runAITurn,

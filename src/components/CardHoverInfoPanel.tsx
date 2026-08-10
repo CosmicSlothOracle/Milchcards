@@ -32,6 +32,10 @@ export const CardHoverInfoPanel: React.FC<CardHoverInfoPanelProps> = ({ hovered 
         <div>Einfluss: {polCard.influence}{delta !== 0 ? ` (${baseInf} ${delta > 0 ? '+' : ''}${delta})` : ''}</div>
         <div>Tier: {polCard.T}</div>
         <div>BP: {polCard.BP}</div>
+        <div style={{ color: Number(polCard.corruption ?? 0) >= 3 ? '#fb923c' : '#facc15', marginTop: 4 }}>
+          Korruption: {polCard.corruption ?? polCard.corruptionStart ?? '—'}
+          {Number(polCard.corruption ?? 0) >= 3 ? ' · Fähigkeit bereit (klicken)' : ''}
+        </div>
       </div>
     );
   } else {

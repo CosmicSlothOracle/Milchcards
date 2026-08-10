@@ -137,19 +137,24 @@ export function applyTrapsOnCardPlayed(
             .slice()
             .sort((a: any, b: any) => (b.influence + (b.tempBuffs||0) - (b.tempDebuffs||0)) - (a.influence + (a.tempBuffs||0) - (a.tempDebuffs||0)))
             .slice(0, 2);
+          const hasOligarch = (state.board[playedBy]?.innen || []).some(c => isOligarchCard(c) && !(c as any).deactivated);
           govs.forEach((g: any) => {
             enqueue({ type: 'DEBUFF_CARD', player: opp, targetUid: g.uid, amount: 1, fromIntervention: true } as any);
+            if (hasOligarch) {
+              enqueue({ type: 'CHANGE_CORRUPTION', targetUid: g.uid, amount: 1, source: 'Massenproteste (Oligarch-Fallout)', enemySourcePlayer: opp } as any);
+            }
           });
           log('Trap: Massenproteste – zwei Regierungskarten -1 Einfluss.');
           consumed.push(t);
         }
         break;
 
-      // Berater-Affäre: Tier-1-Regierungskarte -2 Einfluss
+      // Berater-Affäre: Tier-1-Regierungskarte -2 Einfluss +1 Korruption
       case 'trap.advisor_scandal.minus2_gov_tier1':
         if (isGovernment && ((card as any).T === 1 || (card as any).tier === 1) && (card as any).uid != null) {
           enqueue({ type: 'DEBUFF_CARD', player: opp, targetUid: (card as any).uid, amount: 2, fromIntervention: true } as any);
-          log('Trap: Berater-Affäre – Tier-1-Regierung -2 Einfluss.');
+          enqueue({ type: 'CHANGE_CORRUPTION', targetUid: (card as any).uid, amount: 1, source: 'Berater-Affäre', enemySourcePlayer: opp } as any);
+          log('Trap: Berater-Affäre – Tier-1-Regierung -2 Einfluss, +1 Korruption.');
           consumed.push(t);
         }
         break;
@@ -165,6 +170,7 @@ export function applyTrapsOnCardPlayed(
         break;
 
       // "Unabhängige" Untersuchung: gegnerische Intervention wird annulliert
+      // Alternate: if played card is NOT an intervention, cleanse own strongest gov −2 corruption
       case 'trap.independent_investigation.cancel_trap': {
         const typeStr = String((card as any).type || '').toLowerCase();
         if (typeStr.includes('intervention')) {
@@ -184,6 +190,17 @@ export function applyTrapsOnCardPlayed(
             enqueue({ type: 'LOG', msg: `Trap: "Unabhängige" Untersuchung – ${cardName} wurde annulliert.` });
             log('Trap: Independent Investigation – intervention cancelled.');
             playedCardCancelled = true;
+            consumed.push(t);
+          }
+        } else if (isGovernment) {
+          // Alternate cleanse mode: wash own strongest government
+          const ownGovs = (state.board[opp].aussen || [])
+            .filter(c => c.kind === 'pol' && !(c as any).deactivated)
+            .slice()
+            .sort((a: any, b: any) => (b.influence || 0) - (a.influence || 0));
+          if (ownGovs[0]) {
+            enqueue({ type: 'CHANGE_CORRUPTION', targetUid: (ownGovs[0] as any).uid, amount: -2, source: '"Unabhängige" Untersuchung (Säuberung)' } as any);
+            log('Trap: "Unabhängige" Untersuchung – eigene Regierung −2 Korruption.');
             consumed.push(t);
           }
         }
@@ -208,11 +225,18 @@ export function applyTrapsOnCardPlayed(
         }
         break;
 
-      // Lobby Leak: bei NGO – Gegner muss 1 Karte abwerfen
+      // Lobby Leak: bei NGO – Gegner muss 1 Karte abwerfen; stärkste Regierung +1 Korruption
       case 'trap.lobby_leak.force_discard_on_ngo':
         if (isNgoCard(card)) {
           enqueue({ type: 'DISCARD_RANDOM_FROM_HAND', player: playedBy, amount: 1 });
-          log('Trap: Lobby Leak – Gegner wirft 1 Karte ab.');
+          const strong = (state.board[playedBy].aussen || [])
+            .filter(c => c.kind === 'pol' && !(c as any).deactivated)
+            .slice()
+            .sort((a: any, b: any) => (b.influence || 0) - (a.influence || 0))[0];
+          if (strong) {
+            enqueue({ type: 'CHANGE_CORRUPTION', targetUid: (strong as any).uid, amount: 1, source: 'Lobby Leak', enemySourcePlayer: opp } as any);
+          }
+          log('Trap: Lobby Leak – Gegner wirft 1 Karte ab; stärkste Regierung +1 Korruption.');
           consumed.push(t);
         }
         break;
@@ -226,6 +250,9 @@ export function applyTrapsOnCardPlayed(
             const ownerTotal = sumGovernmentInfluenceWithAuras(state, opp);
             if (playedByTotal >= ownerTotal) {
               enqueue({ type: 'DEBUFF_CARD', player: opp, targetUid: (card as any).uid, amount: 2, fromIntervention: true } as any);
+              if (Number((card as any).corruption ?? 0) >= 3) {
+                enqueue({ type: 'LOG', msg: `Satire-Show: ${ (card as any).name } öffentlich verspottet (Korruption ${ (card as any).corruption }).` });
+              }
               log('Trap: Satire-Show – Regierungskarte -2 Einfluss.');
               consumed.push(t);
             }
@@ -371,9 +398,12 @@ export function applyTrapsOnCardPlayed(
         const amount = -totalDebuffMagnitude;
 
         enqueue({ type: 'DEBUFF_CARD', player: opp, targetUid: (card as any).uid, amount, fromIntervention: true } as any);
-        const debuffMsg = `Trap: Whistleblower – government card gets ${amount} Influence (base -2 + activists ${activistCount}, capped at -6).`;
+        enqueue({ type: 'CHANGE_CORRUPTION', targetUid: (card as any).uid, amount: 1, source: 'Whistleblower', enemySourcePlayer: opp } as any);
+        if ((state.effectFlags[opp] as any)?.cheneyInterventionCorruption) {
+          enqueue({ type: 'CHANGE_CORRUPTION', targetUid: (card as any).uid, amount: 1, source: 'Schattenregierung (Cheney)', enemySourcePlayer: opp } as any);
+        }
+        const debuffMsg = `Trap: Whistleblower – government card gets ${amount} Influence (base -2 + activists ${activistCount}, capped at -6) +1 Korruption.`;
         enqueue({ type: 'LOG', msg: debuffMsg });
-        // Immediate console log for better chronological trace before warnings
         log(debuffMsg);
         log(`🟢 trap.whistleblower triggered: applied ${amount} to uid ${(card as any).uid} (activists=${activistCount})`);
         consumed.push(t);

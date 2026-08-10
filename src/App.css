@@ -288,6 +288,46 @@
   box-shadow: 0 0 24px color-mix(in srgb, var(--rose-500) 40%, transparent), var(--shadow-md);
 }
 
+.game-board__card--purge-focus {
+  z-index: 40;
+  outline: 3px solid var(--amber-500);
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--amber-500) 55%, transparent),
+    0 0 36px color-mix(in srgb, var(--rose-500) 35%, transparent),
+    var(--shadow-lg);
+  animation: purge-focus-shake 0.55s ease-in-out, purge-focus-zoom 0.55s ease-out;
+  transform-origin: center center;
+}
+
+.game-board__surface--purge-focus::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, var(--ink-900) 28%, transparent);
+  pointer-events: none;
+  z-index: 30;
+  animation: purge-dim-in 0.35s ease-out;
+}
+
+@keyframes purge-focus-shake {
+  0%, 100% { translate: 0 0; }
+  20% { translate: -7px 2px; }
+  40% { translate: 7px -2px; }
+  60% { translate: -5px -1px; }
+  80% { translate: 5px 1px; }
+}
+
+@keyframes purge-focus-zoom {
+  0% { scale: 1; }
+  35% { scale: 1.16; }
+  100% { scale: 1.1; }
+}
+
+@keyframes purge-dim-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 @keyframes card-surge {
   0% {
     transform: scale(0.96);
@@ -1163,6 +1203,129 @@
   z-index: 1260;
   width: min(420px, calc(100vw - 24px));
   pointer-events: none;
+}
+
+/* Side live-cast feeds (replace center toasts / bottom hints during play) */
+.live-cast {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
+  background: color-mix(in srgb, var(--surface-panel) 88%, transparent);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--ink-900) 22%, transparent);
+  pointer-events: none;
+  font-family: "IBM Plex Mono", "Courier New", monospace;
+}
+
+.live-cast__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.live-cast__title {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  color: var(--content-muted);
+  text-transform: uppercase;
+}
+
+.live-cast__live {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  padding: 2px 6px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--teal-500) 22%, transparent);
+  color: var(--action-primary);
+}
+
+.live-cast__guidance {
+  padding: 8px 8px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--amber-500) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--amber-500) 28%, transparent);
+}
+
+.live-cast__guidance-title {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--amber-700);
+  letter-spacing: 0.4px;
+}
+
+.live-cast__guidance-body {
+  margin-top: 2px;
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--content-secondary);
+}
+
+.live-cast__scroller {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow-y: auto;
+  max-height: 220px;
+  padding-right: 2px;
+}
+
+.live-cast__empty {
+  font-size: 11px;
+  color: var(--content-muted);
+  font-style: italic;
+}
+
+.live-cast__line {
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--content-secondary);
+  border-left: 2px solid var(--border-subtle);
+  padding-left: 8px;
+  animation: live-cast-in 0.22s ease-out;
+}
+
+.live-cast__line--success { border-left-color: var(--sage-500); color: var(--sage-700); }
+.live-cast__line--fail { border-left-color: var(--rose-500); color: var(--rose-700); }
+.live-cast__line--lead { border-left-color: var(--amber-500); color: var(--amber-800); }
+.live-cast__line--warn { border-left-color: var(--amber-600); }
+.live-cast__line--info { border-left-color: var(--teal-500); }
+.live-cast__line--guide { border-left-color: var(--amber-500); }
+.live-cast__line--log { border-left-color: var(--border-default); }
+
+@keyframes live-cast-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.game-board__live-cast {
+  position: absolute;
+  z-index: 120;
+  width: 216px;
+  top: 52px;
+  pointer-events: none;
+}
+
+.game-board__live-cast--left { left: 4px; }
+.game-board__live-cast--right { left: 1700px; }
+
+.game-board__live-cast--mobile {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 78px;
+  width: min(520px, 92%);
+  z-index: 130;
+  top: auto;
+}
+
+.game-board__live-cast--mobile .live-cast__scroller {
+  max-height: 96px;
 }
 
 .action-toast {

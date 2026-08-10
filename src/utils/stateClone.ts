@@ -25,5 +25,13 @@ export function cloneStateForMutation(prev: GameState): GameState {
     discard: [...prev.discard],
     log: [...prev.log],
     traps: { 1: [...prev.traps[1]], 2: [...prev.traps[2]] },
+    pendingPurge: prev.pendingPurge
+      ? {
+          ...prev.pendingPurge,
+          queue: [...prev.pendingPurge.queue],
+          removed: [...prev.pendingPurge.removed],
+          survived: [...prev.pendingPurge.survived],
+        }
+      : undefined,
   };
 }

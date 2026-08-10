@@ -1,4 +1,5 @@
 import { GameState, Player } from '../types/game';
+import { applyCorruptionTurnStart } from './corruption';
 
 function other(p: Player): Player { return p === 1 ? 2 : 1; }
 
@@ -13,6 +14,9 @@ export function startOfTurn(state: GameState, p: Player) {
       if (card.kind === 'pol') {
         (card as any).tempBuffs = 0;
         (card as any).tempDebuffs = 0;
+        // Corruption: reset per-turn win-more tax marker (tempBuffs also reset here);
+        // ability uses and _corruptionTainted persist for the whole round.
+        (card as any)._corruptionBuffTaxed = false;
       }
     });
   }
@@ -34,8 +38,20 @@ export function startOfTurn(state: GameState, p: Player) {
   f.aiWeiweiInitiativeUsed = false;
   f.gretaFirstGovApUsed = false;
   f.zivilgesellschaftApUsed = false;
+  f.publicApStealUsed = {};
+  f.govPlayedThisTurn = false;
   // Opportunist is a Sofort buff for the turn it was activated — never leave it sticky
   f.opportunistActive = false;
+  // Corruption: reset per-turn pass/ability context for this player
+  (f as any).hushMoneySpent = 0;
+  (f as any).passHandSize = undefined;
+  (f as any).cheneyInterventionCorruption = false;
+  (f as any).lavrovNjetAvailable = false;
+  // Note: purgeTargetDelta / purgeRollBonus / corruptionReductionBlocked persist
+  // until this player's next turn start, then clear here.
+  (f as any).purgeTargetDelta = 0;
+  (f as any).purgeRollBonus = 0;
+  (f as any).nextGovCorruptionMinus1 = false;
   // Elon is once-per-round: do NOT clear elonInitiativeApUsed here (cleared on round resolve)
   // Oppositionsblockade / Parlament geschlossen end at start of this player's turn
   f.initiativesLocked = false;
@@ -65,10 +81,21 @@ export function startOfTurn(state: GameState, p: Player) {
       if (!state._effectQueue) state._effectQueue = [];
       state._effectQueue.push({ type: 'BUFF_STRONGEST_GOV', player: p, amount: 1, reason: 'BUFFETT_AURA_NO_GOV_PLAYED' } as any);
       state._effectQueue.push({ type: 'LOG', msg: 'Warren Buffett: No government played last turn -> strongest gov +1 influence.' } as any);
+      // Corruption rider: patient, boring money is clean money — that gov also −1 corruption
+      const govs = (state.board[p]?.aussen || []).filter((c:any) => c.kind === 'pol' && !c.deactivated) as any[];
+      if (govs.length) {
+        const strongest = govs.slice().sort((a,b) => (b.influence + (b.tempBuffs||0) - (b.tempDebuffs||0)) - (a.influence + (a.tempBuffs||0) - (a.tempDebuffs||0)))[0];
+        if (strongest) {
+          state._effectQueue.push({ type: 'CHANGE_CORRUPTION', targetUid: strongest.uid, amount: -1, source: 'Warren Buffett (geduldiges Kapital)' } as any);
+        }
+      }
     }
     // Reset played-government tracking for this player for the upcoming turn
     if ((state as any)._playedGovernmentThisTurn) (state as any)._playedGovernmentThisTurn[p] = false;
   }
+
+  // === Corruption turn-start economy (influence bonus, oligarch auras, cleanses) ===
+  applyCorruptionTurnStart(state, p);
 
   // Apply auras via events instead of direct state mutation
   if (pubNames.includes('Jennifer Doudna')) {

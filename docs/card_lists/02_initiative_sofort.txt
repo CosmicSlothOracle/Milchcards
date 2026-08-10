@@ -1,0 +1,20 @@
+Sofort-Initiativen
+==================
+
+Count: 15
+
+- Shadow Lobbying: +1 Einfluss auf deine stärkste Regierungskarte für jede eigene [ICON:oligarch] Oligarch-Karte (max. +3, einmalig diese Runde).
+- Spin Doctor: Beim Ausspielen: +1 Einfluss auf deine stärkste Regierungskarte.
+- Digitaler Wahlkampf: Ziehe 1 Karte pro eigener Medien-/Plattform-Karte auf dem Feld (maximal 2).
+- Partei-Offensive: Die stärkste gegnerische Regierungskarte erhält −3 Einfluss.
+- Oppositionsblockade: Gegner kann keine Sofort-Initiativen spielen (bis zu seinem nächsten Zug).
+- Verzögerungsverfahren: When played: +1 AP.
+- Opportunist: Beim Ausspielen: Aktiviert Mirror-Effekt. Einfluss-Boni des Gegners werden auf deine stärkste Regierungskarte gespiegelt.
+- Think-tank: Ziehe 1 Karte, nächste Regierungskarte +2 Einfluss
+- Whataboutism: Reaktiviere eine eigene deaktivierte Karte; Regierungskarten erhalten dabei −2 Einfluss.
+- Influencer-Kampagne: Öffentlichkeits-Effekt zählt doppelt (einmalig)
+- Systemrelevant: Schützt 1 Karte vor Deaktivierung (einmalig)
+- Symbolpolitik: Ziehe 1 Karte. Effekt: Nichts. Optik: Stark.
+- Bestechungsskandal 2.0: Wähle eine gegnerische Regierungskarte und würfle W6. Erfolg bei W6 ≥ aktuellem Einfluss (keine Oligarch-Boni). Bei Erfolg übernimmst du die Karte.
+- Maulwurf: Übernimmt automatisch die schwächste gegnerische Regierungskarte bei erfolgreicher Probe: W6 ≥ 3 + Anzahl gegnerischer Regierungskarten.
+- Skandalspirale: Bei Aktivierung: Der Spieler mit dem geringeren Gesamt-Einfluss muss einen W6 würfeln. Bei 4-6 passiert nichts; bei 1-3 verliert er entsprechend der Augenzahl -1/-2/-3 Einfluss auf seine stärkste Regierungskarte.

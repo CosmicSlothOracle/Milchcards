@@ -33,6 +33,15 @@ export interface PoliticianCard extends Card {
   _activeUsed: boolean;
   _pledgeDown?: { amount: number; round: number } | null;
   _hypedRoundFlag?: boolean;
+  // === Corruption system ===
+  corruption?: number;         // current corruption (0..6)
+  corruptionStart?: number;    // lore floor — corruption never drops below this (except clean-sweep entry bonus)
+  corruptionAbilityUsed?: number; // active-ability uses this round (board life = one round)
+  purgeMarked?: boolean;       // Snowden mark: purge target +1 this round
+  _corruptionTainted?: boolean;   // buffed by a corruption-tagged effect this round (purge target +1)
+  _corruptionBuffTaxed?: boolean; // win-more tax (+3 buffs in a round → +1 corruption) applied once
+  _ignoreGreedyPass?: boolean;    // Trump "Alternative Wahrheit": ignore greedy-pass purge modifier
+  _corruptionShielded?: boolean;  // set by Lavrov "Njet": next enemy corruption gain on this board is cancelled
 }
 
 export interface SpecialCard extends Card {
@@ -125,10 +134,12 @@ export interface EffectFlags {
   opportunistActive?: boolean;       // Opportunist mirror effect active
 
   // Per-turn effect tracking (reset in startOfTurn unless noted)
-  gretaFirstGovApUsed?: boolean;     // Greta Thunberg: first government card each turn grants +1 AP
-  elonInitiativeApUsed?: boolean;    // Elon Musk: once per round +1 AP on initiative activation
-  aiWeiweiInitiativeUsed?: boolean;  // Ai Weiwei: once per turn draw+AP on initiative activation
+  gretaFirstGovApUsed?: boolean;     // legacy (Greta now steals on opponent first gov)
+  elonInitiativeApUsed?: boolean;    // legacy (Elon now steals on opponent heavy gov/oligarch)
+  aiWeiweiInitiativeUsed?: boolean;  // legacy (Ai Weiwei now steals on opponent initiative)
   zivilgesellschaftApUsed?: boolean; // Zivilgesellschaft: NGO grants +1 AP on next initiative (once per turn)
+  publicApStealUsed?: Record<string, boolean>; // reactive public steal-AP once per owner turn cycle
+  govPlayedThisTurn?: boolean;       // actor played a government card this turn
   cannotPlayMoreGovernment?: boolean; // Parlament geschlossen: no further government until next turn
   drawPenaltyNextDraw?: boolean;     // Mukesh Ambani: player draws one card less at next end-of-turn draw
 
@@ -137,6 +148,19 @@ export interface EffectFlags {
   diplomatInfluenceTransferUsed?: boolean; // Diplomat influence transfer used this turn
   influenceTransferBlocked?: boolean; // Influence transfer is blocked
   // REMOVED: Alle AP-Discount/Free-Flags - alle Karten kosten immer 1 AP
+
+  // === Corruption system flags ===
+  hushMoneySpent?: number;            // AP sacrificed at pass time (purge target −1 each, max 2)
+  passHandSize?: number;              // hand size at pass time (greedy pass +1 / forced pass −1)
+  purgeTargetDelta?: number;          // Verzögerungsverfahren: all own purge targets −1 this round
+  purgeRollBonus?: number;            // Trudeau "Sunny Ways" etc.: bonus on own purge rolls this round
+  lavrovNjetAvailable?: boolean;      // Lavrov: cancel next enemy corruption gain on own board
+  cheneyInterventionCorruption?: boolean; // Cheney: own interventions add +1 corruption on trigger this round
+  corruptionReductionBlocked?: boolean;   // Oppositionsblockade: cannot reduce corruption until next turn
+  nextGovCorruptionMinus1?: boolean;  // Think-tank vetting: next own gov enters with −1 corruption
+  harariCorruptionDrawUsed?: boolean; // Harari draw on gov reaching corruption 5+ (1×/Runde)
+  sorosCleanseUsed?: boolean;         // Soros foundation cleanse (1×/Zug)
+  oligarchCorruptionRound?: number;   // round in which the oligarch-pair corruption gain already fired
 }
 
 export function createDefaultEffectFlags(): EffectFlags {
@@ -198,7 +222,22 @@ export interface GameState {
     2: ActiveAbility[];
   };
   pendingAbilitySelect?: AbilitySelect;
+  /** Interactive W6 purge audit between double-pass and scoring */
+  pendingPurge?: PendingPurge;
   isEndingTurn?: boolean;
+}
+
+export interface PurgeProbeEntry {
+  player: Player;
+  uid: number;
+}
+
+export interface PendingPurge {
+  queue: PurgeProbeEntry[];
+  index: number;
+  awaitingRoll: boolean;
+  removed: { player: Player; card: PoliticianCard; roll: number | null; target: number }[];
+  survived: { player: Player; card: PoliticianCard; roll: number | null; target: number }[];
 }
 
 export interface BuilderState {

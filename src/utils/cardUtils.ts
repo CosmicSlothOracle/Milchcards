@@ -1,10 +1,12 @@
 import { Card, PoliticianCard, SpecialCard, BasePolitician, BaseSpecial, GameState, Lane, Player } from '../types/game';
 import { getCardDetails } from '../data/cardDetails';
+import { getCorruptionStart } from './corruption';
 
 // Card instance creation
 let NEXT_UID = 1;
 
 export function makePolInstance(base: BasePolitician): PoliticianCard {
+  const corruptionStart = getCorruptionStart(base.name, base.T);
   return {
     id: base.id,
     key: base.key,
@@ -24,6 +26,9 @@ export function makePolInstance(base: BasePolitician): PoliticianCard {
     tempBuffs: 0,
     uid: NEXT_UID++,
     _activeUsed: false,
+    corruption: corruptionStart,
+    corruptionStart,
+    corruptionAbilityUsed: 0,
   } as PoliticianCard;
 }
 

@@ -14,6 +14,7 @@ export const RELAYED_ENGINE_EVENTS = [
   'pc:maulwurf_request_roll',
   'pc:maulwurf_cancel',
   'pc:tunnelvision_request_roll',
+  'pc:purge_request_roll',
 ] as const;
 
 /** Visual/feedback events the host mirrors to the guest. */
@@ -21,6 +22,10 @@ export const RELAYED_FX_EVENTS = [
   'pc:corruption_roll_started',
   'pc:engine_dice_result',
   'pc:corruption_resolved',
+  'pc:purge_probe_focus',
+  'pc:purge_await_roll',
+  'pc:purge_sequence_start',
+  'pc:purge_sequence_done',
 ] as const;
 
 export type PvpPhase = 'lobby' | 'started' | 'closed';

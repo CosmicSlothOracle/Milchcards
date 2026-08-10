@@ -1,0 +1,22 @@
+Interventionen
+==============
+
+Count: 17
+
+- Fake News-Kampagne: Die Öffentlichkeitskarte wird deaktiviert
+- Whistleblower: -2 Einfluss auf die Regierungskarte
+- Strategische Enthüllung: Eine Regierungskarte zurück auf die Hand
+- Interne Fraktionskämpfe: Die große Initiative wird annulliert
+- Boykott-Kampagne: Die Karte wird deaktiviert
+- Deepfake-Skandal: Kein Einflusstransfer möglich
+- Cyber-Attacke: Die Plattform-Karte wird deaktiviert
+- Grassroots-Widerstand: Eine Öffentlichkeitskarte wird deaktiviert
+- Massenproteste: Beide Regierungskarten -1 Einfluss
+- Berater-Affäre: -2 Einfluss auf die Regierungskarte
+- Parlament geschlossen: Gegner kann bis zu seinem nächsten Zug keine weiteren Regierungskarten spielen.
+- "Unabhängige" Untersuchung: Die Intervention wird annulliert
+- Soft Power-Kollaps: -3 Einfluss auf die Diplomat-Karte
+- Cancel Culture: Die Öffentlichkeitskarte wird deaktiviert, wenn sie Oligarch oder Medien/Plattform ist.
+- Lobby Leak: Gegner muss 1 Karte abwerfen
+- Satire-Show: Eine Regierungskarte des Gegners -2 Einfluss
+- Scandal Spiral: Die zweite Öffentlichkeitskarte des Gegners wird annulliert

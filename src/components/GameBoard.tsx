@@ -4,6 +4,7 @@ import { getCardImagePath } from '../data/gameData';
 import { LAYOUT, UI_BASE, computeSlotRects, getGovernmentRects, getPublicRects, getSofortRect, getUiTransform, getZone } from '../ui/layout';
 import { sortHandCards } from '../utils/gameUtils';
 import { MOBILE_HUD_BOTTOM, MOBILE_HUD_TOP, useMobileLayout } from '../hooks/useMobileLayout';
+import { LiveCastFeed } from './LiveCastFeed';
 
 interface GameBoardProps {
   gameState: GameState;
@@ -15,6 +16,8 @@ interface GameBoardProps {
   localPlayer?: 1 | 2;
   /** Exit to main menu (rendered subtly in the bottom bar). */
   onExitToMenu?: () => void;
+  /** Contextual guidance shown in the local player's live-cast. */
+  guidanceHint?: { title: string; body: string } | null;
 }
 
 const useBoardSize = () => {
@@ -48,6 +51,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
   devMode = false,
   localPlayer = 1,
   onExitToMenu,
+  guidanceHint = null,
 }) => {
   const isMyTurn = gameState.current === localPlayer;
   const { ref: boardRef, size } = useBoardSize();
@@ -114,14 +118,13 @@ const GameBoard: React.FC<GameBoardProps> = ({
   const [corruptionSuccessUids, setCorruptionSuccessUids] = useState<Set<number>>(new Set());
   const [corruptionFailUids, setCorruptionFailUids] = useState<Set<number>>(new Set());
   const corruptionResultTimers = useRef<Map<number, number>>(new Map());
-  const [isLogOpen, setIsLogOpen] = useState(false);
-  const logEndRef = useRef<HTMLDivElement>(null);
+  const [purgeFocusUid, setPurgeFocusUid] = useState<number | null>(null);
 
-  useEffect(() => {
-    if (isLogOpen && logEndRef.current) {
-      logEndRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [gameState.log, isLogOpen]);
+  const pendingPurgeUid = useMemo(() => {
+    const pp = gameState.pendingPurge;
+    if (!pp || pp.index >= pp.queue.length) return purgeFocusUid;
+    return pp.queue[pp.index]?.uid ?? purgeFocusUid;
+  }, [gameState.pendingPurge, purgeFocusUid]);
 
   useEffect(() => {
     const currentUids = new Set<number>();
@@ -218,9 +221,21 @@ const GameBoard: React.FC<GameBoardProps> = ({
 
     window.addEventListener('pc:corruption_roll_started', handleCorruptionRoll as EventListener);
     window.addEventListener('pc:corruption_resolved', handleCorruptionResolved as EventListener);
+
+    const handlePurgeFocus = (event: Event) => {
+      const detail = (event as CustomEvent).detail as { targetUid?: number };
+      if (detail?.targetUid == null) return;
+      setPurgeFocusUid(detail.targetUid);
+    };
+    const handlePurgeDone = () => setPurgeFocusUid(null);
+
+    window.addEventListener('pc:purge_probe_focus', handlePurgeFocus as EventListener);
+    window.addEventListener('pc:purge_sequence_done', handlePurgeDone as EventListener);
     return () => {
       window.removeEventListener('pc:corruption_roll_started', handleCorruptionRoll as EventListener);
       window.removeEventListener('pc:corruption_resolved', handleCorruptionResolved as EventListener);
+      window.removeEventListener('pc:purge_probe_focus', handlePurgeFocus as EventListener);
+      window.removeEventListener('pc:purge_sequence_done', handlePurgeDone as EventListener);
     };
   }, []);
 
@@ -255,6 +270,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
     const spawn = recentlyPlayed.has(card.uid);
     const corrOk = corruptionSuccessUids.has(card.uid);
     const corrFail = corruptionFailUids.has(card.uid);
+    const purgeFocus = pendingPurgeUid === card.uid;
     return (
       <div
         key={card.uid}
@@ -265,6 +281,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
           spawn ? 'game-board__card--spawn' : '',
           corrOk ? 'game-board__card--corruption-success' : '',
           corrFail ? 'game-board__card--corruption-fail' : '',
+          purgeFocus ? 'game-board__card--purge-focus' : '',
         ].filter(Boolean).join(' ')}
         style={style}
         onClick={() => onCardClick(data)}
@@ -628,7 +645,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
 
       {/* Main Board Surface */}
       <div
-        className="game-board__surface"
+        className={`game-board__surface${ pendingPurgeUid ? ' game-board__surface--purge-focus' : '' }`}
         style={{
           width: UI_BASE.width,
           height: UI_BASE.height,
@@ -663,7 +680,40 @@ const GameBoard: React.FC<GameBoardProps> = ({
         {renderInterventionSlot(1)}
         {renderHand(1)}
         {renderHand(2)}
+
+        {!useCompactHud && (
+          <>
+            <div className="game-board__live-cast game-board__live-cast--left">
+              <LiveCastFeed
+                side="left"
+                player={1}
+                log={gameState.log}
+                guidance={localPlayer === 1 && !gameState.gameWinner ? guidanceHint : null}
+              />
+            </div>
+            <div className="game-board__live-cast game-board__live-cast--right">
+              <LiveCastFeed
+                side="right"
+                player={2}
+                log={gameState.log}
+                guidance={localPlayer === 2 && !gameState.gameWinner ? guidanceHint : null}
+              />
+            </div>
+          </>
+        )}
       </div>
+
+      {useCompactHud && !gameState.gameWinner && (
+        <div className="game-board__live-cast game-board__live-cast--mobile">
+          <LiveCastFeed
+            side="combined"
+            player={localPlayer}
+            log={gameState.log}
+            guidance={guidanceHint}
+            maxLines={6}
+          />
+        </div>
+      )}
 
       {/* Bottom HUD Bar */}
       <div className={`game-board__hud game-board__hud--bottom${ useCompactHud ? ' game-board__hud--compact' : '' }`} style={{
@@ -782,128 +832,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
         </div>
       </div>
 
-      {/* Collapsible Intelligence Feed — hidden on mobile (use action hint instead) */}
-      <div className={`game-board__log-panel${ isLogOpen ? ' game-board__log-panel--open' : '' }`} style={{
-        position: 'absolute',
-        top: '80px',
-        left: isLogOpen ? '0' : '-320px',
-        bottom: '90px',
-        width: '320px',
-        background: 'var(--surface-panel)',
-        borderRight: '1px solid var(--border-subtle)',
-        boxShadow: '4px 0 20px color-mix(in srgb, var(--ink-900) 28%, transparent)',
-        zIndex: 150,
-        display: 'flex',
-        flexDirection: 'column',
-        transition: 'left 0.3s cubic-bezier(0.19, 1, 0.22, 1)',
-        backdropFilter: 'blur(15px)',
-      }}>
-        {/* Toggle Tab */}
-        <button
-          onClick={() => setIsLogOpen(!isLogOpen)}
-          style={{
-            position: 'absolute',
-            top: '40px',
-            right: '-42px',
-            width: '42px',
-            height: '140px',
-            background: 'var(--surface-panel)',
-            border: '1px solid var(--border-subtle)',
-            borderLeft: 'none',
-            borderRadius: '0 8px 8px 0',
-            color: 'var(--action-primary)',
-            cursor: 'pointer',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '8px',
-            padding: '10px 0',
-            boxShadow: '4px 0 10px color-mix(in srgb, var(--ink-900) 12%, transparent)',
-            zIndex: 140,
-          }}
-        >
-          <span style={{
-            writingMode: 'vertical-lr',
-            textTransform: 'uppercase',
-            letterSpacing: '2px',
-            fontSize: '11px',
-            fontWeight: 800,
-            transform: 'rotate(180deg)',
-          }}>
-            {isLogOpen ? 'Schließen ◀' : 'Tactical Feed ▶'}
-          </span>
-        </button>
-
-        {/* Feed Header */}
-        <div style={{
-          padding: '16px 20px',
-          borderBottom: '1px solid var(--border-subtle)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-        }}>
-          <span style={{
-            fontSize: '13px',
-            fontWeight: 800,
-            letterSpacing: '1px',
-            color: 'var(--content-primary)',
-            textTransform: 'uppercase',
-          }}>
-            📡 Intelligence Feed
-          </span>
-          <span style={{
-            fontSize: '10px',
-            background: 'color-mix(in srgb, var(--teal-500) 20%, transparent)',
-            color: 'var(--action-primary)',
-            padding: '2px 8px',
-            borderRadius: '10px',
-            fontWeight: 700,
-          }}>
-            LIVE
-          </span>
-        </div>
-
-        {/* Feed Messages */}
-        <div style={{
-          flex: 1,
-          overflowY: 'auto',
-          padding: '16px 20px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '12px',
-          fontSize: '12px',
-          fontFamily: '"Courier New", Courier, monospace',
-          lineHeight: '1.4',
-        }}>
-          {gameState.log && gameState.log.length > 0 ? (
-            gameState.log.map((entry, index) => {
-              // Highlight errors and warnings
-              let color = 'var(--content-muted)';
-              if (entry.includes('❌') || entry.includes('ERROR')) color = 'var(--rose-400)';
-              else if (entry.includes('🟢') || entry.includes('✓') || entry.includes('gelungen')) color = 'var(--sage-500)';
-              else if (entry.includes('🎯') || entry.includes('UI:')) color = 'var(--content-secondary)';
-              else if (entry.includes('🤖')) color = 'var(--teal-400)';
-
-              return (
-                <div key={index} style={{
-                  color,
-                  borderBottom: '1px solid var(--border-subtle)',
-                  paddingBottom: '8px',
-                  wordBreak: 'break-word'
-                }}>
-                  {entry}
-                </div>
-              );
-            })
-          ) : (
-            <div style={{ color: 'var(--content-muted)', fontStyle: 'italic', textAlign: 'center', marginTop: '20px' }}>
-              Keine Logdaten vorhanden.
-            </div>
-          )}
-          <div ref={logEndRef} />
-        </div>
-      </div>
+      {/* Intelligence Feed replaced by side LiveCast panels */}
 
       {corruptionPending && corruptionTargetUid && (
         <div

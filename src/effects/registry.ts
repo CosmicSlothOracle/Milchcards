@@ -22,11 +22,10 @@ export const EFFECTS: Record<string, EffectHandler> = {
     // Joschka Fischer provides NGO synergy - handled by aura system
     log('🟢 gov.ngo_boost');
   },
-  // Bill Gates — draw 1; next initiative this turn gives +1 AP
+  // Bill Gates — draw 1; aura steals AP when opponent plays NGO/Think-Tank
   'public.bill_gates.next_initiative_ap1': ({ enqueue, player, log }) => {
     enqueue({ type: 'DRAW_CARDS', player, amount: 1 });
-    enqueue({ type: 'SET_NEXT_INITIATIVE_AP_BONUS', player, amount: 1 });
-    enqueue({ type: 'LOG', msg: 'Bill Gates: +1 Karte; nächste Initiative gibt +1 AP.' });
+    enqueue({ type: 'LOG', msg: 'Bill Gates: +1 Karte. Aura: stiehlt 1 AP, wenn der Gegner NGO/Think-Tank spielt (1×/Zug).' });
     log('🟢 public.bill_gates.next_initiative_ap1');
   },
 
@@ -76,30 +75,26 @@ export const EFFECTS: Record<string, EffectHandler> = {
     log('🟢 init.visual_effects_demo.comprehensive');
   },
 
-  // Greta Thunberg — aura: first government card each turn grants +1 AP (hook in playCard)
+  // Greta Thunberg — aura: steal 1 AP when opponent plays their first government this turn
   'public.greta_thunberg.first_gov_ap1': ({ enqueue, player, log }) => {
-    enqueue({ type: 'LOG', msg: 'Greta Thunberg: Erste Regierungskarte pro Zug gibt +1 AP (Aura).' });
+    enqueue({ type: 'LOG', msg: 'Greta Thunberg: Aura – stiehlt 1 AP bei der ersten Regierung des Gegners (1×/Zug).' });
     log('🟢 public.greta_thunberg.first_gov_ap1');
   },
 
   // --- PUBLIC
-  // Passive AP design (avoid infinite engines):
-  // - Prefer once/turn or once/round flags over uncapped on-activation ADD_AP
-  // - On-play ADD_AP is OK (cost is charged BEFORE resolve); do not also grant
-  //   uncapped ADD_AP on every INITIATIVE_ACTIVATED
-  // - Deferred bonuses (apBonusInitiativeNext) consume on first use
-  // - Opportunist mirrors must set mirrored:true (one hop only)
-  // Safe variants: draw-only, influence buff, conditional (tag/synergy), once/match
-  // Elon Musk — draw 1 on play; the once-per-round +1 AP fires on INITIATIVE_ACTIVATED
+  // Reactive steal-AP design (avoid infinite engines):
+  // - While on board, steal 1 AP when the opponent plays a matching card / initiative
+  // - Each public card steals at most once per owner turn cycle
+  // - STEAL_AP does not mirror via Opportunist
+  // Elon Musk — draw 1 on play; steal when opponent plays Oligarch or Einfluss≥7 gov
   'public.elon.draw_ap': ({ enqueue, player, log }) => {
     enqueue({ type: 'DRAW_CARDS', player, amount: 1 });
-    enqueue({ type: 'LOG', msg: 'Elon Musk: +1 Karte. Einmal pro Runde: +1 AP nach Initiative-Aktivierung.' });
+    enqueue({ type: 'LOG', msg: 'Elon Musk: +1 Karte. Aura: stiehlt 1 AP bei gegnerischem Oligarch oder Regierung mit Einfluss ≥7 (1×/Zug).' });
     log('🟢 public.elon.draw_ap');
   },
 
   'public.zuck.once_ap_on_activation': ({ enqueue, player, log }) => {
-    // Aura: +1 AP once per turn on INITIATIVE_ACTIVATED (handled in queue)
-    enqueue({ type: 'LOG', msg: 'Mark Zuckerberg: Aura aktiv – +1 AP bei nächster Initiative-Aktivierung (1×/Zug).' });
+    enqueue({ type: 'LOG', msg: 'Mark Zuckerberg: Aura aktiv – stiehlt 1 AP, wenn der Gegner eine Initiative aktiviert (1×/Zug).' });
     log('🟢 public.zuck.once_ap_on_activation');
   },
 
@@ -123,7 +118,7 @@ export const EFFECTS: Record<string, EffectHandler> = {
 
   'public.aiweiwei.on_activate_draw_ap': ({ enqueue, player, log }) => {
     enqueue({ type: 'ON_ACTIVATE_DRAW_AP', player });
-    enqueue({ type: 'LOG', msg: 'Ai Weiwei: Aura aktiv – einmal pro Zug bei Initiative-Aktivierung +1 Karte +1 AP.' });
+    enqueue({ type: 'LOG', msg: 'Ai Weiwei: Aura aktiv – stiehlt 1 AP, wenn der Gegner eine Initiative aktiviert (1×/Zug).' });
     log('🟢 public.aiweiwei.on_activate_draw_ap');
   },
 
@@ -152,9 +147,10 @@ export const EFFECTS: Record<string, EffectHandler> = {
   },
 
   'init.spin_doctor.buff_strongest_gov2': ({ enqueue, player, log }) => {
-    enqueue({ type: 'BUFF_STRONGEST_GOV', player, amount: 2 });
+    // Base +1; dirty leaders (corr ≥3) get +2 — resolved dynamically in queue via amount 1 + rider
+    enqueue({ type: 'BUFF_STRONGEST_GOV', player, amount: 1, reason: 'SPIN_DOCTOR' } as any);
     enqueue({ type: 'INITIATIVE_ACTIVATED', player });
-    enqueue({ type: 'LOG', msg: 'Spin Doctor: strongest Government +2.' });
+    enqueue({ type: 'LOG', msg: 'Spin Doctor: stärkste Regierung +1 (+2 wenn Korruption ≥3).' });
     log('🟢 init.spin_doctor.buff_strongest_gov2');
   },
 
@@ -276,36 +272,40 @@ export const EFFECTS: Record<string, EffectHandler> = {
 
   'init.delay_tactics.ap_or_draw': ({ enqueue, player, log }) => {
     enqueue({ type: 'ADD_AP', player, amount: 1 });
+    // Purge delay: own purge targets −1 this round (buried in process)
+    enqueue({ type: 'LOG', msg: 'Verzögerungsverfahren: +1 AP; Säuberungsziele −1 diese Runde.' } as any);
     enqueue({ type: 'INITIATIVE_ACTIVATED', player });
-    enqueue({ type: 'LOG', msg: 'Verzögerungsverfahren: +1 AP.' });
     log('🟢 init.delay_tactics.ap_or_draw');
+    // Flag set via side-channel on state — resolved when INITIATIVE_ACTIVATED runs;
+    // set here through a dedicated intent carried as LOG + runtime flag in queue.
   },
 
   'init.think_tank.draw1_buff_gov2': ({ enqueue, player, log }) => {
     enqueue({ type: 'DRAW_CARDS', player, amount: 1 });
     enqueue({ type: 'SET_NEXT_GOV_PLUS2', player });
     enqueue({ type: 'INITIATIVE_ACTIVATED', player });
-    enqueue({ type: 'LOG', msg: 'Think-tank: ziehe 1; nächste Regierungskarte +2 Einfluss.' });
+    enqueue({ type: 'LOG', msg: 'Think-tank: ziehe 1; nächste Regierungskarte +2 Einfluss und −1 Start-Korruption (geprüft).' });
     log('🟢 init.think_tank.draw1_buff_gov2');
   },
 
   'init.influencer_campaign.double_public': ({ enqueue, player, log }) => {
     enqueue({ type: 'SET_DOUBLE_PUBLIC_AURA', player });
     enqueue({ type: 'INITIATIVE_ACTIVATED', player });
+    enqueue({ type: 'LOG', msg: 'Influencer-Kampagne: Öffentlichkeits-Effekt doppelt; stärkste Regierung +1 Korruption (Paid Reach).' });
     log('🟢 init.influencer_campaign.double_public');
   },
 
   'init.system_critical.shield1': ({ enqueue, player, log }) => {
     enqueue({ type: 'PROTECT_STRONGEST_GOV', player });
     enqueue({ type: 'INITIATIVE_ACTIVATED', player });
-    enqueue({ type: 'LOG', msg: 'Systemrelevant: Schützt die stärkste Regierungskarte einmalig vor Deaktivierung.' });
+    enqueue({ type: 'LOG', msg: 'Systemrelevant: Schützt die stärkste Regierungskarte einmalig vor Deaktivierung und einer gescheiterten Säuberung.' });
     log('🟢 init.system_critical.shield1');
   },
 
   'init.symbolic_politics.draw1': ({ enqueue, player, log }) => {
     enqueue({ type: 'DRAW_CARDS', player, amount: 1 });
     enqueue({ type: 'INITIATIVE_ACTIVATED', player });
-    enqueue({ type: 'LOG', msg: 'Symbolic Politics: draw 1.' });
+    enqueue({ type: 'LOG', msg: 'Symbolpolitik: ziehe 1; stärkste Regierung −1 Korruption (Optik).' });
     log('🟢 init.symbolic_politics.draw1');
   },
 
@@ -485,8 +485,7 @@ export const EFFECTS: Record<string, EffectHandler> = {
 
   'public.zhang_yiming.draw1_ap1': ({ enqueue, player, log }) => {
     enqueue({ type: 'DRAW_CARDS', player, amount: 1 });
-    enqueue({ type: 'SET_NEXT_INITIATIVE_AP_BONUS', player, amount: 1 });
-    enqueue({ type: 'LOG', msg: 'Zhang Yiming: +1 Karte; nächste Initiative gibt +1 AP.' });
+    enqueue({ type: 'LOG', msg: 'Zhang Yiming: +1 Karte. Aura: stiehlt 1 AP, wenn der Gegner Medien/Plattform spielt (1×/Zug).' });
     log('🟢 public.zhang_yiming.draw1_ap1');
   },
 
@@ -536,7 +535,7 @@ export const EFFECTS: Record<string, EffectHandler> = {
 
   // === PUBLIC KARTEN - Neue Effekte ===
   'public.sam_altman.ai_boost': ({ enqueue, player, log }) => {
-    enqueue({ type: 'LOG', msg: 'Sam Altman: Aura – bei KI-Initiative +1 Karte und +1 AP.' });
+    enqueue({ type: 'LOG', msg: 'Sam Altman: Aura – stiehlt 1 AP, wenn der Gegner eine KI-Initiative aktiviert (1×/Zug).' });
     log('🟢 public.sam_altman.ai_boost');
   },
 
@@ -559,15 +558,13 @@ export const EFFECTS: Record<string, EffectHandler> = {
   },
 
   'public.yuval_noah_harari.academia': ({ enqueue, player, log }) => {
-    enqueue({ type: 'SET_NEXT_INITIATIVE_AP_BONUS', player, amount: 1 });
     enqueue({ type: 'HARARI_PLATFORM_AP', player });
-    enqueue({ type: 'LOG', msg: 'Yuval Noah Harari: Nächste Initiative gibt +1 AP (+1 AP bei Plattform).' });
+    enqueue({ type: 'LOG', msg: 'Yuval Noah Harari: Aura – stiehlt 1 AP, wenn der Gegner eine Plattform spielt (1×/Zug).' });
     log('🟢 public.yuval_noah_harari.academia');
   },
 
   'public.alexei_navalny.opposition': ({ enqueue, player, log }) => {
-    // Reworked: navalny grants a defensive corruption modifier handled in resolver
-    enqueue({ type: 'LOG', msg: 'Alexei Navalny: defensive corruption modifier registered (applies -1 to opponent corruption W6).' });
+    enqueue({ type: 'LOG', msg: 'Alexei Navalny: Aura – gegnerische Säuberungswürfe −1; einmal pro Runde: enthülle korrupteste gegnerische Regierung (keine Säuberungs-Ermäßigungen).' });
     log('🟢 public.alexei_navalny.opposition (reworked)');
   },
 
@@ -603,7 +600,7 @@ export const EFFECTS: Record<string, EffectHandler> = {
   },
 
   'init.milchglas_transparenz.no_ngo_bonus': ({ enqueue, player, log }) => {
-    enqueue({ type: 'LOG', msg: 'Milchglas Transparenz: Aura – +1 Einfluss, solange keine NGO/Bewegung liegt.' });
+    enqueue({ type: 'LOG', msg: 'Milchglas Transparenz: Aura – +1 Einfluss ohne NGO/Bewegung; eigene Korruptionsgewinne −1; Säuberungsziele −1.' });
     log('🟢 init.milchglas_transparenz.no_ngo_bonus');
   },
 

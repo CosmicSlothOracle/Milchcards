@@ -8,6 +8,8 @@ export interface FeedbackPayload {
   durationMs?: number;
   /** Full-screen color flash matching tone */
   flash?: boolean;
+  /** Prefer routing to this player's live-cast side */
+  player?: 1 | 2;
 }
 
 export const FEEDBACK_EVENT = 'pc:feedback';

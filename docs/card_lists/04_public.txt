@@ -1,0 +1,30 @@
+Öffentlichkeitskarten (Public)
+==============================
+
+Count: 25
+
+- Elon Musk: Ziehe 1 Karte. Aura: Wenn der Gegner einen Oligarchen oder eine Regierung mit Einfluss ≥7 spielt, stiehl 1 AP (1×/Zug).
+- Bill Gates: Ziehe 1 Karte. Aura: Wenn der Gegner NGO/Think-Tank spielt oder Think-tank aktiviert, stiehl 1 AP (1×/Zug).
+- Mark Zuckerberg: Aura: Wenn der Gegner eine Initiative aktiviert, stiehl 1 AP (1×/Zug).
+- Oprah Winfrey: Beim Ausspielen: Beide Spieler verlieren eine zufällige Handkarte.
+- Sam Altman: Aura: Wenn der Gegner eine KI-Initiative aktiviert, stiehl 1 AP (1×/Zug).
+- George Soros: Aura: Wenn der Gegner eine Regierung mit Einfluss ≥7 spielt, stiehl 1 AP (1×/Zug).
+- Greta Thunberg: Aura: Wenn der Gegner seine erste Regierungskarte im Zug spielt, stiehl 1 AP (1×/Zug).
+- Jack Ma: Beim Ausspielen: Ziehe 1 Karte.
+- Jennifer Doudna: Deine Initiativen erhalten +1 Einfluss.
+- Malala Yousafzai: Wenn du eine NGO/Think-Tank spielst, ziehe 1 Karte.
+- Noam Chomsky: Gegner erhalten -1 Einfluss bei Initiativen.
+- Roman Abramovich: Ziehe 1 Karte, wenn eine Regierungskarte mit Einfluss 5 oder weniger ausgespielt wird.
+- Tim Cook: Aura: Wenn der Gegner eine Plattform spielt, stiehl 1 AP (1×/Zug).
+- Mukesh Ambani: Ziehe 1 Karte. Gegner darf 1 Karte weniger nachziehen in der Runde.
+- Jeff Bezos: Beim Ausspielen: Entfernt alle Oligarchenkarten des Gegners vom Spielfeld.
+- Alisher Usmanov: +1 Schutz für eine Regierungskarte.
+- Zhang Yiming: Ziehe 1 Karte. Aura: Wenn der Gegner Medien/Plattform spielt, stiehl 1 AP (1×/Zug).
+- Edward Snowden: Gegner verliert 1 Karte (zufällig). Bei US-Regierungskarte: -1 Einfluss dort.
+- Julian Assange: Beim Ausspielen: +1 Karte, aber auch Gegner zieht 1. Bei NGO auf dem Feld: Ziehe 2 statt 1.
+- Yuval Noah Harari: Aura: Wenn der Gegner eine Plattform spielt, stiehl 1 AP (1×/Zug).
+- Ai Weiwei: Aura: Wenn der Gegner eine Initiative aktiviert, stiehl 1 AP (1×/Zug).
+- Alexei Navalny: Wenn auf dem Board: Gegner erhält -1 auf W6-Proben bei Corruption-Steal-Versuchen.
+- Anthony Fauci: Bei einer Initiative: +1 Einfluss.
+- Warren Buffett: Aura: Zu Beginn deines Zuges +1 Einfluss auf deine stärkste Regierungskarte, wenn du im vorherigen Zug keine Regierungskarte gespielt hast.
+- Gautam Adani: Oligarch – zählt für Oligarchen-Synergien (kein Corruption-Probe-Bonus).

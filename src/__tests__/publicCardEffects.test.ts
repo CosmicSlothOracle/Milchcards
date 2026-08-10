@@ -3,6 +3,7 @@ import { Pols, Specials } from '../data/gameData';
 import { makePolInstance, makeSpecInstance } from '../utils/cardUtils';
 import { resolveQueue } from '../utils/queue';
 import { triggerCardEffect } from '../effects/registry';
+import { enqueuePublicApStealsOnPlay, enqueuePublicApStealsOnInitiative } from '../utils/publicApSteal';
 import { PRESET_DECKS, presetToBuilderEntries } from '../data/presetDecks';
 import { currentBuilderBudget, currentBuilderCount } from '../utils/gameUtils';
 
@@ -36,47 +37,83 @@ function emptyState(player: Player = 1): GameState {
   } as any;
 }
 
-describe('Öffentlichkeitskarten AP + effects', () => {
-  test('Tim Cook on-play ADD_AP survives after charging 1 AP cost', () => {
+describe('Öffentlichkeitskarten reactive AP steal', () => {
+  test('Tim Cook on-play no longer grants AP (aura only)', () => {
     const state = emptyState(1);
     const cook = makeSpecInstance(Specials.find(s => s.name === 'Tim Cook')!);
     state.board[1].innen.push(cook);
     state.actionPoints[1] = 2;
 
-    // Simulate fixed play order: charge cost, then resolve on-play effect
     state.actionPoints[1] -= 1;
     triggerCardEffect(state, 1, cook);
     resolveQueue(state, [...(state._effectQueue || [])]);
     state._effectQueue = [];
 
-    // Net: 2 - 1 cost + 1 Tim Cook = 2
-    expect(state.actionPoints[1]).toBe(2);
+    // Cost only — no on-play AP refund
+    expect(state.actionPoints[1]).toBe(1);
   });
 
-  test('Elon Musk draws on play and grants +1 AP once on INITIATIVE_ACTIVATED', () => {
-    const state = emptyState(1);
+  test('Elon Musk draws on play; steals AP when opponent plays Einfluss≥7 gov', () => {
+    const state = emptyState(2);
     const elon = makeSpecInstance(Specials.find(s => s.name === 'Elon Musk')!);
     state.board[1].innen.push(elon);
-    const handBefore = state.hands[1].length;
-    const deckBefore = state.decks[1].length;
+    state.decks[1] = [makePolInstance(Pols[0])];
+    state.actionPoints = { 1: 1, 2: 2 };
 
     triggerCardEffect(state, 1, elon);
     resolveQueue(state, [...(state._effectQueue || [])]);
     state._effectQueue = [];
+    expect(state.hands[1].length).toBe(1);
 
-    expect(state.hands[1].length).toBe(handBefore + 1);
-    expect(state.decks[1].length).toBe(deckBefore - 1);
+    const heavy = makePolInstance(Pols.find(p => p.name === 'Vladimir Putin')!);
+    enqueuePublicApStealsOnPlay(state, 2, heavy, (e) => (state._effectQueue ??= []).push(e as any));
+    resolveQueue(state, [...(state._effectQueue || [])]);
+    expect(state.actionPoints[1]).toBe(2); // stole 1
+    expect(state.actionPoints[2]).toBe(1);
 
-    const apBefore = state.actionPoints[1];
-    state._effectQueue = [{ type: 'INITIATIVE_ACTIVATED', player: 1 } as any];
-    (state as any)._lastActivatedInitiative = 'Spin Doctor';
-    resolveQueue(state, [...state._effectQueue]);
-    expect(state.actionPoints[1]).toBe(apBefore + 1);
+    // Once per turn — second heavy gov does not steal again
+    state._effectQueue = [];
+    enqueuePublicApStealsOnPlay(state, 2, heavy, (e) => (state._effectQueue ??= []).push(e as any));
+    resolveQueue(state, [...(state._effectQueue || [])]);
+    expect(state.actionPoints[1]).toBe(2);
+    expect(state.actionPoints[2]).toBe(1);
+  });
 
-    // Second activation same round: no extra Elon AP
-    state._effectQueue = [{ type: 'INITIATIVE_ACTIVATED', player: 1 } as any];
-    resolveQueue(state, [...state._effectQueue]);
-    expect(state.actionPoints[1]).toBe(apBefore + 1);
+  test('George Soros steals on opponent Einfluss≥7; Greta on first gov', () => {
+    const state = emptyState(2);
+    state.board[1].innen.push(makeSpecInstance(Specials.find(s => s.name === 'George Soros')!));
+    state.board[1].innen.push(makeSpecInstance(Specials.find(s => s.name === 'Greta Thunberg')!));
+    state.actionPoints = { 1: 0, 2: 2 };
+
+    const heavy = makePolInstance(Pols.find(p => p.name === 'Vladimir Putin')!);
+    enqueuePublicApStealsOnPlay(state, 2, heavy, (e) => (state._effectQueue ??= []).push(e as any));
+    resolveQueue(state, [...(state._effectQueue || [])]);
+    // Soros + Greta both fire on first heavy gov → steal 2 total
+    expect(state.actionPoints[1]).toBe(2);
+    expect(state.actionPoints[2]).toBe(0);
+  });
+
+  test('Mark Zuckerberg steals when opponent activates initiative', () => {
+    const state = emptyState(2);
+    state.board[1].innen.push(makeSpecInstance(Specials.find(s => s.name === 'Mark Zuckerberg')!));
+    state.actionPoints = { 1: 1, 2: 2 };
+
+    enqueuePublicApStealsOnInitiative(state, 2, 'Spin Doctor', (e) => (state._effectQueue ??= []).push(e as any));
+    resolveQueue(state, [...(state._effectQueue || [])]);
+    expect(state.actionPoints[1]).toBe(2);
+    expect(state.actionPoints[2]).toBe(1);
+  });
+
+  test('Tim Cook steals when opponent plays a Platform', () => {
+    const state = emptyState(2);
+    state.board[1].innen.push(makeSpecInstance(Specials.find(s => s.name === 'Tim Cook')!));
+    state.actionPoints = { 1: 0, 2: 2 };
+    const zuck = makeSpecInstance(Specials.find(s => s.name === 'Mark Zuckerberg')!);
+
+    enqueuePublicApStealsOnPlay(state, 2, zuck, (e) => (state._effectQueue ??= []).push(e as any));
+    resolveQueue(state, [...(state._effectQueue || [])]);
+    expect(state.actionPoints[1]).toBe(1);
+    expect(state.actionPoints[2]).toBe(1);
   });
 
   test('Opportunist ADD_AP mirror does not recurse', () => {
@@ -86,9 +123,19 @@ describe('Öffentlichkeitskarten AP + effects', () => {
     state.actionPoints = { 1: 2, 2: 2 };
 
     resolveQueue(state, [{ type: 'ADD_AP', player: 1, amount: 1 } as any]);
-    // P1 +1, mirrored once to P2 +1 — not infinite
     expect(state.actionPoints[1]).toBe(3);
     expect(state.actionPoints[2]).toBe(3);
+  });
+
+  test('STEAL_AP is not mirrored by Opportunist', () => {
+    const state = emptyState(1);
+    state.effectFlags[1].opportunistActive = true;
+    state.effectFlags[2].opportunistActive = true;
+    state.actionPoints = { 1: 2, 2: 2 };
+
+    resolveQueue(state, [{ type: 'STEAL_AP', from: 2, to: 1, amount: 1, source: 'Test' } as any]);
+    expect(state.actionPoints[1]).toBe(3);
+    expect(state.actionPoints[2]).toBe(1);
   });
 });
 

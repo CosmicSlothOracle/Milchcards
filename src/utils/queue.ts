@@ -13,7 +13,6 @@ import { logger } from '../debug/logger';
 import {
   consumeProtection,
   findActivePublicCard,
-  isAiRelatedInitiativeName,
   isMediaLikeCard,
   isNgoCard,
   isOligarchCard,
@@ -21,6 +20,15 @@ import {
   isUsGovernmentCard,
   strongestActiveGov,
 } from './cardClassification';
+import { enqueuePublicApStealsOnInitiative } from './publicApSteal';
+import {
+  activeGovs,
+  applyCorruptionDelta,
+  getCorruption,
+  mostCorruptGov,
+  runPurgeSequence,
+  strongestOwnGov,
+} from './corruption';
 // Helper to find strongest government uid for new intents
 function strongestGovernmentUid(state: GameState, p: Player): number | null {
   const govRow = state.board[p]?.aussen as PoliticianCard[];
@@ -142,6 +150,37 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
         }
 
         logPush(state, logAP(ev.player, cur, next));
+        break;
+      }
+
+      case 'STEAL_AP': {
+        const from = (ev as any).from as Player;
+        const to = (ev as any).to as Player;
+        const amount = Math.max(0, Number((ev as any).amount || 0));
+        const avail = state.actionPoints[from] || 0;
+        const stolen = Math.min(amount, avail);
+        const source = (ev as any).source || 'Öffentlichkeit';
+        const reason = (ev as any).reason || '';
+        if (stolen <= 0) {
+          logPush(state, `${source}: kein AP zum Stehlen${reason ? ` (${reason})` : ''}.`);
+          break;
+        }
+        const toBefore = state.actionPoints[to] || 0;
+        state.actionPoints[from] = avail - stolen;
+        state.actionPoints[to] = toBefore + stolen;
+        events.unshift({
+          type: 'VISUAL_AP_GAIN',
+          player: to,
+          amount: stolen,
+          color: '#c45c26',
+          size: 26,
+        } as EffectEvent);
+        logPush(
+          state,
+          `${source}: stiehlt ${stolen} AP von P${from} → P${to}${reason ? ` — ${reason}` : ''}.`
+        );
+        logPush(state, logAP(from, avail, avail - stolen));
+        logPush(state, logAP(to, toBefore, toBefore + stolen));
         break;
       }
 
@@ -298,6 +337,18 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
 
         if (removedCount > 0) {
           logPush(state, `🔥 Jeff Bezos hat ${removedCount} gegnerische Oligarchen entfernt`);
+          // Fallout: victim's strongest gov +1 corruption per removed oligarch (capped at +2)
+          const fallout = Math.min(2, removedCount);
+          const strong = strongestOwnGov(state, victim);
+          if (strong) {
+            events.unshift({
+              type: 'CHANGE_CORRUPTION',
+              targetUid: strong.uid,
+              amount: fallout,
+              source: 'Jeff Bezos (Oligarchen-Fallout)',
+              enemySourcePlayer: actor,
+            } as EffectEvent);
+          }
         } else {
           logPush(state, `ℹ️ Jeff Bezos: Keine gegnerischen Oligarchen auf dem Spielfeld gefunden`);
         }
@@ -359,9 +410,25 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
         }
 
         const tgt = getStrongestGovernment(state, player);
+        // Spin Doctor: dirty leaders (corr ≥3) get +2 instead of +1
+        if (reason === 'SPIN_DOCTOR' && tgt && getCorruption(tgt as PoliticianCard) >= 3) {
+          amount = 2;
+          events.unshift({ type: 'LOG', msg: `Spin Doctor: ${tgt.name} ist kompromittiert → +2 Einfluss.` });
+        }
         if (tgt && amount !== 0) {
           if (amount >= 0) {
             (tgt as PoliticianCard).tempBuffs = ((tgt as PoliticianCard).tempBuffs || 0) + amount;
+            // Corruption win-more tax: +3 or more accumulated buffs in a round → +1 corruption (once)
+            const pc = tgt as PoliticianCard;
+            if ((pc.tempBuffs || 0) >= 3 && !pc._corruptionBuffTaxed) {
+              pc._corruptionBuffTaxed = true;
+              events.unshift({
+                type: 'CHANGE_CORRUPTION',
+                targetUid: pc.uid,
+                amount: 1,
+                source: 'Machtrausch (≥3 Buffs in einer Runde)',
+              } as EffectEvent);
+            }
           } else {
             (tgt as PoliticianCard).tempDebuffs = ((tgt as PoliticianCard).tempDebuffs || 0) + Math.abs(amount);
           }
@@ -436,6 +503,21 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
         if (amt > 0) {
           events.unshift({ type: 'BUFF_STRONGEST_GOV', player: p, amount: amt });
           events.unshift({ type: 'LOG', msg: `Shadow Lobbying: stärkste Regierung +${amt} Einfluss (pro Oligarch, max 3).` });
+          // Corruption rider: dirty money — +1 corruption per 2 influence granted, target is tainted
+          const target = strongestOwnGov(state, p);
+          if (target) {
+            (target as any)._corruptionTainted = true;
+            const gain = Math.floor(amt / 2);
+            if (gain > 0) {
+              events.unshift({
+                type: 'CHANGE_CORRUPTION',
+                targetUid: target.uid,
+                amount: gain,
+                source: 'Shadow Lobbying (schmutziges Geld)',
+                fromInitiative: true,
+              } as EffectEvent);
+            }
+          }
         } else {
           events.unshift({ type: 'LOG', msg: 'Shadow Lobbying: Keine Oligarchen – kein Einfluss-Buff.' });
         }
@@ -453,6 +535,19 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
         } else {
           events.unshift({ type: 'LOG', msg: 'Digitaler Wahlkampf: Keine Medien-Karten auf dem Feld – keine Karten gezogen.' });
         }
+        // Narrative control: ≥2 media/platform → most corrupt own gov −1
+        if (mediaCount >= 2) {
+          const dirty = mostCorruptGov(state, p, { minCorruption: 1 });
+          if (dirty) {
+            events.unshift({
+              type: 'CHANGE_CORRUPTION',
+              targetUid: dirty.uid,
+              amount: -1,
+              source: 'Digitaler Wahlkampf (Narrativkontrolle)',
+              fromInitiative: true,
+            } as EffectEvent);
+          }
+        }
         break;
       }
 
@@ -467,6 +562,18 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
         if (amt > 0) {
           events.unshift({ type: 'BUFF_STRONGEST_GOV', player: opp, amount: -amt });
           events.unshift({ type: 'LOG', msg: `Algorithmischer Diskurs: gegnerische stärkste Regierung -${amt} Einfluss (pro Plattform/KI-Karte).` });
+          // Feed radicalizes: also +1 corruption on the debuffed government
+          const strong = strongestOwnGov(state, opp);
+          if (strong) {
+            events.unshift({
+              type: 'CHANGE_CORRUPTION',
+              targetUid: strong.uid,
+              amount: 1,
+              source: 'Algorithmischer Diskurs (Feed)',
+              enemySourcePlayer: p,
+              fromInitiative: true,
+            } as EffectEvent);
+          }
         } else {
           events.unshift({ type: 'LOG', msg: 'Algorithmischer Diskurs: Keine gegnerischen Plattform/KI-Karten – kein Malus.' });
         }
@@ -485,6 +592,28 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
           if (target.kind === 'pol') {
             (target as any).tempDebuffs = ((target as any).tempDebuffs || 0) + 2; // Balance: −2
             events.unshift({ type: 'LOG', msg: `Whataboutism: ${target.name} reaktiviert (-2 Einfluss).` });
+            // Transfer 1 corruption from reactivated gov to a random enemy government
+            if (getCorruption(target as PoliticianCard) > Number((target as PoliticianCard).corruptionStart ?? 0)) {
+              const oppGovs = activeGovs(state, other(p));
+              if (oppGovs.length) {
+                const victim = oppGovs[rng.randomInt(oppGovs.length)];
+                events.unshift({
+                  type: 'CHANGE_CORRUPTION',
+                  targetUid: (target as any).uid,
+                  amount: -1,
+                  source: 'Whataboutism (Abwälzen)',
+                  fromInitiative: true,
+                } as EffectEvent);
+                events.unshift({
+                  type: 'CHANGE_CORRUPTION',
+                  targetUid: victim.uid,
+                  amount: 1,
+                  source: 'Whataboutism (Abwälzen)',
+                  enemySourcePlayer: p,
+                  fromInitiative: true,
+                } as EffectEvent);
+              }
+            }
           } else {
             events.unshift({ type: 'LOG', msg: `Whataboutism: ${target.name} reaktiviert.` });
           }
@@ -543,14 +672,11 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
       }
 
       case 'SOROS_AP_CHECK': {
-        const p = ev.player;
-        const oppGov = state.board[other(p)].aussen.filter(c => c.kind === 'pol' && !(c as any).deactivated);
-        if (oppGov.length > 0) {
-          events.unshift({ type: 'ADD_AP', player: p, amount: 1 });
-          events.unshift({ type: 'LOG', msg: 'George Soros: Gegner hat Regierungskarte(n) → +1 AP.' });
-        } else {
-          events.unshift({ type: 'LOG', msg: 'George Soros: Gegner hat keine Regierungskarte – kein AP-Bonus.' });
-        }
+        // Legacy no-op: Soros now steals AP reactively when opponent plays Einfluss ≥7
+        events.unshift({
+          type: 'LOG',
+          msg: 'George Soros: Aura aktiv – stiehlt 1 AP, wenn der Gegner eine Regierung mit Einfluss ≥7 spielt (1×/Zug).',
+        });
         break;
       }
 
@@ -560,6 +686,12 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
         if (target) {
           events.unshift({ type: 'DEBUFF_CARD', player: opp, targetUid: (target as any).uid, amount: 1 });
           events.unshift({ type: 'LOG', msg: `Edward Snowden: US-Regierungskarte ${target.name} -1 Einfluss.` });
+        }
+        // Corruption rider: reveal + mark the opponent's most corrupt gov (purge target +1)
+        const dirty = mostCorruptGov(state, opp, { minCorruption: 1 });
+        if (dirty) {
+          (dirty as any).purgeMarked = true;
+          events.unshift({ type: 'LOG', msg: `🕵️ Edward Snowden: ${dirty.name} enthüllt (Korruption ${getCorruption(dirty)}) — Säuberungsziel +1.` });
         }
         break;
       }
@@ -571,22 +703,34 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
         events.unshift({ type: 'DRAW_CARDS', player: other(p), amount: 1 });
         events.unshift({ type: 'DRAW_CARDS', player: p, amount: ownDraw });
         events.unshift({ type: 'LOG', msg: `Julian Assange: ziehe ${ownDraw} Karte(n)${hasNgo ? ' (NGO-Bonus)' : ''}, Gegner zieht 1.` });
+        // Corruption rider: leaks hurt everyone — both players' most corrupt gov +1
+        for (const pl of [1, 2] as const) {
+          const dirty = mostCorruptGov(state, pl, { minCorruption: 1 });
+          if (dirty) {
+            events.unshift({
+              type: 'CHANGE_CORRUPTION',
+              targetUid: dirty.uid,
+              amount: 1,
+              source: 'Julian Assange (Leak)',
+            } as EffectEvent);
+          }
+        }
         break;
       }
 
       case 'HARARI_PLATFORM_AP': {
-        const p = ev.player;
-        const hasPlatform = state.board[p].innen.some((c: Card) => isPlatformCard(c) && !(c as any).deactivated);
-        if (hasPlatform) {
-          events.unshift({ type: 'ADD_AP', player: p, amount: 1 });
-          events.unshift({ type: 'LOG', msg: 'Yuval Noah Harari: Plattform vorhanden → +1 AP.' });
-        }
+        // Legacy no-op: Harari now steals AP when opponent plays a Platform
+        events.unshift({
+          type: 'LOG',
+          msg: 'Yuval Noah Harari: Aura aktiv – stiehlt 1 AP, wenn der Gegner eine Plattform spielt (1×/Zug).',
+        });
         break;
       }
 
       case 'SET_NEXT_GOV_PLUS2': {
         state.effectFlags[ev.player].nextGovPlus2 = true;
-        events.unshift({ type: 'LOG', msg: 'Think-tank: Nächste Regierungskarte erhält +2 Einfluss.' });
+        (state.effectFlags[ev.player] as any).nextGovCorruptionMinus1 = true;
+        events.unshift({ type: 'LOG', msg: 'Think-tank: Nächste Regierungskarte erhält +2 Einfluss und −1 Start-Korruption.' });
         break;
       }
 
@@ -614,6 +758,17 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
         if (roll <= 3) {
           events.unshift({ type: 'BUFF_STRONGEST_GOV', player: loser, amount: -roll });
           events.unshift({ type: 'LOG', msg: `Skandalspirale: P${loser} (weniger Einfluss) würfelt ${roll} → stärkste Regierung -${roll}.` });
+          // Corruption rider: the spiral compounds on an already-dirty leader
+          const loserStrongest = strongestOwnGov(state, loser);
+          if (loserStrongest && getCorruption(loserStrongest) >= 2) {
+            events.unshift({
+              type: 'CHANGE_CORRUPTION',
+              targetUid: loserStrongest.uid,
+              amount: 1,
+              source: 'Skandalspirale (kompromittiert)',
+              fromInitiative: true,
+            } as EffectEvent);
+          }
         } else {
           events.unshift({ type: 'LOG', msg: `Skandalspirale: P${loser} würfelt ${roll} → keine Auswirkung.` });
         }
@@ -623,12 +778,14 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
       // ===== New intent event handlers =====
 
       case 'DEACTIVATE_STRONGEST_ENEMY_GOV': {
-        // Balance: −3 influence instead of full deactivate
+        // Balance: −3 influence; −4 if target already has corruption ≥3
         const opp: Player = ev.player === 1 ? 2 : 1;
         const uid = strongestGovernmentUid(state, opp);
         if (uid !== null) {
-          events.unshift({ type: 'DEBUFF_CARD', player: opp, targetUid: uid, amount: 3 });
-          events.unshift({ type: 'LOG', msg: 'Partei-Offensive: stärkste gegnerische Regierung −3 Einfluss.' });
+          const target = findCardByUidOnBoard(state, uid) as PoliticianCard | null;
+          const amt = target && getCorruption(target) >= 3 ? 4 : 3;
+          events.unshift({ type: 'DEBUFF_CARD', player: opp, targetUid: uid, amount: amt });
+          events.unshift({ type: 'LOG', msg: `Partei-Offensive: stärkste gegnerische Regierung −${amt} Einfluss.` });
         } else {
           events.unshift({ type: 'LOG', msg: 'Partei-Offensive: keine gegnerische Regierung gefunden.' });
         }
@@ -639,23 +796,18 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
         // Balance: lock Sofort-Initiativen only (not Dauerhaft / traps)
         const opp: Player = ev.player === 1 ? 2 : 1;
         state.effectFlags[opp].initiativesLocked = true;
+        // Corruption rider: enemy cannot reduce corruption while blockade holds
+        (state.effectFlags[opp] as any).corruptionReductionBlocked = true;
         events.unshift({ type: 'LOG', msg: 'Oppositionsblockade: Gegner kann keine Sofort-Initiativen spielen (bis zu seinem nächsten Zug).' });
+        events.unshift({ type: 'LOG', msg: 'Oppositionsblockade: Gegner kann bis dahin keine Korruption abbauen.' });
         break;
       }
 
       case 'TIM_COOK_AP': {
-        const p = ev.player as Player;
-        // +1 AP, or +2 if another Platform is already on board (exclude Tim Cook himself)
-        const hasOtherPlatform = (state.board[p].innen || []).some(
-          (c: Card) => isPlatformCard(c) && !(c as any).deactivated && c.name !== 'Tim Cook'
-        );
-        const amount = hasOtherPlatform ? 2 : 1;
-        events.unshift({ type: 'ADD_AP', player: p, amount });
+        // Legacy no-op: Tim Cook now steals AP when opponent plays a Platform
         events.unshift({
           type: 'LOG',
-          msg: hasOtherPlatform
-            ? 'Tim Cook: +2 AP (Plattform bereits auf dem Feld).'
-            : 'Tim Cook: +1 AP.',
+          msg: 'Tim Cook: Aura aktiv – stiehlt 1 AP, wenn der Gegner eine Plattform spielt (1×/Zug).',
         });
         break;
       }
@@ -663,6 +815,17 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
       case 'SET_DOUBLE_PUBLIC_AURA': {
         state.effectFlags[ev.player].doublePublicAura = true;
         events.unshift({ type: 'LOG', msg: 'Influencer Campaign: next Public aura will be doubled.' });
+        // Paid reach is dirty money — strongest gov +1 corruption
+        const strong = strongestOwnGov(state, ev.player);
+        if (strong) {
+          events.unshift({
+            type: 'CHANGE_CORRUPTION',
+            targetUid: strong.uid,
+            amount: 1,
+            source: 'Influencer-Kampagne (Paid Reach)',
+            fromInitiative: true,
+          } as EffectEvent);
+        }
         break;
       }
 
@@ -672,6 +835,55 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
         if (active) {
           events.unshift({ type: 'LOG', msg: 'Opportunist: AP effects will be mirrored until end of turn.' });
         }
+        break;
+      }
+
+      // === CORRUPTION SYSTEM (pass-purge economy) ===
+      // Note: CHANGE_CORRUPTION is deliberately NOT mirrored by Opportunist
+      // (same precedent as STEAL_AP — no corruption ping-pong).
+      case 'CHANGE_CORRUPTION': {
+        const { targetUid, amount } = ev as any;
+        const card = findCardByUidOnBoard(state, targetUid);
+        if (!card || card.kind !== 'pol') {
+          // Also allow corruption changes on hand cards (Tunnelvision mark)
+          let handCard: Card | undefined;
+          for (const p of [1, 2] as const) {
+            handCard = state.hands[p].find(c => c.uid === targetUid && c.kind === 'pol');
+            if (handCard) {
+              applyCorruptionDelta(state, handCard as PoliticianCard, p, amount, {
+                source: (ev as any).source,
+                enemySourcePlayer: (ev as any).enemySourcePlayer,
+                fromInitiative: (ev as any).fromInitiative,
+                log: (m) => logPush(state, m),
+                enqueue: (e) => events.unshift(e),
+              });
+              break;
+            }
+          }
+          break;
+        }
+        const slot = findCardSlotByUid(state, targetUid);
+        const owner = (slot?.player ?? 1) as Player;
+        applyCorruptionDelta(state, card as PoliticianCard, owner, amount, {
+          source: (ev as any).source,
+          enemySourcePlayer: (ev as any).enemySourcePlayer,
+          fromInitiative: (ev as any).fromInitiative,
+          log: (m) => logPush(state, m),
+          enqueue: (e) => events.unshift(e),
+        });
+        break;
+      }
+
+      case 'CORRUPTION_PURGE_CHECK': {
+        runPurgeSequence(state, (m) => logPush(state, m));
+        break;
+      }
+
+      case 'VISUAL_PURGE_ROLL': {
+        // UI-only: purge dice results are dispatched from runPurgeSequence;
+        // this event exists for scripted tests / replay logs.
+        const { targetUid, roll, target, survived } = ev as any;
+        logPush(state, `🎲 Säuberungswurf (uid ${targetUid}): ${roll ?? 'auto'} vs Ziel ${target} → ${survived ? 'überlebt' : 'entfernt'}.`);
         break;
       }
 
@@ -763,6 +975,14 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
             state.board[actor as Player].aussen.push(target as any);
             events.unshift({ type: 'LOG', msg: `Bribery Scandal 2.0: Erfolg! ${target.name} übernommen.` });
             transferOutcome = 'stolen';
+            // Corruption rider: the scandal sticks to the stolen card
+            events.unshift({
+              type: 'CHANGE_CORRUPTION',
+              targetUid: target.uid,
+              amount: 1,
+              source: 'Bestechungsskandal 2.0 (übernommen)',
+              fromInitiative: true,
+            } as EffectEvent);
           } else {
             state.board[victim].aussen.splice(targetIdx,1);
             state.discard.push(target as any);
@@ -772,6 +992,17 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
           corruptionSuccess = true;
         } else {
           events.unshift({ type: 'LOG', msg: 'Bribery Scandal 2.0: Wurf zu niedrig – keine Übernahme.' });
+          // Corruption rider: failure — the scandal blows back on your strongest gov
+          const backfire = strongestOwnGov(state, actor as Player);
+          if (backfire) {
+            events.unshift({
+              type: 'CHANGE_CORRUPTION',
+              targetUid: backfire.uid,
+              amount: 1,
+              source: 'Bestechungsskandal 2.0 (gescheitert)',
+              fromInitiative: true,
+            } as EffectEvent);
+          }
         }
 
         if (typeof window !== 'undefined') {
@@ -908,6 +1139,14 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
             state.board[actor as Player].aussen.push(target as any);
             events.unshift({ type: 'LOG', msg: `Maulwurf: Erfolg! ${target.name} übernommen.` });
             transferOutcome = 'stolen';
+            // Corruption rider: the mole brings its dirt along
+            events.unshift({
+              type: 'CHANGE_CORRUPTION',
+              targetUid: target.uid,
+              amount: 1,
+              source: 'Maulwurf (eingeschleust)',
+              fromInitiative: true,
+            } as EffectEvent);
           } else {
             // No space - remove card
             state.board[victim].aussen.splice(targetIdx,1);
@@ -1041,7 +1280,26 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
         const oppPublicCards = state.board[other(p)]?.innen || [];
         const initiativeName = (state as any)._lastActivatedInitiative as string | undefined;
 
-        // Pre-registered AP bonus for the next initiative (Bill Gates, Zhang Yiming, ...)
+        // Verzögerungsverfahren: bury the audit — own purge targets −1 this round
+        if (initiativeName === 'Verzögerungsverfahren') {
+          (flags as any).purgeTargetDelta = ((flags as any).purgeTargetDelta || 0) + 1;
+          events.unshift({ type: 'LOG', msg: 'Verzögerungsverfahren: Säuberungsziele −1 diese Runde.' });
+        }
+        // Symbolpolitik: optics cleanse — strongest gov −1 corruption
+        if (initiativeName === 'Symbolpolitik') {
+          const strong = strongestOwnGov(state, p);
+          if (strong) {
+            events.unshift({
+              type: 'CHANGE_CORRUPTION',
+              targetUid: strong.uid,
+              amount: -1,
+              source: 'Symbolpolitik (Optik)',
+              fromInitiative: true,
+            } as EffectEvent);
+          }
+        }
+
+        // Pre-registered AP bonus for the next initiative (legacy deferred bonuses)
         if (flags && (flags.apBonusInitiativeNext || 0) > 0) {
           const amt = flags.apBonusInitiativeNext!;
           flags.apBonusInitiativeNext = 0;
@@ -1049,27 +1307,8 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
           events.unshift({ type: 'LOG', msg: `Vorgemerkter Initiative-Bonus eingelöst: +${amt} AP.` });
         }
 
-        // Elon Musk: +1 AP on initiative activation (once per round)
-        if (findActivePublicCard(publicCards, 'Elon Musk') && !(flags as any)?.elonInitiativeApUsed) {
-          (flags as any).elonInitiativeApUsed = true;
-          events.unshift({ type: 'ADD_AP', player: p, amount: 1 });
-          events.unshift({ type: 'LOG', msg: 'Elon Musk: +1 AP für Initiative-Aktivierung (1×/Runde).' });
-        }
-
-        // Mark Zuckerberg: +1 AP on initiative activation (once per turn)
-        if (findActivePublicCard(publicCards, 'Mark Zuckerberg') && !flags?.markZuckerbergUsed) {
-          flags.markZuckerbergUsed = true;
-          events.unshift({ type: 'ADD_AP', player: p, amount: 1 });
-          events.unshift({ type: 'LOG', msg: 'Mark Zuckerberg: +1 AP für Initiative-Aktivierung.' });
-        }
-
-        // Ai Weiwei: +1 card +1 AP on initiative activation (once per turn)
-        if (findActivePublicCard(publicCards, 'Ai Weiwei') && !(flags as any)?.aiWeiweiInitiativeUsed) {
-          (flags as any).aiWeiweiInitiativeUsed = true;
-          events.unshift({ type: 'DRAW_CARDS', player: p, amount: 1 });
-          events.unshift({ type: 'ADD_AP', player: p, amount: 1 });
-          events.unshift({ type: 'LOG', msg: 'Ai Weiwei: +1 Karte +1 AP für Initiative-Aktivierung (1×/Zug).' });
-        }
+        // Opponent public auras: steal AP when this player activates an initiative
+        enqueuePublicApStealsOnInitiative(state, p, initiativeName, (e) => events.unshift(e));
 
         // Jennifer Doudna / Anthony Fauci: +1 influence on strongest gov per initiative
         if (findActivePublicCard(publicCards, 'Jennifer Doudna')) {
@@ -1085,13 +1324,6 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
         if (findActivePublicCard(oppPublicCards, 'Noam Chomsky')) {
           events.unshift({ type: 'BUFF_STRONGEST_GOV', player: p, amount: -1 });
           events.unshift({ type: 'LOG', msg: 'Noam Chomsky (Gegner): stärkste Regierung -1 Einfluss (Initiative).' });
-        }
-
-        // Sam Altman: +1 card +1 AP when activating an AI-related initiative
-        if (findActivePublicCard(publicCards, 'Sam Altman') && isAiRelatedInitiativeName(initiativeName)) {
-          events.unshift({ type: 'DRAW_CARDS', player: p, amount: 1 });
-          events.unshift({ type: 'ADD_AP', player: p, amount: 1 });
-          events.unshift({ type: 'LOG', msg: 'Sam Altman: KI-Initiative → +1 Karte +1 AP.' });
         }
 
         // Zivilgesellschaft (ongoing): active NGO grants +1 AP on initiative (once per turn)

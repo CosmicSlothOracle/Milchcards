@@ -20,14 +20,14 @@ import { MainMenu } from './components/MainMenu';
 import { Credits } from './components/Credits';
 import { RotateDeviceOverlay } from './components/RotateDeviceOverlay';
 import { PvpLobby } from './components/PvpLobby';
-import { ActionFeedback } from './components/ActionFeedback';
 import { VictoryOverlay } from './components/VictoryOverlay';
+import { VsAiDeckSelect } from './components/VsAiDeckSelect';
 import { useMobileLayout } from './hooks/useMobileLayout';
 import { usePvpSession } from './hooks/usePvpSession';
 import { PvpAction, RELAYED_ENGINE_EVENTS } from './pvp/types';
 import { presetToBuilderEntries, PRESET_DECKS, randomPresetDeck } from './data/presetDecks';
 
-type AppState = 'intro' | 'menu' | 'deckbuilder' | 'game' | 'credits' | 'pvp-lobby';
+type AppState = 'intro' | 'menu' | 'deckbuilder' | 'vs-ai-select' | 'game' | 'credits' | 'pvp-lobby';
 
 function AppContent() {
   const [appState, setAppState] = useState<AppState>('intro');
@@ -45,6 +45,13 @@ function AppContent() {
   const diceOutcomeTimer = useRef<number | null>(null);
   const [diceRolling, setDiceRolling] = useState(false);
   const diceRollingTimer = useRef<number | null>(null);
+  // Government ability target picker (client-side UI state)
+  const [govAbilityPick, setGovAbilityPick] = useState<{
+    actorPlayer: Player;
+    actorUid: number;
+    needsTarget: string;
+    name: string;
+  } | null>(null);
 
   const {
     gameState,
@@ -54,6 +61,7 @@ function AppContent() {
     startMatchVsAI,
     playCard,
     activateInstantInitiative,
+    activateGovernmentAbility,
     startNewGame,
     runAITurn,
     selectHandCard,
@@ -130,8 +138,17 @@ function AppContent() {
   const corruptionActive = pendingAbility === 'corruption_steal';
   const maulwurfActive = pendingAbility === 'maulwurf_steal';
   const tunnelvisionActive = pendingAbility === 'tunnelvision_probe';
+  const purgeActive = Boolean(gameState.pendingPurge?.awaitingRoll);
+  const diceInteractive = corruptionActive || maulwurfActive || tunnelvisionActive || purgeActive;
 
   const requestPendingDiceRoll = useCallback(() => {
+    if (gameState.pendingPurge?.awaitingRoll) {
+      const entry = gameState.pendingPurge.queue[gameState.pendingPurge.index];
+      window.dispatchEvent(new CustomEvent('pc:purge_request_roll', {
+        detail: { player: entry?.player, targetUid: entry?.uid },
+      }));
+      return;
+    }
     const sel = pendingAbilitySelect;
     if (!sel) return;
     if (sel.type === 'maulwurf_steal') {
@@ -152,18 +169,18 @@ function AppContent() {
         },
       }));
     }
-  }, [pendingAbilitySelect]);
+  }, [pendingAbilitySelect, gameState.pendingPurge]);
 
   useEffect(() => {
     const handleCorruptionResolved = (event: Event) => {
-      const detail = (event as CustomEvent).detail as { success?: boolean };
+      const detail = (event as CustomEvent).detail as { success?: boolean; type?: string; name?: string; roll?: number; target?: number };
       const success = Boolean(detail?.success);
       setDiceOutcome(success ? 'success' : 'fail');
       if (diceOutcomeTimer.current) window.clearTimeout(diceOutcomeTimer.current);
       diceOutcomeTimer.current = window.setTimeout(() => {
         setDiceOutcome(null);
         diceOutcomeTimer.current = null;
-      }, 1400);
+      }, detail?.type === 'purge' ? 900 : 1400);
     };
 
     const handleCorruptionRoll = () => {
@@ -175,15 +192,27 @@ function AppContent() {
       }, 1100);
     };
 
+    const handlePurgeStart = () => {
+      log('🎲 Säuberung gestartet — würfle für jede geprüfte Regierungskarte.');
+    };
+
+    const handlePurgeAwait = () => {
+      setDiceRolling(false);
+    };
+
     window.addEventListener('pc:corruption_resolved', handleCorruptionResolved as EventListener);
     window.addEventListener('pc:probe_resolved', handleCorruptionResolved as EventListener);
     window.addEventListener('pc:corruption_roll_started', handleCorruptionRoll as EventListener);
+    window.addEventListener('pc:purge_sequence_start', handlePurgeStart as EventListener);
+    window.addEventListener('pc:purge_await_roll', handlePurgeAwait as EventListener);
     return () => {
       window.removeEventListener('pc:corruption_resolved', handleCorruptionResolved as EventListener);
       window.removeEventListener('pc:probe_resolved', handleCorruptionResolved as EventListener);
       window.removeEventListener('pc:corruption_roll_started', handleCorruptionRoll as EventListener);
+      window.removeEventListener('pc:purge_sequence_start', handlePurgeStart as EventListener);
+      window.removeEventListener('pc:purge_await_roll', handlePurgeAwait as EventListener);
     };
-  }, []);
+  }, [log]);
 
   useEffect(() => (
     () => {
@@ -193,7 +222,15 @@ function AppContent() {
   ), []);
 
   const actionHint = useMemo(() => {
-    if (appState === 'deckbuilder') return null;
+    if (appState !== 'game') return null;
+    if (purgeActive || gameState.pendingPurge) {
+      return {
+        title: 'Säuberung',
+        body: purgeActive
+          ? 'Karte ist markiert — würfle mit dem Dice (W6).'
+          : 'Säuberungsprüfung läuft…',
+      };
+    }
     if (corruptionActive) {
       return {
         title: 'Korruption aktiv',
@@ -222,7 +259,7 @@ function AppContent() {
       title: 'Handkarte auswählen',
       body: 'Wähle eine Karte aus deiner Hand, um eine Aktion zu starten.',
     };
-  }, [appState, corruptionActive, maulwurfActive, tunnelvisionActive, selectedHandIndex]);
+  }, [appState, corruptionActive, maulwurfActive, tunnelvisionActive, selectedHandIndex, purgeActive, gameState.pendingPurge]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -282,6 +319,46 @@ function AppContent() {
           detail: { player: actor, targetUid: data.card.uid },
         }));
         return;
+      }
+    }
+
+    // Pending government ability that needs a target
+    if (govAbilityPick && data.type === 'board_card' && data.lane === 'aussen' && data.card?.uid) {
+      const { actorPlayer, actorUid, needsTarget } = govAbilityPick;
+      const okOwn = needsTarget === 'own_gov' && data.player === actorPlayer;
+      const okEnemy = needsTarget === 'enemy_gov' && data.player !== actorPlayer;
+      const okAny = needsTarget === 'any_gov';
+      if (okOwn || okEnemy || okAny) {
+        activateGovernmentAbility(actorPlayer, actorUid, data.card.uid);
+        setGovAbilityPick(null);
+        return;
+      }
+    }
+
+    // Click own government with Korruption ≥3 to activate ability (or pick target)
+    if (data.type === 'board_card' && data.lane === 'aussen' && data.player === gameState.current && data.card?.kind === 'pol') {
+      const card = data.card;
+      const corr = Number(card.corruption ?? 0);
+      if (corr >= 3 && !card.deactivated && (gameState.actionPoints[gameState.current] || 0) >= 1) {
+        try {
+          const { getGovAbility, canActivateGovAbility } = require('./utils/govAbilities');
+          const gate = canActivateGovAbility(gameState, gameState.current, card);
+          if (gate.ok) {
+            const ability = getGovAbility(card);
+            if (ability?.needsTarget) {
+              setGovAbilityPick({
+                actorPlayer: gameState.current,
+                actorUid: card.uid,
+                needsTarget: ability.needsTarget,
+                name: ability.name,
+              });
+              log(`⚡ ${card.name}: „${ability.name}" — wähle Ziel (${ability.needsTarget}).`);
+              return;
+            }
+            activateGovernmentAbility(gameState.current, card.uid);
+            return;
+          }
+        } catch { /* best-effort */ }
       }
     }
 
@@ -469,7 +546,7 @@ function AppContent() {
       } catch (e) { }
       return;
     }
-  }, [gameState, selectedHandIndex, playCard, selectHandCard, passTurn, nextTurn, log, devMode, activateInstantInitiative, pvpRole, pvpSendAction]);
+  }, [gameState, selectedHandIndex, playCard, selectHandCard, passTurn, nextTurn, log, devMode, activateInstantInitiative, activateGovernmentAbility, govAbilityPick, pvpRole, pvpSendAction]);
 
   const handleCardHover = useCallback((data: any) => {
     setHoveredCard(data);
@@ -547,6 +624,10 @@ function AppContent() {
       return () => clearTimeout(t);
     }
 
+    // Do not force nextTurn while an interactive Säuberung is waiting on dice —
+    // that would re-enter resolveRound and wipe pendingPurge.
+    if (gameState.pendingPurge) return;
+
     if (gameState.current === 2 && gameState.passed?.[2]) {
       const t2 = setTimeout(() => {
         nextTurn();
@@ -578,11 +659,28 @@ function AppContent() {
       {/* Main Menu State */}
       {appState === 'menu' && (
         <MainMenu
-          onStartGame={() => setAppState('deckbuilder')}
+          onStartGame={() => setAppState('vs-ai-select')}
           onOpenDeckBuilder={() => setAppState('deckbuilder')}
           onShowCredits={() => setAppState('credits')}
           onStartTutorial={() => setTutorialOpen(true)}
           onStartPvp={() => setAppState('pvp-lobby')}
+        />
+      )}
+
+      {/* Slim vs-AI premade picker */}
+      {appState === 'vs-ai-select' && (
+        <VsAiDeckSelect
+          onBack={() => setAppState('menu')}
+          onStart={(p1Deck, deckName) => {
+            try {
+              startMatchVsAI(p1Deck, '');
+              log(`🤖 Spiel vs KI gestartet (Deck: ${deckName})`);
+              setAppState('game');
+            } catch (error) {
+              console.error('Start vs AI failed', error);
+              log('❌ Fehler: KI-Start fehlgeschlagen');
+            }
+          }}
         />
       )}
 
@@ -616,17 +714,6 @@ function AppContent() {
             isOpen={true}
             onClose={() => setAppState('menu')}
             onApplyDeck={handleApplyDeck}
-            onStartMatch={handleStartMatch}
-            onStartVsAI={(p1Deck) => {
-              try {
-                startMatchVsAI(p1Deck, '');
-                log('🤖 Spiel vs KI gestartet (KI erhält anderes Premade-Deck)');
-                setAppState('game');
-              } catch (error) {
-                console.error('Start vs AI failed', error);
-                log('❌ Fehler: KI-Start fehlgeschlagen');
-              }
-            }}
           />
           <div style={{ position: 'fixed', top: '20px', right: '20px', zIndex: 11 }}>
             <MusicToggle size="medium" />
@@ -657,6 +744,7 @@ function AppContent() {
                 onCardHover={handleCardHover}
                 devMode={devMode}
                 localPlayer={pvpRole === 'guest' ? 2 : 1}
+                guidanceHint={!gameState.gameWinner ? actionHint : null}
                 onExitToMenu={() => {
                   if (pvpRole) pvp.leaveRoom();
                   setAppState('menu');
@@ -672,14 +760,6 @@ function AppContent() {
                 onPlayCard={handlePlayCardFromModal}
               />
 
-              {actionHint && !gameState.gameWinner && (
-                <div className={`action-hint${ mobile.isMobile ? ' action-hint--mobile' : '' }`}>
-                  <div className="action-hint__title">{actionHint.title}</div>
-                  <div className="action-hint__body">{actionHint.body}</div>
-                </div>
-              )}
-
-              <ActionFeedback />
               <VictoryOverlay
                 gameState={gameState}
                 localPlayer={pvpRole === 'guest' ? 2 : 1}
@@ -697,10 +777,10 @@ function AppContent() {
               {!mobile.isTouch && <CardHoverInfoPanel hovered={hoveredCard} />}
 
               {/* Dice Roller centered for events */}
-              <div className={`game-dice${ corruptionActive || maulwurfActive || tunnelvisionActive ? ' game-dice--highlight' : '' }${ diceOutcome === 'success' ? ' game-dice--success' : '' }${ diceOutcome === 'fail' ? ' game-dice--fail' : '' }${ diceRolling ? ' game-dice--rolling' : '' }${ mobile.isMobile ? ' game-dice--mobile' : '' }`}>
+              <div className={`game-dice${ diceInteractive ? ' game-dice--highlight' : '' }${ diceOutcome === 'success' ? ' game-dice--success' : '' }${ diceOutcome === 'fail' ? ' game-dice--fail' : '' }${ diceRolling ? ' game-dice--rolling' : '' }${ mobile.isMobile ? ' game-dice--mobile' : '' }`}>
                 <SimpleDice
                   size={diceSize}
-                  onClick={corruptionActive || maulwurfActive || tunnelvisionActive ? requestPendingDiceRoll : undefined}
+                  onClick={diceInteractive ? requestPendingDiceRoll : undefined}
                   onRoll={(f) => {
                     try {
                       window.dispatchEvent(new CustomEvent('pc:dice_result', { detail: { roll: f } }));

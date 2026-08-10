@@ -15,6 +15,11 @@ interface RoundResult {
   roundsWon: { 1: number; 2: number };
   round: number;
   matchOver: boolean;
+  purge?: {
+    removed: { player: number; name: string; roll: number | null; target: number }[];
+    survived: { player: number; name: string; roll: number | null; target: number }[];
+    lines: string[];
+  };
 }
 
 export const VictoryOverlay: React.FC<VictoryOverlayProps> = ({
@@ -32,7 +37,9 @@ export const VictoryOverlay: React.FC<VictoryOverlayProps> = ({
       if (!detail || detail.matchOver) return;
       setRoundResult(detail);
       if (clearTimer) window.clearTimeout(clearTimer);
-      clearTimer = window.setTimeout(() => setRoundResult(null), 3400);
+      // Longer if purge results need reading
+      const hold = detail.purge && (detail.purge.removed.length + detail.purge.survived.length) > 0 ? 5200 : 3400;
+      clearTimer = window.setTimeout(() => setRoundResult(null), hold);
     };
     window.addEventListener('pc:round_resolved', onRound as EventListener);
     return () => {
@@ -90,6 +97,21 @@ export const VictoryOverlay: React.FC<VictoryOverlayProps> = ({
         <div className="round-banner__sub">
           Spielstand {roundResult.roundsWon[1]} : {roundResult.roundsWon[2]}
         </div>
+        {roundResult.purge && (roundResult.purge.removed.length + roundResult.purge.survived.length) > 0 && (
+          <div className="round-banner__sub" style={{ marginTop: 8, textAlign: 'left', fontSize: 12, lineHeight: 1.35 }}>
+            <div style={{ fontWeight: 700, marginBottom: 4 }}>Säuberung (W6)</div>
+            {roundResult.purge.removed.map((r, i) => (
+              <div key={`rm-${i}`} style={{ color: '#f87171' }}>
+                ✗ {r.name} — Wurf {r.roll ?? 'auto'} / Ziel {r.target}
+              </div>
+            ))}
+            {roundResult.purge.survived.map((r, i) => (
+              <div key={`ok-${i}`} style={{ color: '#86efac' }}>
+                ✓ {r.name} — Wurf {r.roll ?? 'auto'} / Ziel {r.target}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -81,6 +81,9 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
   const influenceAnimRef = useRef<Map<string, Array<{ start: number; duration: number; amount: number; type: 'increase' | 'decrease' }>>>(new Map());
   // Previous per-card influence snapshot to detect increases
   const prevInfluencesRef = useRef<Record<string, number>>({});
+  // Corruption intensification anims: floating +K and heat pulse
+  const corruptionAnimRef = useRef<Map<string, Array<{ start: number; duration: number; delta: number; level: number }>>>(new Map());
+  const prevCorruptionsRef = useRef<Record<string, number>>({});
   // Slot symbol images
   const slotSymbolImgsRef = useRef<Map<string, HTMLImageElement>>(new Map());
   // Map of canonical slot positions for animations: key -> {x,y,w,h,cx,cy}
@@ -100,8 +103,72 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
 
   const hitSpriteStateRef = useRef<Record<string, { started: number; frameCount: number; frameDuration: number }>>({});
 
-  // Flash animation state for influence changes: Map<uid, FlashAnim>
-  const cardFlashRef = useRef<Map<string, { start: number; duration: number; type: 'buff' | 'debuff' }>>(new Map());
+  // Flash animation state for influence / corruption changes
+  const cardFlashRef = useRef<Map<string, {
+    start: number;
+    duration: number;
+    type: 'buff' | 'debuff' | 'corruption';
+    level?: number;
+    delta?: number;
+  }>>(new Map());
+
+  const pushCorruptionIntensify = useCallback((uid: string | number, delta: number, level: number) => {
+    const key = String(uid);
+    const now = performance.now();
+    const intensity = Math.max(1, Math.min(6, level));
+    const duration = 700 + intensity * 120;
+    const list = corruptionAnimRef.current.get(key) || [];
+    // Debounce: engine event + state snapshot can both fire for the same rise
+    const last = list[list.length - 1];
+    if (last && now - last.start < 150) return;
+    list.push({ start: now, duration, delta: Math.max(1, delta), level: intensity });
+    corruptionAnimRef.current.set(key, list);
+    cardFlashRef.current.set(key, {
+      start: now,
+      duration,
+      type: 'corruption',
+      level: intensity,
+      delta: Math.max(1, delta),
+    });
+    // Particles at card center if visual effects available
+    try {
+      const zone = clickZonesRef.current.find(z =>
+        z.data?.card && String(z.data.card.uid ?? z.data.card.id) === key
+      );
+      const ve = (window as any).__pc_visual_effects;
+      if (zone && ve?.spawnParticles) {
+        const count = 8 + intensity * 4;
+        ve.spawnParticles(zone.x + zone.w / 2, zone.y + zone.h / 2, count);
+      }
+      if (zone && ve?.spawnVisualEffect) {
+        const color = intensity >= 5 ? '#ef4444' : intensity >= 3 ? '#f97316' : '#eab308';
+        ve.spawnVisualEffect({
+          type: 'influence_buff',
+          x: zone.x + zone.w / 2,
+          y: zone.y + 28,
+          amount: delta,
+          text: `+${delta} K`,
+          color,
+          size: 18 + intensity * 2,
+          duration: 1100,
+        });
+      }
+    } catch { /* best-effort */ }
+  }, []);
+
+  // Engine → canvas: corruption rose on a card
+  useEffect(() => {
+    const onIntensify = (ev: Event) => {
+      const d = (ev as CustomEvent).detail || {};
+      if (d.targetUid == null) return;
+      const after = Number(d.after ?? 1);
+      const delta = Number(d.delta ?? 1);
+      pushCorruptionIntensify(d.targetUid, delta, after);
+      prevCorruptionsRef.current[String(d.targetUid)] = after;
+    };
+    window.addEventListener('pc:corruption_intensified', onIntensify as EventListener);
+    return () => window.removeEventListener('pc:corruption_intensified', onIntensify as EventListener);
+  }, [pushCorruptionIntensify]);
 
   // Helper function to calculate current influence including buffs/debuffs
   const getCurrentInfluence = (card: any): number => {
@@ -389,10 +456,28 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     ctx.restore();
 
     // Status-Indikatoren (für alle Board-Karten)
-    // Einfluss-Wert dauerhaft anzeigen (oben links) – nur für Regierungskarten
+    // Einfluss-Wert + Korruption dauerhaft anzeigen – nur für Regierungskarten
     if ((card as any).kind === 'pol') {
-      const barH = Math.max(20, Math.floor(s * 0.12) + 6);
-      ctx.fillStyle = 'rgba(0,0,0,0.6)';
+      // Persistent heat rim scales with corruption (visual intensification baseline)
+      const rimCorr = Math.max(0, Math.min(6, Number((card as any).corruption ?? (card as any).corruptionStart ?? 0)));
+      if (rimCorr > 0) {
+        const heat = rimCorr / 6;
+        const rimRgb =
+          rimCorr >= 5 ? '239,68,68' : rimCorr >= 3 ? '249,115,22' : '234,179,8';
+        const pulse = 0.35 + 0.25 * Math.sin(performance.now() / (420 - rimCorr * 35));
+        ctx.save();
+        ctx.strokeStyle = `rgba(${rimRgb},${0.25 + heat * 0.55 * pulse})`;
+        ctx.lineWidth = 2 + heat * 3;
+        ctx.strokeRect(dx + 1, dy + 1, s - 2, s - 2);
+        if (rimCorr >= 4) {
+          ctx.fillStyle = `rgba(${rimRgb},${0.04 + heat * 0.08 * pulse})`;
+          ctx.fillRect(dx, dy, s, s);
+        }
+        ctx.restore();
+      }
+
+      const barH = Math.max(22, Math.floor(s * 0.14) + 6);
+      ctx.fillStyle = 'rgba(0,0,0,0.72)';
       ctx.fillRect(dx, dy + s - barH, s, barH);
 
       // Einfluss-Aufschlüsselung für kleinere Anzeige
@@ -401,40 +486,47 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       const tempBuffs = (card as any).tempBuffs ?? 0;
       const tempDebuffs = (card as any).tempDebuffs ?? 0;
       const isModified = currentInfluence !== baseInfluence;
+      const corr = Math.max(0, Math.min(6, Number((card as any).corruption ?? (card as any).corruptionStart ?? 0)));
 
-      const fontSize = Math.floor(s * 0.1); // Etwas kleiner für mehr Platz
+      const fontSize = Math.max(11, Math.floor(s * 0.095));
       ctx.font = `bold ${fontSize}px sans-serif`;
       ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';
+      const textY = dy + s - barH / 2;
+      let textX = dx + 6;
 
-      if (isModified) {
-        // Zeige Aufschlüsselung: "10 +1" oder "10 -2"
-        const textX = dx + 8;
-        const textY = dy + s - barH / 2;
+      // Basis-Einfluss (weiß)
+      ctx.fillStyle = '#ffffff';
+      const inflLabel = isModified
+        ? `${baseInfluence}${tempBuffs > 0 ? `+${tempBuffs}` : ''}${tempDebuffs > 0 ? `-${tempDebuffs}` : ''}`
+        : `${baseInfluence}`;
+      ctx.fillText(inflLabel, textX, textY);
+      textX += ctx.measureText(inflLabel).width + 8;
 
-        // Basis-Einfluss (weiß)
-        ctx.fillStyle = '#ffffff';
-        ctx.fillText(`${baseInfluence}`, textX, textY);
+      // Korruption badge in the same bar — always visible
+      const corrColor = corr >= 6 ? '#fca5a5' : corr >= 5 ? '#f87171' : corr >= 3 ? '#fb923c' : corr >= 1 ? '#facc15' : '#86efac';
+      ctx.fillStyle = corrColor;
+      const corrLabel = `K${corr}`;
+      ctx.fillText(corrLabel, textX, textY);
+      textX += ctx.measureText(corrLabel).width + 6;
 
-        // Modifikationen (grün/rot)
-        if (tempBuffs > 0) {
-          ctx.fillStyle = '#2ecc71'; // Grün
-          const buffText = ` +${tempBuffs}`;
-          const baseWidth = ctx.measureText(`${baseInfluence}`).width;
-          ctx.fillText(buffText, textX + baseWidth, textY);
-        }
+      // Compact pips after the K-label
+      const pipR = Math.max(2.5, Math.floor(s * 0.028));
+      const gap = pipR * 2.2;
+      for (let i = 0; i < 6; i++) {
+        ctx.beginPath();
+        ctx.arc(textX + i * gap + pipR, textY, pipR, 0, Math.PI * 2);
+        ctx.fillStyle = i < corr ? corrColor : 'rgba(255,255,255,0.22)';
+        ctx.fill();
+      }
 
-        if (tempDebuffs > 0) {
-          ctx.fillStyle = '#e74c3c'; // Rot
-          const debuffText = ` -${tempDebuffs}`;
-          const baseWidth = ctx.measureText(`${baseInfluence}`).width;
-          const buffWidth = tempBuffs > 0 ? ctx.measureText(` +${tempBuffs}`).width : 0;
-          ctx.fillText(debuffText, textX + baseWidth + buffWidth, textY);
-        }
-      } else {
-        // Keine Modifikationen - zeige nur Basis-Einfluss
-        ctx.fillStyle = '#ffffff';
-        ctx.fillText(`${baseInfluence}`, dx + 8, dy + s - barH / 2);
+      // Ability unlock marker
+      if (corr >= 3 && !(card as any).deactivated) {
+        ctx.fillStyle = '#fb923c';
+        ctx.font = `bold ${Math.max(12, Math.floor(s * 0.09))}px sans-serif`;
+        ctx.textAlign = 'right';
+        ctx.fillText('⚡', dx + s - 6, textY);
+        ctx.textAlign = 'left';
       }
     }
     // Schutz-Status (blauer Punkt)
@@ -448,12 +540,13 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       ctx.fillRect(dx + s - 22, dy + 26, 16, 16);
     }
 
-    // Einfluss-Badge für Handkarten oben rechts (nur Regierungskarten)
+    // Einfluss- + Korruptions-Badge für Handkarten oben rechts (nur Regierungskarten)
     if (showAPCost && player && (card as any).kind === 'pol') {
       const badgeHeight = Math.max(16, Math.floor(s * 0.12));
-      const badgeWidth = badgeHeight * 2;
+      const badgeWidth = badgeHeight * 2.6;
       const badgeX = dx + s - badgeWidth - 6;
       const badgeY = dy + 6;
+      const corr = Math.max(0, Math.min(6, Number((card as any).corruption ?? (card as any).corruptionStart ?? 0)));
 
       // Semi-transparent dunkler Hintergrund
       ctx.fillStyle = 'rgba(0,0,0,0.6)';
@@ -468,46 +561,26 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         ctx.globalAlpha = 1;
       }
 
-      // Einfluss-Aufschlüsselung: Basis + Modifikationen
-      const currentInfluence = getCurrentInfluence(card);
       const baseInfluence = (card as any).baseInfluence ?? (card as any).influence ?? 0;
-      const tempBuffs = (card as any).tempBuffs ?? 0;
-      const tempDebuffs = (card as any).tempDebuffs ?? 0;
-      const isModified = currentInfluence !== baseInfluence;
-
-      ctx.font = `bold ${Math.floor(badgeHeight * 0.4)}px sans-serif`;
+      ctx.font = `bold ${Math.floor(badgeHeight * 0.42)}px sans-serif`;
       ctx.textAlign = 'right';
       ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText(`${baseInfluence}`, badgeX + badgeWidth - 4, badgeY + badgeHeight / 2);
 
-      if (isModified) {
-        // Zeige Aufschlüsselung: "10 +1" oder "10 -2"
-        const textX = badgeX + badgeWidth - 4;
-        const textY = badgeY + badgeHeight / 2;
-
-        // Basis-Einfluss (weiß)
-        ctx.fillStyle = '#ffffff';
-        ctx.fillText(`${baseInfluence}`, textX, textY);
-
-        // Modifikationen (grün/rot)
-        if (tempBuffs > 0) {
-          ctx.fillStyle = '#2ecc71'; // Grün
-          const buffText = ` +${tempBuffs}`;
-          const buffWidth = ctx.measureText(buffText).width;
-          ctx.fillText(buffText, textX - ctx.measureText(`${baseInfluence}`).width, textY);
-        }
-
-        if (tempDebuffs > 0) {
-          ctx.fillStyle = '#e74c3c'; // Rot
-          const debuffText = ` -${tempDebuffs}`;
-          const baseWidth = ctx.measureText(`${baseInfluence}`).width;
-          const buffWidth = tempBuffs > 0 ? ctx.measureText(` +${tempBuffs}`).width : 0;
-          ctx.fillText(debuffText, textX - baseWidth - buffWidth, textY);
-        }
-      } else {
-        // Keine Modifikationen - zeige nur Basis-Einfluss
-        ctx.fillStyle = '#ffffff';
-        ctx.fillText(`${baseInfluence}`, badgeX + badgeWidth - 4, badgeY + badgeHeight / 2);
-      }
+      // Second badge for Korruption (under influence badge)
+      const kH = badgeHeight;
+      const kW = Math.max(badgeHeight * 1.6, 28);
+      const kX = dx + s - kW - 6;
+      const kY = badgeY + badgeHeight + 4;
+      const corrColor = corr >= 3 ? '#fb923c' : '#facc15';
+      ctx.fillStyle = 'rgba(0,0,0,0.7)';
+      ctx.beginPath();
+      ctx.roundRect(kX, kY, kW, kH, kH / 2);
+      ctx.fill();
+      ctx.fillStyle = corrColor;
+      ctx.textAlign = 'center';
+      ctx.fillText(`K${corr}`, kX + kW / 2, kY + kH / 2);
 
       // Reset align
       ctx.textAlign = 'start';
@@ -1100,15 +1173,17 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Detect influence increases and start animations
+    // Detect influence / corruption increases and start animations
     try {
       const currSnapshot: Record<string, number> = {};
+      const corrSnapshot: Record<string, number> = {};
       const collect = (c: any) => {
         if (!c) return;
         if ((c as any).kind !== 'pol') return;
         const uid = c.uid ?? (c.id != null ? String(c.id) : null);
         if (!uid) return;
         currSnapshot[uid] = getCurrentInfluence(c);
+        corrSnapshot[uid] = Math.max(0, Math.min(6, Number(c.corruption ?? c.corruptionStart ?? 0)));
       };
       // board rows
       (gameState.board[1].aussen || []).forEach(collect);
@@ -1145,6 +1220,20 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
           cardFlashRef.current.set(uid, { start: now, duration: 600, type: 'debuff' });
         }
         prevInfluencesRef.current[uid] = curr;
+      });
+
+      // Fallback: detect corruption rises if engine event was missed
+      Object.keys(corrSnapshot).forEach(uid => {
+        const curr = corrSnapshot[uid] ?? 0;
+        const prev = prevCorruptionsRef.current[uid];
+        if (prev == null) {
+          prevCorruptionsRef.current[uid] = curr;
+          return;
+        }
+        if (curr > prev) {
+          pushCorruptionIntensify(uid, curr - prev, curr);
+        }
+        prevCorruptionsRef.current[uid] = curr;
       });
     } catch (e) {
       // ignore
@@ -1490,7 +1579,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       } catch (e) {}
     } catch (e) {}
 
-    // --- FLASH ANIMATIONS FOR INFLUENCE CHANGES ---
+    // --- FLASH ANIMATIONS FOR INFLUENCE / CORRUPTION CHANGES ---
     try {
       const nowFlash = performance.now();
       cardFlashRef.current.forEach((flash, uid) => {
@@ -1506,6 +1595,55 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         // Find card position by scanning clickZones
         const zone = clickZonesRef.current.find(z => z.data && ((z.data.card && ((z.data.card.uid ?? String(z.data.card.id)) === uid)) || (z.data.card && z.data.card.uid === uid)));
         if (!zone) return;
+
+        if (flash.type === 'corruption') {
+          const level = Math.max(1, Math.min(6, flash.level ?? 1));
+          const wave = Math.sin(progress * Math.PI);
+          const rgb = level >= 5 ? '239,68,68' : level >= 3 ? '249,115,22' : '234,179,8';
+          const peak = 0.22 + level * 0.06;
+
+          // Fill wash
+          ctx.save();
+          ctx.globalAlpha = wave * peak;
+          ctx.fillStyle = `rgb(${rgb})`;
+          ctx.fillRect(zone.x, zone.y, zone.w, zone.h);
+          ctx.restore();
+
+          // Expanding heat ring from card center
+          const cx = zone.x + zone.w / 2;
+          const cy = zone.y + zone.h / 2;
+          const maxR = Math.max(zone.w, zone.h) * (0.55 + level * 0.06);
+          const r = maxR * (0.35 + progress * 0.75);
+          ctx.save();
+          ctx.globalAlpha = wave * (0.55 + level * 0.05);
+          ctx.strokeStyle = `rgb(${rgb})`;
+          ctx.lineWidth = 3 + level * 0.8;
+          ctx.beginPath();
+          ctx.arc(cx, cy, r, 0, Math.PI * 2);
+          ctx.stroke();
+          // Inner second ring for higher levels
+          if (level >= 3) {
+            ctx.globalAlpha = wave * 0.35;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(cx, cy, r * 0.62, 0, Math.PI * 2);
+            ctx.stroke();
+          }
+          ctx.restore();
+
+          // Corner vignette spikes at high corruption
+          if (level >= 4) {
+            ctx.save();
+            ctx.globalAlpha = wave * 0.45;
+            const g = ctx.createRadialGradient(cx, cy, zone.w * 0.15, cx, cy, maxR);
+            g.addColorStop(0, `rgba(${rgb},0)`);
+            g.addColorStop(1, `rgba(${rgb},0.55)`);
+            ctx.fillStyle = g;
+            ctx.fillRect(zone.x, zone.y, zone.w, zone.h);
+            ctx.restore();
+          }
+          return;
+        }
 
         // Calculate flash alpha using sine wave for smooth fade in/out
         const flashAlpha = Math.sin(progress * Math.PI) * 0.3; // Max 30% opacity
@@ -1878,6 +2016,60 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
           ctx.restore();
         }
       });
+
+      // Corruption rise: floating +K labels + pip heat burst near K badge
+      corruptionAnimRef.current.forEach((anims, uid) => {
+        const zone = clickZonesRef.current.find(z =>
+          z.data && ((z.data.card && ((z.data.card.uid ?? String(z.data.card.id)) === uid)) || (z.data.card && z.data.card.uid === uid))
+        );
+        if (!zone) return;
+        const remaining: Array<{ start: number; duration: number; delta: number; level: number }> = [];
+        let floatDelta = 0;
+        let maxLevel = 1;
+        let maxPulse = 0;
+        anims.forEach(a => {
+          const p = Math.min(1, Math.max(0, (now - a.start) / a.duration));
+          const pulse = Math.sin(p * Math.PI);
+          if (p < 1) {
+            remaining.push(a);
+            floatDelta += a.delta;
+            if (a.level > maxLevel) maxLevel = a.level;
+            if (pulse > maxPulse) maxPulse = pulse;
+          }
+        });
+        if (remaining.length > 0) corruptionAnimRef.current.set(uid, remaining);
+        else corruptionAnimRef.current.delete(uid);
+
+        if (maxPulse < 0.01 || floatDelta <= 0) return;
+
+        const rgb = maxLevel >= 5 ? '#ef4444' : maxLevel >= 3 ? '#f97316' : '#eab308';
+        const lift = (1 - maxPulse) * 28;
+        const labelX = zone.x + 10;
+        const labelY = zone.y + zone.h - 36 - lift;
+
+        ctx.save();
+        ctx.globalAlpha = Math.min(1, 0.35 + maxPulse * 0.75);
+        ctx.fillStyle = rgb;
+        ctx.strokeStyle = 'rgba(0,0,0,0.65)';
+        ctx.lineWidth = 3;
+        ctx.font = `bold ${16 + maxLevel}px sans-serif`;
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        const label = `+${floatDelta} K`;
+        ctx.strokeText(label, labelX, labelY);
+        ctx.fillText(label, labelX, labelY);
+
+        // Expanding pip arc near bottom-left of card (K badge area)
+        const arcX = zone.x + 28;
+        const arcY = zone.y + zone.h - 18;
+        ctx.beginPath();
+        ctx.strokeStyle = rgb;
+        ctx.lineWidth = 2 + maxLevel * 0.5;
+        ctx.globalAlpha = maxPulse * 0.85;
+        ctx.arc(arcX, arcY, 10 + maxPulse * (10 + maxLevel * 2), 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      });
     } catch (e) {
       // ignore overlay errors
     }
@@ -2002,7 +2194,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
 
     // Run diagnostics after canvas is fully rendered
     runDiagnostics();
-  }, [drawLane, drawHandP1, drawHandP2, drawInterventionsP1, drawInterventionsP2, drawPermanentSlotsP1, drawPermanentSlotsP2, drawInstantSlots, drawInfoPanels, devMode, runDiagnostics]);
+  }, [drawLane, drawHandP1, drawHandP2, drawInterventionsP1, drawInterventionsP2, drawPermanentSlotsP1, drawPermanentSlotsP2, drawInstantSlots, drawInfoPanels, devMode, runDiagnostics, pushCorruptionIntensify]);
 
   const DRAW_LAYOUT_OVERLAY = false; // force off per new layout system
 

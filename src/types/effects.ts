@@ -3,6 +3,7 @@ import type { Player } from './game';
 export type EffectEvent =
   | { type: 'LOG'; msg: string }
   | { type: 'ADD_AP'; player: Player; amount: number }
+  | { type: 'STEAL_AP'; from: Player; to: Player; amount: number; source?: string; reason?: string }
   | { type: 'DRAW_CARDS'; player: Player; amount: number }
   | { type: 'DISCARD_RANDOM_FROM_HAND'; player: Player; amount: number }
   | { type: 'DISCARD_RANDOM_HAND'; player: Player; amount: number }
@@ -55,6 +56,10 @@ export type EffectEvent =
   | { type: 'TRAP_PUBLIC_SCANDAL'; player: Player; targetUid: number }
   | { type: 'TRAP_BUDGET_FREEZE'; player: Player; targetUid: number }
   | { type: 'TRAP_SABOTAGE'; player: Player; targetUid: number }
+  // Corruption system (pass-purge economy)
+  | { type: 'CHANGE_CORRUPTION'; targetUid: number; amount: number; source?: string; enemySourcePlayer?: Player; fromInitiative?: boolean }
+  | { type: 'CORRUPTION_PURGE_CHECK'; player: Player }
+  | { type: 'VISUAL_PURGE_ROLL'; targetUid: number; roll: number; target: number; survived: boolean }
   // Corruption dice-steal mechanic
   | { type: 'CORRUPTION_STEAL_GOV_START'; player: Player }
   | { type: 'CORRUPTION_STEAL_GOV_RESOLVE'; player: Player; targetUid: number; roll: number; influence: number }

@@ -22,10 +22,19 @@ import type { EffectEvent } from '../types/effects';
 import { logger } from '../debug/logger';
 import { useVisualEffects, useVisualEffectsSafe } from '../context/VisualEffectsContext';
 import { feedbackFail, feedbackInfo, feedbackSuccess, emitFeedback } from '../utils/feedback';
+import {
+  beginInteractivePurge,
+  presentPurgeProbe,
+  resolveCurrentPurgeProbe,
+} from '../utils/corruption';
+import { getGlobalRNG } from '../services/rng';
+import type { PurgeResult } from '../utils/corruption';
 // TS: sometimes asset module resolution fails in some setups — ignore typecheck for this import
 // @ts-ignore
 import slotGovGif from '../ui/layout/slot_gov.webm';
 import { getUiTransform, getGovernmentRects } from '../ui/layout';
+
+const PURGE_AUTO_FAIL_MS = 850;
 
 // Migration Helper für Queue-Vereinheitlichung
 const migrateLegacyQueue = (state: any) => {
@@ -182,11 +191,60 @@ function reallyEndTurn(gameState: GameState, log: (msg: string) => void): GameSt
 
 // Helper function to resolve round and start new one
 function resolveRound(gameState: GameState, log: (msg: string) => void): GameState {
-  // Calculate influence for both players
+  // Already mid-purge — do not restart the queue (duplicate pass/nextTurn entries)
+  if (gameState.pendingPurge) {
+    return gameState;
+  }
+
+  // Interactive purge: pause scoring until every corrupt gov is player-rolled (or auto-fail).
+  const needsPlayer = beginInteractivePurge(gameState, log);
+  if (needsPlayer && gameState.pendingPurge) {
+    emitFeedback({
+      tone: 'warn',
+      title: 'Säuberung',
+      body: 'Würfle für jede markierte Regierungskarte (W6).',
+      flash: false,
+      durationMs: 2800,
+    });
+    return gameState;
+  }
+  return finishRoundAfterPurge(gameState, { removed: [], survived: [] }, log);
+}
+
+function finishRoundAfterPurge(gameState: GameState, purgeResult: PurgeResult, log: (msg: string) => void): GameState {
+  gameState.pendingPurge = undefined;
+
+  try {
+    const removedN = purgeResult.removed.length;
+    const checkedN = removedN + purgeResult.survived.length;
+    if (checkedN > 0) {
+      emitFeedback({
+        tone: removedN > 0 ? 'fail' : 'info',
+        title: `Säuberung: ${checkedN} Regierung${checkedN === 1 ? '' : 'en'} geprüft`,
+        body: removedN > 0
+          ? `${removedN} entfernt — ${purgeResult.removed.map((r) => r.card.name).join(', ')}`
+          : 'Alle geprüften Karten überstehen das Audit.',
+        flash: true,
+        durationMs: 3200,
+      });
+    } else {
+      emitFeedback({
+        tone: 'info',
+        title: 'Säuberung',
+        body: 'Keine korrupten Regierungskarten auf dem Feld.',
+        flash: false,
+        durationMs: 1800,
+      });
+    }
+  } catch (e) {
+    log(`⚠️ Säuberung-Feedback fehlgeschlagen: ${String(e)}`);
+  }
+
+  // Calculate influence for both players (purged cards already gone)
   const p1Influence = sumGovernmentInfluenceWithAuras(gameState, 1);
   const p2Influence = sumGovernmentInfluenceWithAuras(gameState, 2);
 
-  log(`📊 Rundenauswertung: P1 ${ p1Influence } Einfluss vs P2 ${ p2Influence } Einfluss`);
+  log(`📊 Rundenauswertung (nach Säuberung): P1 ${ p1Influence } Einfluss vs P2 ${ p2Influence } Einfluss`);
 
   // Determine winner
   let roundWinner: Player;
@@ -202,11 +260,27 @@ function resolveRound(gameState: GameState, log: (msg: string) => void): GameSta
     log(`🤝 Unentschieden! Spieler ${ roundWinner } gewinnt als aktiver Spieler.`);
   }
 
+  // === CORRUPTION: clean-sweep reward ===
+  try {
+    const winnerGovs = (gameState.board[roundWinner]?.aussen || [])
+      .filter((c: any) => c.kind === 'pol' && !c.deactivated);
+    const allClean = winnerGovs.length > 0 && winnerGovs.every((c: any) => Number(c.corruption ?? 0) === 0);
+    (gameState as any)._cleanSweepBonus = (gameState as any)._cleanSweepBonus || {};
+    if (allClean) {
+      (gameState as any)._cleanSweepBonus[roundWinner] = gameState.round + 1;
+      log(`🧼 Sauberer Sieg: P${roundWinner} gewinnt mit blütenweißer Weste — nächste Runde starten Regierungen −1 Korruption.`);
+    }
+  } catch { /* best-effort */ }
+
   const provisionalRoundsWon = {
     ...gameState.roundsWon,
     [roundWinner]: gameState.roundsWon[roundWinner] + 1,
   };
   const matchOver = provisionalRoundsWon[1] >= 2 || provisionalRoundsWon[2] >= 2;
+  const purgeLines = [
+    ...purgeResult.removed.map((r) => `✗ ${r.card.name} (W${r.roll ?? 'auto'}/${r.target})`),
+    ...purgeResult.survived.map((r) => `✓ ${r.card.name} (W${r.roll ?? 'auto'}/${r.target})`),
+  ];
   if (typeof window !== 'undefined') {
     try {
       window.dispatchEvent(new CustomEvent('pc:round_resolved', {
@@ -217,6 +291,15 @@ function resolveRound(gameState: GameState, log: (msg: string) => void): GameSta
           roundsWon: provisionalRoundsWon,
           round: gameState.round,
           matchOver,
+          purge: {
+            removed: purgeResult.removed.map((r) => ({
+              player: r.player, name: r.card.name, roll: r.roll, target: r.target,
+            })),
+            survived: purgeResult.survived.map((r) => ({
+              player: r.player, name: r.card.name, roll: r.roll, target: r.target,
+            })),
+            lines: purgeLines,
+          },
         },
       }));
     } catch { /* ignore */ }
@@ -225,9 +308,10 @@ function resolveRound(gameState: GameState, log: (msg: string) => void): GameSta
     emitFeedback({
       tone: 'success',
       title: `Spieler ${roundWinner} gewinnt Runde ${gameState.round}`,
-      body: `${p1Influence} : ${p2Influence} Einfluss`,
+      body: `${p1Influence} : ${p2Influence} Einfluss` +
+        (purgeLines.length ? ` · Säuberung: ${purgeLines.slice(0, 3).join(', ')}` : ''),
       flash: true,
-      durationMs: 2800,
+      durationMs: 3200,
     });
   } else {
     emitFeedback({
@@ -277,6 +361,7 @@ function resolveRound(gameState: GameState, log: (msg: string) => void): GameSta
       ...gameState,
       roundsWon: newRoundsWon,
       gameWinner,
+      pendingPurge: undefined,
       // Keep current board state for final display
       passed: { 1: true, 2: true }, // Both passed to indicate game end
     };
@@ -291,6 +376,7 @@ function resolveRound(gameState: GameState, log: (msg: string) => void): GameSta
     actionPoints: { 1: 2, 2: 2 }, // Reset AP
     actionsUsed: { 1: 0, 2: 0 }, // Reset actions (kept for compatibility)
     roundsWon: newRoundsWon,
+    pendingPurge: undefined,
     effectFlags: {
       1: createDefaultEffectFlags(),
       2: createDefaultEffectFlags()
@@ -330,6 +416,57 @@ export function useGameActions(
   // Visual effects context (spawn helpers)
   // Use safe hook variant which returns null when no provider is present
   const visualEffects = useVisualEffectsSafe();
+  const purgeTimerRef = useRef<number | null>(null);
+
+  const advancePurgeStep = useCallback((rawRoll?: number) => {
+    if (isPvpGuest()) return;
+    setGameState((prev) => {
+      if (!prev.pendingPurge) return prev;
+      if (prev.pendingPurge.awaitingRoll && rawRoll == null) return prev;
+
+      const newState = cloneStateForMutation(prev);
+      if (!newState.pendingPurge) return prev;
+
+      const status = resolveCurrentPurgeProbe(
+        newState,
+        log,
+        rawRoll != null ? { rawRoll } : undefined
+      );
+
+      if (status === 'done') {
+        const result: PurgeResult = {
+          removed: [...(newState.pendingPurge?.removed ?? [])],
+          survived: [...(newState.pendingPurge?.survived ?? [])],
+        };
+        return finishRoundAfterPurge(newState, result, log);
+      }
+
+      presentPurgeProbe(newState, log);
+      return { ...newState };
+    });
+  }, [log, setGameState]);
+
+  // Auto-advance corr-6 / focus beats when not waiting for a player roll
+  useEffect(() => {
+    const pending = gameState.pendingPurge;
+    if (!pending) return;
+    if (pending.awaitingRoll) return;
+    if (purgeTimerRef.current) {
+      window.clearTimeout(purgeTimerRef.current);
+      purgeTimerRef.current = null;
+    }
+    purgeTimerRef.current = window.setTimeout(() => {
+      purgeTimerRef.current = null;
+      advancePurgeStep();
+    }, PURGE_AUTO_FAIL_MS);
+    return () => {
+      if (purgeTimerRef.current) {
+        window.clearTimeout(purgeTimerRef.current);
+        purgeTimerRef.current = null;
+      }
+    };
+  }, [gameState.pendingPurge?.index, gameState.pendingPurge?.awaitingRoll, gameState.pendingPurge?.queue.length, advancePurgeStep]);
+
   // Helper: spawn lightweight UI visuals via window hooks (prototype only)
   const spawnCardVisual = useCallback((card: any, stateOverride?: GameState) => {
     try {
@@ -471,13 +608,28 @@ export function useGameActions(
     // Listener: when UI/modal requests a corruption roll, perform RNG and trigger visual dice
     const handleRequestRoll = (ev: any) => {
       try {
-        const player = ev.detail?.player as Player | undefined;
-        const targetUid = ev.detail?.targetUid as number | undefined;
-        if (!player || !targetUid) return;
+        setGameState((prev) => {
+          if (prev.pendingPurge?.awaitingRoll) {
+            const raw = 1 + getGlobalRNG().randomInt(6);
+            const newState = cloneStateForMutation(prev);
+            if (!newState.pendingPurge?.awaitingRoll) return prev;
+            const status = resolveCurrentPurgeProbe(newState, log, { rawRoll: raw });
+            if (status === 'done') {
+              const result: PurgeResult = {
+                removed: [...(newState.pendingPurge?.removed ?? [])],
+                survived: [...(newState.pendingPurge?.survived ?? [])],
+              };
+              return finishRoundAfterPurge(newState, result, log);
+            }
+            presentPurgeProbe(newState, log);
+            return { ...newState };
+          }
 
-        console.log('🎲 CORRUPTION: Requesting roll for player', player, 'target', targetUid);
+          const player = ev.detail?.player as Player | undefined;
+          const targetUid = ev.detail?.targetUid as number | undefined;
+          if (!player || !targetUid) return prev;
 
-        setGameState(prev => {
+          console.log('🎲 CORRUPTION: Requesting roll for player', player, 'target', targetUid);
           const newState = cloneStateForMutation(prev);
           const events: EffectEvent[] = [];
           events.push({ type: 'CORRUPTION_STEAL_GOV_RESOLVE', player, targetUid } as any);
@@ -488,6 +640,25 @@ export function useGameActions(
       } catch (e) {
         logger.dbg('corruption request roll error', e);
       }
+    };
+
+    const handlePurgeRequestRoll = (_ev: any) => {
+      setGameState((prev) => {
+        if (!prev.pendingPurge?.awaitingRoll) return prev;
+        const raw = 1 + getGlobalRNG().randomInt(6);
+        const newState = cloneStateForMutation(prev);
+        if (!newState.pendingPurge?.awaitingRoll) return prev;
+        const status = resolveCurrentPurgeProbe(newState, log, { rawRoll: raw });
+        if (status === 'done') {
+          const result: PurgeResult = {
+            removed: [...(newState.pendingPurge?.removed ?? [])],
+            survived: [...(newState.pendingPurge?.survived ?? [])],
+          };
+          return finishRoundAfterPurge(newState, result, log);
+        }
+        presentPurgeProbe(newState, log);
+        return { ...newState };
+      });
     };
     // Listener: when UI/modal requests a maulwurf roll, perform RNG and trigger visual dice
     const handleMaulwurfRequestRoll = (ev: any) => {
@@ -524,12 +695,14 @@ export function useGameActions(
 
     const guardedPickTarget = guardGuest(handlePickTarget);
     const guardedRequestRoll = guardGuest(handleRequestRoll);
+    const guardedPurgeRequestRoll = guardGuest(handlePurgeRequestRoll);
     const guardedCorruptionCancel = guardGuest(handleCorruptionCancel);
     const guardedMaulwurfRequestRoll = guardGuest(handleMaulwurfRequestRoll);
     const guardedMaulwurfCancel = guardGuest(handleMaulwurfCancel);
 
     window.addEventListener('pc:corruption_pick_target', guardedPickTarget as EventListener);
     window.addEventListener('pc:corruption_request_roll', guardedRequestRoll as EventListener);
+    window.addEventListener('pc:purge_request_roll', guardedPurgeRequestRoll as EventListener);
     window.addEventListener('pc:corruption_cancel', guardedCorruptionCancel as EventListener);
     window.addEventListener('pc:maulwurf_request_roll', guardedMaulwurfRequestRoll as EventListener);
     window.addEventListener('pc:maulwurf_cancel', guardedMaulwurfCancel as EventListener);
@@ -570,12 +743,13 @@ export function useGameActions(
     return () => {
       window.removeEventListener('pc:corruption_pick_target', guardedPickTarget as EventListener);
       window.removeEventListener('pc:corruption_request_roll', guardedRequestRoll as EventListener);
+      window.removeEventListener('pc:purge_request_roll', guardedPurgeRequestRoll as EventListener);
       window.removeEventListener('pc:corruption_cancel', guardedCorruptionCancel as EventListener);
       window.removeEventListener('pc:maulwurf_request_roll', guardedMaulwurfRequestRoll as EventListener);
       window.removeEventListener('pc:maulwurf_cancel', guardedMaulwurfCancel as EventListener);
       window.removeEventListener('pc:tunnelvision_request_roll', guardedTunnelvisionRequestRoll as EventListener);
     };
-  }, [setGameState, afterQueueResolved, log]);
+  }, [setGameState, afterQueueResolved, log, advancePurgeStep]);
   const startMatchWithDecks = useCallback((p1DeckEntries: BuilderEntry[], p2DeckEntries: BuilderEntry[]) => {
     const p1Cards = buildDeckFromEntries(p1DeckEntries);
     const p2Cards = buildDeckFromEntries(p2DeckEntries);
@@ -852,19 +1026,6 @@ export function useGameActions(
           const playerBoardCloned = { ...newState.board[player], [targetLane]: laneArray } as any;
           newState.board = { ...newState.board, [player]: playerBoardCloned } as any;
 
-          // Greta Thunberg: erste Regierungskarte pro Zug gibt +1 AP
-          if (targetLane === 'aussen' && !newState.effectFlags[player]?.gretaFirstGovApUsed) {
-            const gretaActive = newState.board[player].innen.some(c =>
-              c.kind === 'spec' && c.name === 'Greta Thunberg' && !(c as any).deactivated
-            );
-            if (gretaActive) {
-              newState.effectFlags[player].gretaFirstGovApUsed = true;
-              if (!newState._effectQueue) newState._effectQueue = [];
-              newState._effectQueue.push({ type: 'ADD_AP', player, amount: 1 } as any);
-              newState._effectQueue.push({ type: 'LOG', msg: 'Greta Thunberg: Erste Regierungskarte des Zuges → +1 AP.' } as any);
-            }
-          }
-
           // VISUAL: spawn GIF overlay centered over the government slot icon when placing a government card
           try {
             if (targetLane === 'aussen') {
@@ -923,6 +1084,25 @@ export function useGameActions(
             newState._playedGovernmentThisTurn = newState._playedGovernmentThisTurn || { 1: false, 2: false };
             newState._playedGovernmentThisTurn[player] = true;
           }
+
+          // Opponent Öffentlichkeitskarten: steal AP on matching government plays
+          if (targetLane === 'aussen') {
+            try {
+              const { enqueuePublicApStealsOnPlay } = require('../utils/publicApSteal');
+              enqueuePublicApStealsOnPlay(newState, player, playedCard, (e: any) => {
+                (newState._effectQueue ??= []).push(e);
+              });
+            } catch (e) { /* best-effort */ }
+
+            // Corruption: on-play entry rules (clean-sweep, think-tank vetting, power corrupts)
+            if (playedCard.kind === 'pol') {
+              try {
+                const { applyCorruptionOnGovPlay } = require('../utils/corruption');
+                applyCorruptionOnGovPlay(newState, player, playedCard);
+              } catch (e) { /* best-effort */ }
+            }
+          }
+
           // UI visual: particle burst + pop scale for played card (prototype hook)
           try { spawnCardVisual(playedCard, newState); } catch (e) { }
           resolveEffectsAfterCost();
@@ -1113,6 +1293,14 @@ export function useGameActions(
               // 6) Karteneffekte enqueuen (alle Karteneffekte laufen über die Registry)
               triggerCardEffects(newState, player, playedCard);
 
+              // Opponent Öffentlichkeitskarten: steal AP on matching public plays
+              try {
+                const { enqueuePublicApStealsOnPlay } = require('../utils/publicApSteal');
+                enqueuePublicApStealsOnPlay(newState, player, playedCard, (e: any) => {
+                  (newState._effectQueue ??= []).push(e);
+                });
+              } catch (e) { /* best-effort */ }
+
               // 🔗 Aura-Hooks: Reaktionen anderer Karten auf die gespielte Öffentlichkeitskarte
               try {
                 const { isNgoCard, isOligarchCard, isPlatformCard } = require('../utils/cardClassification');
@@ -1268,6 +1456,11 @@ export function useGameActions(
         // 3) Normale Karten-Effekte der Sofort-Karte feuern
         (newState as any)._lastActivatedInitiative = instantCard.name;
         triggerCardEffects(newState, player, instantCard);
+        // Ensure public steal reactions fire if the card handler omitted the event
+        const q = (newState._effectQueue ??= []);
+        if (!q.some((e: any) => e?.type === 'INITIATIVE_ACTIVATED' && e.player === player)) {
+          q.push({ type: 'INITIATIVE_ACTIVATED', player } as any);
+        }
         feedbackSuccess(`${instantCard.name} aktiviert`, 'Effekt wird ausgeführt.');
 
         // UI visual: initiative ripple + AP pop (prototype hook)
@@ -1433,6 +1626,21 @@ export function useGameActions(
       logger.dbg(`Pass status updated P1=${ newState.passed[1] } P2=${ newState.passed[2] }`);
       log(`🚫 Spieler ${ player } passt.`);
 
+      // Pass-Kontext für die Säuberung: Handgröße steuert gierig (+1) vs. leer (−1).
+      // Kein Auto-Schweigegeld — die W6-Prüfung soll spürbar bleiben.
+      try {
+        const pf = (newState.effectFlags?.[player] as any);
+        if (pf) {
+          pf.passHandSize = (newState.hands?.[player] || []).length;
+          pf.hushMoneySpent = 0;
+          const corruptCount = (newState.board[player]?.aussen || [])
+            .filter((c: any) => c.kind === 'pol' && !c.deactivated && Number(c.corruption ?? 0) >= 1).length;
+          if (corruptCount > 0) {
+            log(`🎲 Beim Rundenende: ${corruptCount} korrupte Regierungskarte(n) von P${player} werden mit W6 geprüft.`);
+          }
+        }
+      } catch { /* best-effort */ }
+
       // ❗ Kein Nachziehen bei Pass:
       // Der passierende Spieler kommt in dieser Runde nicht mehr dran.
       // Die nächste Runde startet ohnehin mit 5 neuen Handkarten.
@@ -1472,11 +1680,35 @@ export function useGameActions(
     });
   }, [setGameState, log]);
 
+  const activateGovernmentAbility = useCallback((player: Player, uid: number, targetUid?: number) => {
+    setGameState(prev => {
+      if (prev.current !== player) return prev;
+      const newState = { ...prev };
+      try {
+        const { activateGovAbility } = require('../utils/govAbilities');
+        const result = activateGovAbility(newState, player, uid, targetUid);
+        if (!result.ok) {
+          log(`⚠️ Fähigkeit nicht aktivierbar: ${result.reason || 'unbekannt'}`);
+          return prev;
+        }
+        if (newState._effectQueue && newState._effectQueue.length > 0) {
+          try { resolveQueue(newState, [...newState._effectQueue]); } catch (e) { /* best-effort */ }
+          newState._effectQueue = [];
+        }
+        return newState;
+      } catch (e) {
+        log(`⚠️ Fähigkeit fehlgeschlagen: ${String(e)}`);
+        return prev;
+      }
+    });
+  }, [setGameState, log]);
+
   return {
     startMatchWithDecks,
     startMatchVsAI,
     playCard,
     activateInstantInitiative,
+    activateGovernmentAbility,
     passTurn,
     nextTurn,
     endTurn,

@@ -423,6 +423,16 @@ export const HandCardModal: React.FC<HandCardModalProps> = ({
                 }}>
                   Stufe {(currentCard as any).T ?? '—'}
                 </span>
+                <span style={{
+                  background: 'color-mix(in srgb, #ea580c 22%, transparent)',
+                  border: '1px solid rgba(234, 88, 12, 0.55)',
+                  color: '#fb923c',
+                  borderRadius: '6px',
+                  padding: '3px 8px',
+                }}>
+                  Korruption {(currentCard as any).corruption ?? (currentCard as any).corruptionStart ?? '—'}
+                  {Number((currentCard as any).corruption ?? 0) >= 3 ? ' · Fähigkeit bereit' : ''}
+                </span>
               </div>
             )}
             {/* Show subcategories for public cards */}

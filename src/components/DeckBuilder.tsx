@@ -12,8 +12,6 @@ interface DeckBuilderProps {
   isOpen: boolean;
   onClose: () => void;
   onApplyDeck: (deck: BuilderEntry[]) => void;
-  onStartMatch: (p1Deck: BuilderEntry[], p2Deck: BuilderEntry[]) => void;
-  onStartVsAI?: (p1Deck: BuilderEntry[]) => void;
   images?: never;
 }
 
@@ -21,8 +19,6 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
   isOpen,
   onClose,
   onApplyDeck,
-  onStartMatch,
-  onStartVsAI
 }) => {
   const [deck, setDeck] = useState<BuilderEntry[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -568,26 +564,6 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [selectedCard, handlePreviousCard, handleNextCard, handleCloseCardDetail]);
 
-  const handleStartMatch = useCallback(() => {
-    const p1Deck: BuilderEntry[] = deck.length ? deck : [];
-    // P2 deck is unused for vs-AI (parent assigns a different premade); keep empty here.
-    const p2Deck: BuilderEntry[] = [];
-
-    console.log('🔧 DEBUG: Starting match with decks:', { p1Cards: p1Deck.length, p2Cards: p2Deck.length });
-    onStartMatch(p1Deck, p2Deck);
-    // Parent switches appState to 'game' — do not call onClose() (would reset to menu)
-  }, [deck, onStartMatch]);
-
-  const handleStartVsAI = useCallback(() => {
-    const isDeckValid = count >= 10 && governmentCount >= 6 && count <= 15 && budget >= 75 && budget <= 105;
-    if (!isDeckValid || !onStartVsAI) return;
-
-    const p1Deck: BuilderEntry[] = deck.length ? deck : [];
-    console.log('🔧 DEBUG: Starting vs AI with deck:', { p1Cards: p1Deck.length });
-    onStartVsAI(p1Deck);
-    // Parent switches appState to 'game' — do not call onClose() (would reset to menu)
-  }, [deck, count, governmentCount, budget, onStartVsAI]);
-
   // Card Tile Component
   const CardTile = React.memo(({ kind, base, onClick }: {
     kind: 'pol' | 'spec';
@@ -822,33 +798,6 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
           </div>
 
           <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-            {onStartVsAI && (
-              <button
-                onClick={handleStartVsAI}
-                style={{
-                  background: isValid ? 'var(--action-primary)' : 'var(--content-muted)',
-                  color: 'var(--content-on-action)',
-                  border: 'none',
-                  padding: '10px 24px',
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                  fontWeight: 700,
-                  letterSpacing: '1px',
-                  textTransform: 'uppercase',
-                  cursor: isValid ? 'pointer' : 'not-allowed',
-                  opacity: isValid ? 1 : 0.6,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  boxShadow: isValid ? '0 4px 12px color-mix(in srgb, var(--sage-500) 28%, transparent)' : 'none',
-                  transition: 'all 0.2s',
-                }}
-                disabled={!isValid}
-                title={!isValid ? `Deck muss gültig sein: 10-15 Karten, ≥6 Government, 75-105 BP (aktuell: ${budget} BP)` : 'Spiel gegen KI starten'}
-              >
-                🎮 Match Starten (vs KI)
-              </button>
-            )}
             <button
               onClick={onClose}
               style={{
@@ -871,7 +820,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                 e.currentTarget.style.background = 'var(--surface-panel)';
               }}
             >
-              Abbrechen
+              Zurück
             </button>
           </div>
         </div>
@@ -1455,23 +1404,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                   opacity: isValid ? 1 : 0.6,
                 }}
               >
-                Use as P1 Deck
-              </button>
-              <button
-                onClick={handleStartMatch}
-                disabled={!isValid}
-                style={{
-                  background: 'var(--surface-sunken)',
-                  color: 'var(--content-primary)',
-                  border: '1px solid var(--border-default)',
-                  borderRadius: '8px',
-                  padding: '6px 10px',
-                  fontSize: '12px',
-                  cursor: isValid ? 'pointer' : 'not-allowed',
-                  opacity: isValid ? 1 : 0.6,
-                }}
-              >
-                Start Match
+                Deck speichern
               </button>
             </div>
           </div>

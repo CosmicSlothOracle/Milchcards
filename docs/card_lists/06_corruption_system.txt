@@ -1,0 +1,47 @@
+Korruptionssystem (Pass-Säuberung)
+==================================
+
+Überblick
+---------
+Jede Regierungskarte trägt Korruption (0–6) mit Lore-Startwert (1–3).
+Korruption gibt Einfluss und schaltet ab 3 aktive Fähigkeiten frei, erhöht
+aber das Risiko, bei der Säuberung vor der Rundenwertung vom Feld zu fallen.
+
+Pass-Ablauf
+-----------
+1. Spieler passt → Handgröße + optional Schweigegeld (bis 2 ungenutzte AP → Säuberungsziel −1 je)
+2. Beide gepasst → Säuberungsprüfung für jede aktive Regierung mit Korruption ≥1
+3. Ziel = Korruption + Tier + Modifikatoren, Clamp 5; Korruption 6 = Auto-Fail
+4. W6: Fail wenn Wurf < Ziel (bzw. Auto-Fail). Schutz (Systemrelevant / Usmanov) rettet einmal.
+5. Danach normale Einflusswertung (entfernte Karten zählen nicht)
+
+Einflussbonus (Temp-Buff zu Zugbeginn)
+-------------------------------------
+0–1: +0 | 2: +1 | 3: +2 | 4–5: +3 | 6: +4
+
+Schwellen
+---------
+0 Sauber | 1–2 Verstrickt | 3–4 Kompromittiert (Fähigkeit) | 5 Kleptokrat (2× Fähigkeit) | 6 Absolut korrupt (Auto-Fail)
+
+Startwerte
+----------
+3: Putin, Xi, Trump, Erdoğan, MBS, Netanyahu, Raisi, Meloni
+2: übrige Tier-2
+1: Tier-1
+
+Wichtige Karten-Haken
+---------------------
+Initiativen: Bestechungsskandal / Maulwurf / Skandalspirale / Shadow Lobbying /
+  Verzögerungsverfahren / Symbolpolitik / Influencer-Kampagne / Think-tank / Whataboutism /
+  Partei-Offensive / Oppositionsblockade / Digitaler Wahlkampf / Algorithmischer Diskurs /
+  Milchglas Transparenz / Alternative Fakten / Zivilgesellschaft / Koalitionszwang / …
+Öffentlichkeit: Navalny, Greta, Snowden, Assange, Buffett, Bezos, Soros (Stiftungs-Cleanse),
+  Fauci, Chomsky, Doudna, Oligarchen-Trio (Adani/Usmanov/Abramovich), Harari, Musk, …
+Interventionen: Whistleblower, Berater-Affäre, Lobby Leak, Massenproteste,
+  "Unabhängige" Untersuchung (Cleanse-Modus), Satire-Show, Strategische Enthüllung
+
+Aktive Regierungsfähigkeiten
+----------------------------
+Klick auf eigene Regierung mit Korruption ≥3 (wenn AP verfügbar).
+Benannte Fähigkeiten für Putin, Xi, Trump, Erdoğan, MBS, Netanyahu, Raisi, Meloni,
+Macron, Trudeau, Lavrov, Cheney, Lagarde; Tier-1-Generics nach Tag.
