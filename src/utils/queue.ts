@@ -429,6 +429,37 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
                 source: 'Machtrausch (≥3 Buffs in einer Runde)',
               } as EffectEvent);
             }
+
+            // Aufsichtsmandat: when strongest gains ≥2 from temps this turn, opp trap fires once
+            if (amount > 0) {
+              const flags = state.effectFlags[player];
+              const buffGain = (flags.strongestGovBuffGainThisTurn || 0) + amount;
+              flags.strongestGovBuffGainThisTurn = buffGain;
+              if (
+                buffGain >= 2 &&
+                !flags.aufsichtFiredThisTurn
+              ) {
+                const opp = other(player);
+                const traps = ((state.traps as any)?.[opp] || []) as Array<{ owner: Player; key: string }>;
+                const trapIdx = traps.findIndex(t => t.key === 'trap.aufsichtsmandat.counter_stack');
+                if (trapIdx >= 0) {
+                  flags.aufsichtFiredThisTurn = true;
+                  (tgt as PoliticianCard).tempDebuffs = ((tgt as PoliticianCard).tempDebuffs || 0) + 1;
+                  events.unshift({
+                    type: 'CHANGE_CORRUPTION',
+                    targetUid: tgt.uid,
+                    amount: 1,
+                    source: 'Aufsichtsmandat',
+                    enemySourcePlayer: opp,
+                  } as EffectEvent);
+                  events.unshift({
+                    type: 'LOG',
+                    msg: `Aufsichtsmandat: ${tgt.name} −1 Einfluss und +1 Korruption (Stack ≥2).`,
+                  });
+                  traps.splice(trapIdx, 1);
+                }
+              }
+            }
           } else {
             (tgt as PoliticianCard).tempDebuffs = ((tgt as PoliticianCard).tempDebuffs || 0) + Math.abs(amount);
           }
@@ -472,7 +503,8 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
             break;
           }
           let magnitude = Math.abs((ev as any).amount);
-          // Alternative Fakten: enemy interventions have -1 effect (min 0)
+          // Alternative Fakten: enemy interventions have -1 effect (min 0).
+          // Ambivalence: when spin fully nullifies a hit, draw 1 (narrative victory).
           if ((ev as any).fromIntervention) {
             const slot = findCardSlotByUid(state, ev.targetUid);
             if (slot) {
@@ -482,6 +514,10 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
               if (hasAltFakten && magnitude > 0) {
                 magnitude -= 1;
                 logPush(state, `🪧 Alternative Fakten: Interventions-Wirkung um 1 reduziert (${magnitude}).`);
+                if (magnitude <= 0) {
+                  events.unshift({ type: 'DRAW_CARDS', player: owner, amount: 1 });
+                  events.unshift({ type: 'LOG', msg: 'Alternative Fakten: Intervention wirkungslos → +1 Karte (Spin).' });
+                }
               }
             }
           }
@@ -1050,8 +1086,8 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
           current.influence < weakest.influence ? current : weakest
         );
 
-        // Balance: base 3 + opponent government count (harder probe)
-        const requiredRoll = 3 + oppGovCards.length;
+        // Balance: flat W6 ≥ 4 (no oligarch / count stacking)
+        const requiredRoll = 4;
 
         // Signal UI that player must roll dice for the automatically selected target
         (state as any).pendingAbilitySelect = {
@@ -1063,7 +1099,7 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
 
         console.log('🔥 SET pendingAbilitySelect for Maulwurf:', (state as any).pendingAbilitySelect);
         events.unshift({ type: 'LOG', msg: `Maulwurf: Schwächste Regierungskarte ${weakestCard.name} (Einfluss ${weakestCard.influence}) automatisch gewählt.` });
-        events.unshift({ type: 'LOG', msg: `Maulwurf: Würfle mindestens ${requiredRoll} (3 + ${oppGovCards.length} Regierungskarten).` });
+        events.unshift({ type: 'LOG', msg: `Maulwurf: Würfle mindestens ${requiredRoll} (W6 ≥ 4).` });
 
         // Trigger UI hook to show dice roll
         if (typeof window !== 'undefined') {
@@ -1085,7 +1121,8 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
       }
 
       case 'CORRUPTION_MOLE_STEAL_RESOLVE': {
-        const { player: actor, targetUid } = ev as any;
+        const actor = (ev as any).player as Player;
+        const targetUid = (ev as any).targetUid as number;
         const victim: Player = actor === 1 ? 2 : 1;
 
         if (typeof window !== 'undefined') {
@@ -1110,9 +1147,8 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
         }
         const target = state.board[victim].aussen[targetIdx] as any;
 
-        // Balance: base 3 + opponent government count
-        const oppGovCards = state.board[victim].aussen.filter(c => c.kind === 'pol') as any[];
-        const requiredRoll = 3 + oppGovCards.length;
+        // Balance: flat W6 ≥ 4
+        const requiredRoll = 4;
 
         // Dispatch the calculated roll to UI for 3D dice display
         if (typeof window !== 'undefined') {
@@ -1129,7 +1165,7 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
         events.unshift({ type: 'LOG', msg: `Maulwurf: Roll ${roll} vs benötigt ${requiredRoll} (${target.name}).` });
 
         let corruptionSuccess = false;
-        let transferOutcome: 'stolen' | 'discarded' | 'none' = 'none';
+        let transferOutcome: 'stolen' | 'discarded' | 'none' | 'returned' = 'none';
 
         if (roll >= requiredRoll) {
           const maxSlots = 5; // Government slots
@@ -1156,7 +1192,18 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
           }
           corruptionSuccess = true;
         } else {
-          events.unshift({ type: 'LOG', msg: 'Maulwurf: Wurf zu niedrig – keine Übernahme.' });
+          // On fail: return Maulwurf from discard to hand (soft miss, not hard loss)
+          const discIdx = (state.discard || []).findIndex(
+            (c: any) => c && c.name === 'Maulwurf' && (c.uid == null || true)
+          );
+          if (discIdx >= 0) {
+            const [mole] = state.discard.splice(discIdx, 1);
+            state.hands[actor] = [...(state.hands[actor] || []), mole];
+            events.unshift({ type: 'LOG', msg: 'Maulwurf: Wurf zu niedrig – Karte kehrt auf die Hand zurück.' });
+            transferOutcome = 'returned';
+          } else {
+            events.unshift({ type: 'LOG', msg: 'Maulwurf: Wurf zu niedrig – keine Übernahme.' });
+          }
         }
 
         if (typeof window !== 'undefined') {
@@ -1326,7 +1373,8 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
           events.unshift({ type: 'LOG', msg: 'Noam Chomsky (Gegner): stärkste Regierung -1 Einfluss (Initiative).' });
         }
 
-        // Zivilgesellschaft (ongoing): active NGO grants +1 AP on initiative (once per turn)
+        // Zivilgesellschaft (ongoing): active NGO grants +1 AP on initiative (once per turn).
+        // Ambivalence: dirty strongest gov (≥3 Korruption) also takes +1 Korruption (civic scrutiny).
         const permPublic = (state.permanentSlots?.[p]?.public as any) || null;
         if (permPublic?.name === 'Zivilgesellschaft' && !(flags as any)?.zivilgesellschaftApUsed) {
           const hasNgo = [...state.board[p].innen, ...state.board[p].aussen]
@@ -1335,6 +1383,17 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
             (flags as any).zivilgesellschaftApUsed = true;
             events.unshift({ type: 'ADD_AP', player: p, amount: 1 });
             events.unshift({ type: 'LOG', msg: 'Zivilgesellschaft: NGO aktiv → +1 AP für Initiative.' });
+            const strong = strongestOwnGov(state, p);
+            if (strong && Number((strong as any).corruption ?? 0) >= 3) {
+              events.unshift({
+                type: 'CHANGE_CORRUPTION',
+                targetUid: strong.uid,
+                amount: 1,
+                source: 'Zivilgesellschaft (Scrutiny)',
+                fromInitiative: true,
+              } as EffectEvent);
+              events.unshift({ type: 'LOG', msg: `Zivilgesellschaft: ${strong.name} unter zivilem Druck → +1 Korruption.` });
+            }
           }
         }
         break;
@@ -1416,9 +1475,11 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
           const strongestGov = getStrongestGovernment(state, player);
           if (strongestGov) {
             (strongestGov as PoliticianCard).tempBuffs = ((strongestGov as PoliticianCard).tempBuffs || 0) + totalBonus;
+            // Anti double-dip: suppress T2 aura this turn after on-play fires
+            state.effectFlags[player].koalitionOnPlayFiredThisTurn = true;
             events.unshift({
               type: 'LOG',
-              msg: `Koalitionszwang: +${totalBonus} Einfluss (${bonusDetails.join(', ')})`
+              msg: `Koalitionszwang: +${totalBonus} Einfluss (${bonusDetails.join(', ')}) — T2-Aura diese Runde pausiert.`
             });
           }
         } else {
@@ -1426,6 +1487,26 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
             type: 'LOG',
             msg: 'Koalitionszwang: No bonus conditions met'
           });
+        }
+        break;
+      }
+
+      case 'REDAKTIONSKONFERENZ': {
+        const player = ev.player as Player;
+        const board = [
+          ...(state.board[player].innen || []),
+          ...(state.board[player].aussen || []),
+        ];
+        const { isMediaLikeCard, isPlatformCard } = require('./cardClassification');
+        const hasMedia = board.some(
+          (c: any) => c && !(c as any).deactivated && (isMediaLikeCard(c) || isPlatformCard(c))
+        );
+        if (hasMedia) {
+          events.unshift({ type: 'BUFF_STRONGEST_GOV', player, amount: 2, reason: 'REDAKTIONSKONFERENZ' } as any);
+          events.unshift({ type: 'LOG', msg: 'Redaktionskonferenz: Medien/Plattform kontrolliert → stärkste Regierung +2.' });
+        } else {
+          events.unshift({ type: 'DRAW_CARDS', player, amount: 1 });
+          events.unshift({ type: 'LOG', msg: 'Redaktionskonferenz: keine Medien/Plattform → ziehe 1.' });
         }
         break;
       }
