@@ -16,10 +16,16 @@ interface RoundResult {
   round: number;
   matchOver: boolean;
   purge?: {
-    removed: { player: number; name: string; roll: number | null; target: number }[];
-    survived: { player: number; name: string; roll: number | null; target: number }[];
+    removed: { player: number; name: string; roll: number | null; target: number; outcome?: 'safe' | 'scandal' | 'remove' }[];
+    survived: { player: number; name: string; roll: number | null; target: number; outcome?: 'safe' | 'scandal' | 'remove' }[];
     lines: string[];
   };
+}
+
+function auditLineLabel(outcome?: 'safe' | 'scandal' | 'remove'): string {
+  if (outcome === 'remove') return 'ENTFERNT';
+  if (outcome === 'scandal') return 'SKANDAL';
+  return 'GEPRÜFT';
 }
 
 export const VictoryOverlay: React.FC<VictoryOverlayProps> = ({
@@ -99,15 +105,15 @@ export const VictoryOverlay: React.FC<VictoryOverlayProps> = ({
         </div>
         {roundResult.purge && (roundResult.purge.removed.length + roundResult.purge.survived.length) > 0 && (
           <div className="round-banner__sub" style={{ marginTop: 8, textAlign: 'left', fontSize: 12, lineHeight: 1.35 }}>
-            <div style={{ fontWeight: 700, marginBottom: 4 }}>Säuberung (W6)</div>
+            <div style={{ fontWeight: 700, marginBottom: 4 }}>Audit</div>
             {roundResult.purge.removed.map((r, i) => (
               <div key={`rm-${i}`} style={{ color: '#f87171' }}>
-                ✗ {r.name} — Wurf {r.roll ?? 'auto'} / Ziel {r.target}
+                ✗ {r.name} — Stufe {r.target} · {auditLineLabel(r.outcome ?? 'remove')}
               </div>
             ))}
             {roundResult.purge.survived.map((r, i) => (
-              <div key={`ok-${i}`} style={{ color: '#86efac' }}>
-                ✓ {r.name} — Wurf {r.roll ?? 'auto'} / Ziel {r.target}
+              <div key={`ok-${i}`} style={{ color: r.outcome === 'scandal' ? '#fbbf24' : '#86efac' }}>
+                {r.outcome === 'scandal' ? '⚠' : '✓'} {r.name} — Stufe {r.target} · {auditLineLabel(r.outcome)}
               </div>
             ))}
           </div>

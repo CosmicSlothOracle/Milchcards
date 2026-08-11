@@ -29,7 +29,8 @@
     "eject": "node node_modules/react-scripts/bin/react-scripts.js eject",
     "pvp": "npm --prefix server start",
     "pvp:install": "npm --prefix server install",
-    "dev:all": "node scripts/dev_all.js"
+    "dev:all": "node scripts/dev_all.js",
+    "ambivalence": "node scripts/compute_ambivalence.js"
   },
   "eslintConfig": {
     "extends": [

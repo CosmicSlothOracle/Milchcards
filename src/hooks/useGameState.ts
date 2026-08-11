@@ -765,89 +765,9 @@ export function useGameState() {
     return [null, null];
   };
 
-  // Berechne Einfluss mit dauerhaften Auren-Effekten
+  // Berechne Einfluss mit dauerhaften Auren-Effekten (single source of truth)
   const sumRowWithAuras = (state: GameState, player: Player): number => {
-    const govCards = state.board[player].aussen.filter(c => c.kind === 'pol') as PoliticianCard[];
-    const opponent: Player = player === 1 ? 2 : 1;
-    let total = 0;
-
-    // 🔍 DEBUG: Log welche Regierungskarten gefunden wurden
-    console.log(`🔍 sumRowWithAuras P${ player }: Gefunden ${ govCards.length } Regierungskarten:`,
-      govCards.map(c => `${ c.name }[${ c.influence }I]`).join(', '));
-
-    govCards.forEach(card => {
-      let influence = card.influence;
-
-      // Dauerhafte Auren anwenden
-      const govSlot = state.permanentSlots[player].government;
-      const pubSlot = state.permanentSlots[player].public;
-
-      // Koalitionszwang: Coalition bonus for Tier 2 government cards
-      if (govSlot?.kind === 'spec' && (govSlot as SpecialCard).name === 'Koalitionszwang') {
-        const tier2GovCount = govCards.filter(card => card.T === 2).length;
-        if (tier2GovCount >= 2 && card.T === 2) {
-          influence += 1;
-        }
-      }
-
-      // Napoleon Komplex: +1 only on strongest Tier-1 government (handled via sumGovernmentInfluenceWithAuras)
-      // Legacy path kept for display parity: +1 if this is the strongest T1
-      if (govSlot?.kind === 'spec' && (govSlot as SpecialCard).name === 'Napoleon Komplex' && card.T === 1) {
-        const t1 = govCards.filter(c => c.T === 1 && !c.deactivated);
-        const strongest = t1.reduce((best, c) => {
-          const score = c.influence + (c.tempBuffs || 0) - (c.tempDebuffs || 0);
-          const bestScore = best.influence + (best.tempBuffs || 0) - (best.tempDebuffs || 0);
-          return score > bestScore ? c : best;
-        }, t1[0]);
-        if (strongest && strongest.uid === card.uid) influence += 1;
-      }
-
-      // Zivilgesellschaft: Bewegung-Karten +1 Einfluss
-      if (pubSlot?.kind === 'spec' && (pubSlot as SpecialCard).name === 'Zivilgesellschaft') {
-        const bewegungNames = ['Greta Thunberg', 'Malala Yousafzai', 'Ai Weiwei', 'Alexei Navalny'];
-        const hasBewegung = state.board[player].innen.some(c => c.kind === 'spec' && (c as SpecialCard).type === 'Öffentlichkeitskarte' && bewegungNames.includes(c.name));
-        if (hasBewegung) influence += 1;
-      }
-
-      // 🔥 JOSCHKA FISCHER NGO-BOOST: +1 Einfluss wenn NGO auf dem Board liegt
-      if (card.name === 'Joschka Fischer' && (card as any).effect === 'ngo_boost') {
-        const hasNgoCard = state.board[player].innen.some(c =>
-          c.kind === 'spec' &&
-          (c as SpecialCard).type === 'Öffentlichkeitskarte' &&
-          (c as any).tag === 'NGO'
-        );
-        if (hasNgoCard) {
-          influence += 1;
-          // Log nur beim ersten Mal, um Spam zu vermeiden
-          if (!(card as any)._ngoBoostLogged) {
-            console.log(`🔥 JOSCHKA FISCHER KONTINUIERLICHER NGO-BOOST: +1 Einfluss`);
-            (card as any)._ngoBoostLogged = true;
-          }
-        } else {
-          (card as any)._ngoBoostLogged = false;
-        }
-      }
-
-      // Milchglas Transparenz: +1 Einfluss wenn keine NGO/Bewegung liegt
-      if (govSlot?.kind === 'spec' && (govSlot as SpecialCard).name === 'Milchglas Transparenz') {
-        const ngoMovementNames = ['Jennifer Doudna', 'Noam Chomsky', 'Bill Gates', 'Greta Thunberg', 'Malala Yousafzai', 'Ai Weiwei', 'Alexei Navalny'];
-        const hasNgoMovement = state.board[player].innen.some(c => c.kind === 'spec' && (c as SpecialCard).type === 'Öffentlichkeitskarte' && ngoMovementNames.includes(c.name));
-        if (!hasNgoMovement) influence += 1;
-      }
-
-      // Alternative Fakten: Gegner-Interventionen -1 Wirkung
-      const oppPubSlot = state.permanentSlots[opponent].public;
-      if (oppPubSlot?.kind === 'spec' && (oppPubSlot as SpecialCard).name === 'Alternative Fakten') {
-        // Reduziere Effekt von Interventionen (vereinfacht: -1 Einfluss weniger)
-        // Wird in der Intervention-Auswertung berücksichtigt
-      }
-
-      total += influence;
-    });
-
-    // 🔍 DEBUG: Final influence calculation
-    console.log(`🎯 sumRowWithAuras P${ player }: Gesamt-Einfluss = ${ total }`);
-    return total;
+    return sumGovernmentInfluenceWithAuras(state, player);
   };
 
   // playCard is now handled by useGameActions hook
@@ -882,31 +802,8 @@ export function useGameState() {
       logFunctionCall('applyPermanentInitiative', { slot: 'government', initiative: govInitiative.name }, 'Processing government permanent initiative');
 
       if (govInitiative.name === 'Alternative Fakten') {
-        // Alle Oligarchen geben +1 Einfluss
-        const oligarchCards = pool.filter(c =>
-          c.kind === 'pol' &&
-          ['Elon Musk', 'Bill Gates', 'George Soros', 'Warren Buffett', 'Mukesh Ambani', 'Jeff Bezos', 'Alisher Usmanov', 'Gautam Adani', 'Jack Ma', 'Zhang Yiming', 'Roman Abramovich'].includes(c.name)
-        ) as PoliticianCard[];
-
-        logDataFlow('board analysis', 'oligarch cards', {
-          count: oligarchCards.length,
-          cards: oligarchCards.map(c => ({ name: c.name, influence: c.kind === 'pol' ? (c as any).influence : 0 }))
-        }, 'Finding oligarch cards for Alternative Fakten effect');
-
-        let totalInfluenceGained = 0;
-        oligarchCards.forEach(card => {
-          const oldInfluence = card.influence;
-          adjustInfluence(card, 1, 'Alternative Fakten');
-          const newInfluence = card.influence;
-          totalInfluenceGained += 1;
-          logCardEffect('Alternative Fakten', `${ card.name } erhält +1 Einfluss (${ oldInfluence } → ${ newInfluence })`);
-        });
-
-        if (oligarchCards.length > 0) {
-          logCardEffect('Alternative Fakten', `${ oligarchCards.length } Oligarchen gefunden - ${ totalInfluenceGained } Punkte zum Gesamteinfluss hinzugefügt`);
-        } else {
-          logWarning('No oligarch cards found', 'Alternative Fakten effect has no targets');
-        }
+        // Aura only (intervention/corruption dampen) — no oligarch influence buff
+        logCardEffect('Alternative Fakten', 'Aura aktiv: Interventionen −1, gegnerische Korruption −1');
       }
     }
 
@@ -915,31 +812,8 @@ export function useGameState() {
       logFunctionCall('applyPermanentInitiative', { slot: 'public', initiative: pubInitiative.name }, 'Processing public permanent initiative');
 
       if (pubInitiative.name === 'Algorithmischer Diskurs') {
-        // Alle Medien-Karten geben +1 Einfluss
-        const mediaCards = pool.filter(c =>
-          c.kind === 'pol' &&
-          ['Oprah Winfrey', 'Mark Zuckerberg', 'Tim Cook', 'Sam Altman'].includes(c.name)
-        ) as PoliticianCard[];
-
-        logDataFlow('board analysis', 'media cards', {
-          count: mediaCards.length,
-          cards: mediaCards.map(c => ({ name: c.name, influence: c.kind === 'pol' ? (c as any).influence : 0 }))
-        }, 'Finding media cards for Algorithmischer Diskurs effect');
-
-        let totalInfluenceGained = 0;
-        mediaCards.forEach(card => {
-          const oldInfluence = card.influence;
-          adjustInfluence(card, 1, 'Algorithmischer Diskurs');
-          const newInfluence = card.influence;
-          totalInfluenceGained += 1;
-          logCardEffect('Algorithmischer Diskurs', `${ card.name } erhält +1 Einfluss (${ oldInfluence } → ${ newInfluence })`);
-        });
-
-        if (mediaCards.length > 0) {
-          logCardEffect('Algorithmischer Diskurs', `${ mediaCards.length } Medien-Karten gefunden - ${ totalInfluenceGained } Punkte zum Gesamteinfluss hinzugefügt`);
-        } else {
-          logWarning('No media cards found', 'Algorithmischer Diskurs effect has no targets');
-        }
+        // On-play only (ALGO_DISCOURSE_DEBUFF) — no per-turn media influence buff
+        logCardEffect('Algorithmischer Diskurs', 'Aura-Platzhalter: Effekt greift beim Ausspielen');
       }
     }
 
@@ -1059,6 +933,7 @@ export function useGameState() {
     playCard: gameActions.playCard,
     activateInstantInitiative: gameActions.activateInstantInitiative,
     activateGovernmentAbility: gameActions.activateGovernmentAbility,
+    activateLeader: gameActions.activateLeader,
 
     // AI functionality
     runAITurn: gameAI.runAITurn,

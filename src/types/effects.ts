@@ -23,6 +23,7 @@ export type EffectEvent =
   // Dynamic buffs/draws computed at resolve time (board-dependent)
   | { type: 'SHADOW_LOBBYING_BUFF'; player: Player }
   | { type: 'DIGITAL_CAMPAIGN_DRAW'; player: Player }
+  | { type: 'REDAKTIONSKONFERENZ'; player: Player }
   | { type: 'ALGO_DISCOURSE_DEBUFF'; player: Player }
   | { type: 'WHATABOUTISM_REACTIVATE'; player: Player }
   | { type: 'PROTECT_STRONGEST_GOV'; player: Player }
@@ -68,7 +69,7 @@ export type EffectEvent =
   | { type: 'CORRUPTION_MOLE_STEAL_RESOLVE'; player: Player; targetUid: number; roll: number; requiredRoll: number }
   // Tunnelvision probe system
   | { type: 'TUNNELVISION_GOV_PROBE_START'; player: Player; targetUid: number; influence: number }
-  | { type: 'TUNNELVISION_GOV_PROBE_RESOLVE'; player: Player; targetUid: number; roll: number; requiredRoll: number; influence: number }
+  | { type: 'TUNNELVISION_GOV_PROBE_RESOLVE'; player: Player; targetUid: number; choice?: 'ap' | 'corruption'; influence?: number }
   | { type: 'SKANDALSPIRALE_TRIGGER'; player: Player }
   // Koalitionszwang complex influence calculation
   | { type: 'KOALITIONSZWANG_CALCULATE_BONUS'; player: Player }

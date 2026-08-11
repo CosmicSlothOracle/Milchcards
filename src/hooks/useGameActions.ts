@@ -3,7 +3,16 @@ import { GameState, Card, Player, BuilderEntry, PoliticianCard } from '../types/
 import { createDefaultEffectFlags } from '../types/game';
 import { buildDeckFromEntries, sumGovernmentInfluenceWithAuras, removeCardFromDeck, drawCardsAtRoundEnd } from '../utils/gameUtils';
 import { Pols, Specials } from '../data/gameData';
-import { presetToBuilderEntries, randomPresetDeckDifferentFrom } from '../data/presetDecks';
+import { PRESET_DECKS, presetToBuilderEntries, randomPresetDeckDifferentFrom } from '../data/presetDecks';
+import {
+  applyStyleScoringPassives,
+  promoteChampionFromDeck,
+  activateLeaderAbility,
+  canActivateLeader,
+  createLeaderFromChampion,
+  inferChampionFromCardNames,
+  LeaderSlot,
+} from '../utils/leadership';
 import { getCardActionPointCost, getNetApCost, canPlayCard, isInitiativeCard, isGovernmentCard } from '../utils/ap';
 import { triggerCardEffects } from '../effects/cards';
 import { ensureTestBaselineAP } from '../utils/testCompat';
@@ -34,7 +43,8 @@ import type { PurgeResult } from '../utils/corruption';
 import slotGovGif from '../ui/layout/slot_gov.webm';
 import { getUiTransform, getGovernmentRects } from '../ui/layout';
 
-const PURGE_AUTO_FAIL_MS = 850;
+/** Timed audit stamp beat (no dice). Plan: ~350ms; slightly longer for readability. */
+const PURGE_AUTO_FAIL_MS = 380;
 
 // Migration Helper für Queue-Vereinheitlichung
 const migrateLegacyQueue = (state: any) => {
@@ -196,13 +206,13 @@ function resolveRound(gameState: GameState, log: (msg: string) => void): GameSta
     return gameState;
   }
 
-  // Interactive purge: pause scoring until every corrupt gov is player-rolled (or auto-fail).
+  // Interactive audit: pause scoring until every corrupt gov is stamped (deterministic, no W6).
   const needsPlayer = beginInteractivePurge(gameState, log);
   if (needsPlayer && gameState.pendingPurge) {
     emitFeedback({
       tone: 'warn',
-      title: 'Säuberung',
-      body: 'Würfle für jede markierte Regierungskarte (W6).',
+      title: 'Audit',
+      body: 'Jede korrupte Regierung wird geprüft — Stufe entscheidet, kein Würfel.',
       flash: false,
       durationMs: 2800,
     });
@@ -220,17 +230,17 @@ function finishRoundAfterPurge(gameState: GameState, purgeResult: PurgeResult, l
     if (checkedN > 0) {
       emitFeedback({
         tone: removedN > 0 ? 'fail' : 'info',
-        title: `Säuberung: ${checkedN} Regierung${checkedN === 1 ? '' : 'en'} geprüft`,
+        title: `Audit: ${checkedN} Regierung${checkedN === 1 ? '' : 'en'} geprüft`,
         body: removedN > 0
           ? `${removedN} entfernt — ${purgeResult.removed.map((r) => r.card.name).join(', ')}`
-          : 'Alle geprüften Karten überstehen das Audit.',
+          : 'Alle geprüften Karten bleiben — Skandale mindern Einfluss.',
         flash: true,
         durationMs: 3200,
       });
     } else {
       emitFeedback({
         tone: 'info',
-        title: 'Säuberung',
+        title: 'Audit',
         body: 'Keine korrupten Regierungskarten auf dem Feld.',
         flash: false,
         durationMs: 1800,
@@ -240,11 +250,17 @@ function finishRoundAfterPurge(gameState: GameState, purgeResult: PurgeResult, l
     log(`⚠️ Säuberung-Feedback fehlgeschlagen: ${String(e)}`);
   }
 
-  // Calculate influence for both players (purged cards already gone)
+  // Style scoring passives (Autokratie / Bewegung) — ≤1 pt character depth
+  try {
+    applyStyleScoringPassives(gameState, 1);
+    applyStyleScoringPassives(gameState, 2);
+  } catch { /* best-effort */ }
+
+  // Calculate influence for both players (audited cards already adjusted / removed)
   const p1Influence = sumGovernmentInfluenceWithAuras(gameState, 1);
   const p2Influence = sumGovernmentInfluenceWithAuras(gameState, 2);
 
-  log(`📊 Rundenauswertung (nach Säuberung): P1 ${ p1Influence } Einfluss vs P2 ${ p2Influence } Einfluss`);
+  log(`📊 Rundenauswertung (nach Audit): P1 ${ p1Influence } Einfluss vs P2 ${ p2Influence } Einfluss`);
 
   // Determine winner
   let roundWinner: Player;
@@ -277,9 +293,12 @@ function finishRoundAfterPurge(gameState: GameState, purgeResult: PurgeResult, l
     [roundWinner]: gameState.roundsWon[roundWinner] + 1,
   };
   const matchOver = provisionalRoundsWon[1] >= 2 || provisionalRoundsWon[2] >= 2;
+  const outcomeLabel = (o?: 'safe' | 'scandal' | 'remove') =>
+    o === 'remove' ? 'ENTFERNT' : o === 'scandal' ? 'SKANDAL' : 'GEPRÜFT';
   const purgeLines = [
-    ...purgeResult.removed.map((r) => `✗ ${r.card.name} (W${r.roll ?? 'auto'}/${r.target})`),
-    ...purgeResult.survived.map((r) => `✓ ${r.card.name} (W${r.roll ?? 'auto'}/${r.target})`),
+    ...purgeResult.removed.map((r) => `✗ ${r.card.name} (Stufe ${r.target} · ${outcomeLabel(r.outcome)})`),
+    ...purgeResult.survived.map((r) =>
+      `${r.outcome === 'scandal' ? '⚠' : '✓'} ${r.card.name} (Stufe ${r.target} · ${outcomeLabel(r.outcome)})`),
   ];
   if (typeof window !== 'undefined') {
     try {
@@ -293,10 +312,10 @@ function finishRoundAfterPurge(gameState: GameState, purgeResult: PurgeResult, l
           matchOver,
           purge: {
             removed: purgeResult.removed.map((r) => ({
-              player: r.player, name: r.card.name, roll: r.roll, target: r.target,
+              player: r.player, name: r.card.name, roll: r.roll, target: r.target, outcome: r.outcome,
             })),
             survived: purgeResult.survived.map((r) => ({
-              player: r.player, name: r.card.name, roll: r.roll, target: r.target,
+              player: r.player, name: r.card.name, roll: r.roll, target: r.target, outcome: r.outcome,
             })),
             lines: purgeLines,
           },
@@ -309,7 +328,7 @@ function finishRoundAfterPurge(gameState: GameState, purgeResult: PurgeResult, l
       tone: 'success',
       title: `Spieler ${roundWinner} gewinnt Runde ${gameState.round}`,
       body: `${p1Influence} : ${p2Influence} Einfluss` +
-        (purgeLines.length ? ` · Säuberung: ${purgeLines.slice(0, 3).join(', ')}` : ''),
+        (purgeLines.length ? ` · Audit: ${purgeLines.slice(0, 3).join(', ')}` : ''),
       flash: true,
       durationMs: 3200,
     });
@@ -707,38 +726,37 @@ export function useGameActions(
     window.addEventListener('pc:maulwurf_request_roll', guardedMaulwurfRequestRoll as EventListener);
     window.addEventListener('pc:maulwurf_cancel', guardedMaulwurfCancel as EventListener);
 
-    // Listener: when UI/modal requests a tunnelvision probe roll
-    const handleTunnelvisionRequestRoll = (ev: any) => {
+    // Listener: Tunnelvision Freigabe — choice of +1 AP or +1 corruption (no W6)
+    const handleTunnelvisionChoice = (ev: any) => {
       try {
         const player = ev.detail?.player as Player | undefined;
         const targetUid = ev.detail?.targetUid as number | undefined;
-        const requiredRoll = ev.detail?.requiredRoll as number | undefined;
-        const influence = ev.detail?.influence as number | undefined;
-        if (!player || !targetUid || !requiredRoll || !influence) return;
+        const choice = (ev.detail?.choice === 'corruption' ? 'corruption' : 'ap') as 'ap' | 'corruption';
+        if (!player || !targetUid) return;
 
-        console.log('🎲 TUNNELVISION: Requesting roll for player', player, 'target', targetUid, 'required', requiredRoll);
-        // Quick visual fallback: dispatch an engine_dice_result immediately so the Dice3D shows a value
-        try {
-          const fallbackRoll = 1 + Math.floor(Math.random() * 6);
-          console.debug('🎲 TUNNELVISION: dispatching fallback engine_dice_result', fallbackRoll);
-          window.dispatchEvent(new CustomEvent('pc:engine_dice_result', { detail: { roll: fallbackRoll, player, targetUid } }));
-        } catch (e) { console.debug('🎲 TUNNELVISION: fallback engine_dice_result dispatch failed', e); }
-
-        // Enqueue the tunnelvision resolve event - engine will also calculate roll and trigger 3D dice via resolver
         setGameState(prev => {
+          const newState = cloneStateForMutation(prev);
           const events: EffectEvent[] = [];
-          events.push({ type: 'TUNNELVISION_GOV_PROBE_RESOLVE', player, targetUid, roll: 1 + Math.floor(Math.random() * 6), requiredRoll, influence } as any);
-          // Process immediately
-          try { resolveQueue(prev as any, events); } catch (e) { console.error('resolveQueue error in handleTunnelvisionRequestRoll', e); }
+          events.push({
+            type: 'TUNNELVISION_GOV_PROBE_RESOLVE',
+            player,
+            targetUid,
+            choice,
+          } as any);
+          try { resolveQueue(newState as any, events); } catch (e) {
+            console.error('resolveQueue error in handleTunnelvisionChoice', e);
+          }
           if (afterQueueResolved) afterQueueResolved();
-          return { ...prev, _effectQueue: [] };
+          return { ...newState, _effectQueue: [] };
         });
       } catch (e) {
-        logger.dbg('tunnelvision request roll error', e);
+        logger.dbg('tunnelvision choice error', e);
       }
     };
-    const guardedTunnelvisionRequestRoll = guardGuest(handleTunnelvisionRequestRoll);
-    window.addEventListener('pc:tunnelvision_request_roll', guardedTunnelvisionRequestRoll as EventListener);
+    const guardedTunnelvisionChoice = guardGuest(handleTunnelvisionChoice);
+    window.addEventListener('pc:tunnelvision_choice', guardedTunnelvisionChoice as EventListener);
+    // Legacy event name still accepted (maps to auto AP-or-corruption fallback in resolver)
+    window.addEventListener('pc:tunnelvision_request_roll', guardedTunnelvisionChoice as EventListener);
 
     return () => {
       window.removeEventListener('pc:corruption_pick_target', guardedPickTarget as EventListener);
@@ -747,12 +765,60 @@ export function useGameActions(
       window.removeEventListener('pc:corruption_cancel', guardedCorruptionCancel as EventListener);
       window.removeEventListener('pc:maulwurf_request_roll', guardedMaulwurfRequestRoll as EventListener);
       window.removeEventListener('pc:maulwurf_cancel', guardedMaulwurfCancel as EventListener);
-      window.removeEventListener('pc:tunnelvision_request_roll', guardedTunnelvisionRequestRoll as EventListener);
+      window.removeEventListener('pc:tunnelvision_choice', guardedTunnelvisionChoice as EventListener);
+      window.removeEventListener('pc:tunnelvision_request_roll', guardedTunnelvisionChoice as EventListener);
     };
   }, [setGameState, afterQueueResolved, log, advancePurgeStep]);
-  const startMatchWithDecks = useCallback((p1DeckEntries: BuilderEntry[], p2DeckEntries: BuilderEntry[]) => {
+  const startMatchWithDecks = useCallback((
+    p1DeckEntries: BuilderEntry[],
+    p2DeckEntries: BuilderEntry[],
+    opts?: { startingPlayer?: Player; p1PresetName?: string; p2PresetName?: string }
+  ) => {
     const p1Cards = buildDeckFromEntries(p1DeckEntries);
     const p2Cards = buildDeckFromEntries(p2DeckEntries);
+    const startingPlayer: Player = opts?.startingPlayer === 2 ? 2 : 1;
+
+    const resolveLeader = (cards: typeof p1Cards, entries: BuilderEntry[], presetHint?: string): LeaderSlot | null => {
+      const hint = presetHint || PRESET_DECKS.find(p => {
+        const pe = presetToBuilderEntries(p);
+        if (pe.length !== entries.length) return false;
+        const names = new Set(pe.map(e => `${e.kind}:${e.baseId}`));
+        return entries.every(e => names.has(`${e.kind}:${e.baseId}`));
+      })?.name;
+      if (hint) {
+        return promoteChampionFromDeck(cards, hint);
+      }
+      const names = cards.map(c => c.name);
+      const inferred = inferChampionFromCardNames(names);
+      if (!inferred) return null;
+      const idx = cards.findIndex(c => c.name === inferred.cardName);
+      if (idx === -1) return createLeaderFromChampion(inferred, {
+        id: -1, key: `leader_${inferred.cardName}`, name: inferred.cardName,
+        kind: 'spec', baseId: -1, uid: -999,
+      } as any);
+      const [card] = cards.splice(idx, 1);
+      return createLeaderFromChampion(inferred, card);
+    };
+
+    const leader1 = resolveLeader(p1Cards, p1DeckEntries, opts?.p1PresetName);
+    const leader2 = resolveLeader(p2Cards, p2DeckEntries, opts?.p2PresetName);
+    if (leader1) log(`👑 P1 Anführer: ${leader1.championName} (${leader1.styleId})`);
+    if (leader2) log(`👑 P2 Anführer: ${leader2.championName} (${leader2.styleId})`);
+    // Custom-deck guard: leaderless decks are legal but the player should know
+    // they are giving up the champion passive + active.
+    ([[1, leader1], [2, leader2]] as const).forEach(([player, leader]) => {
+      if (leader) return;
+      log(`⚠️ P${player}: Kein Anführer erkannt — Deck spielt ohne Champion-Passiv und Aktiv-Fähigkeit.`);
+      try {
+        const { emitFeedback } = require('../utils/feedback');
+        emitFeedback({
+          tone: 'warn',
+          title: `P${player}: Kein Anführer`,
+          body: 'Deck enthält keinen bekannten Champion — Passiv & Aktiv entfallen.',
+          player,
+        });
+      } catch { /* ignore */ }
+    });
 
     // Debug: Log deck composition with detailed tag analysis
     const p1NgoCarten = p1Cards.filter(c => (c as any).tag === 'NGO');
@@ -774,7 +840,7 @@ export function useGameActions(
     setGameState(prev => ({
       ...prev,
       round: 1,
-      current: 1,
+      current: startingPlayer,
       passed: { 1: false, 2: false },
       actionPoints: { 1: 2, 2: 2 }, // FIX: Reset AP to 2 for both players
       decks: { 1: d1, 2: d2 },
@@ -798,8 +864,13 @@ export function useGameActions(
       effectQueue: EffectQueueManager.initializeQueue(), // FIX: Reset effect queue
       activeAbilities: { 1: [], 2: [] }, // FIX: Reset active abilities
       pendingAbilitySelect: undefined, // FIX: Reset pending ability selection
+      pendingPurge: undefined,
+      leaders: { 1: leader1, 2: leader2 },
       log: [
-        `Match gestartet. P1 und P2 erhalten je ${ h1.length }/${ h2.length } Startkarten.`,
+        `Match gestartet. Spieler ${startingPlayer} beginnt nach dem Startduell.`,
+        `P1 und P2 erhalten je ${ h1.length }/${ h2.length } Startkarten.`,
+        leader1 ? `👑 P1 Anführer: ${leader1.championName} — ${leader1.activeName}` : '👑 P1: kein Anführer',
+        leader2 ? `👑 P2 Anführer: ${leader2.championName} — ${leader2.activeName}` : '👑 P2: kein Anführer',
         `🔍 DECK DEBUG P1: ${ p1Cards.length } Karten total`,
         `🧪 P1 Public Cards: ${ p1PublicCards.map(c => `${ c.name }${ (c as any).tag ? `[${ (c as any).tag }]` : '' }`).join(', ') }`,
         `🌱 P1 NGO-Karten: ${ p1NgoCarten.length > 0 ? p1NgoCarten.map(c => c.name).join(', ') : 'Keine' }`,
@@ -815,7 +886,11 @@ export function useGameActions(
     }));
   }, [gameState, setGameState, log]);
 
-  const startMatchVsAI = useCallback((p1DeckEntries: BuilderEntry[], _presetKey: string = '') => {
+  const startMatchVsAI = useCallback((
+    p1DeckEntries: BuilderEntry[],
+    presetKey: string = '',
+    opts?: { startingPlayer?: Player }
+  ) => {
     // Always assign a premade that differs from the player's deck composition
     const aiPreset = randomPresetDeckDifferentFrom(p1DeckEntries);
     log(`🤖 KI erhält Premade-Deck: "${aiPreset.name}"`);
@@ -826,8 +901,44 @@ export function useGameActions(
     // Enable AI for P2 first so nextTurn/auto-run sees the flag immediately
     setGameState(prev => ({ ...prev, aiEnabled: { ...(prev.aiEnabled || { 1: false, 2: false }), 2: true } }));
     log('🔧 AI aktiviert für Spieler 2');
-    startMatchWithDecks(p1DeckEntries, p2DeckEntries);
+    const p1PresetName =
+      (presetKey && PRESET_DECKS.some(p => p.name === presetKey) ? presetKey : undefined) ||
+      PRESET_DECKS.find(p => {
+        const pe = presetToBuilderEntries(p);
+        if (pe.length !== p1DeckEntries.length) return false;
+        const names = new Set(pe.map(e => `${e.kind}:${e.baseId}`));
+        return p1DeckEntries.every(e => names.has(`${e.kind}:${e.baseId}`));
+      })?.name;
+    startMatchWithDecks(p1DeckEntries, p2DeckEntries, {
+      ...opts,
+      p1PresetName,
+      p2PresetName: aiPreset.name,
+    });
   }, [startMatchWithDecks, setGameState, log]);
+
+  const activateLeader = useCallback((player: Player, targetUid?: number) => {
+    setGameState(prev => {
+      const gate = canActivateLeader(prev, player);
+      if (!gate.ok) {
+        log(`👑 Anführer: ${gate.reason}`);
+        return prev;
+      }
+      const newState = cloneStateForMutation(prev);
+      // Deep-clone leaders so mutation doesn't leak into prev
+      if (prev.leaders) {
+        newState.leaders = {
+          1: prev.leaders[1] ? { ...prev.leaders[1], card: prev.leaders[1].card } : null,
+          2: prev.leaders[2] ? { ...prev.leaders[2], card: prev.leaders[2].card } : null,
+        };
+      }
+      const res = activateLeaderAbility(newState, player, { targetUid });
+      if (!res.ok) {
+        log(`👑 Anführer fehlgeschlagen: ${res.reason}`);
+        return prev;
+      }
+      return newState;
+    });
+  }, [setGameState, log]);
 
   const playCard = useCallback((player: Player, handIndex: number, lane?: 'innen' | 'aussen') => {
     logger.info(`playCard START P${ player } idx=${ handIndex }`);
@@ -979,37 +1090,27 @@ export function useGameActions(
               newState.permanentSlots[opponent].public?.name === 'Tunnelvision';
 
             if (tunnelvisionOwnedByEnemy) {
-              // Trigger Tunnelvision probe
               const influence = polCard.influence || 0;
-              const requiredRoll = influence >= 9 ? 5 : 4;
+              log(`🔮 Tunnelvision: ${playedCard.name} braucht Freigabe — +1 AP oder +1 Korruption.`);
+              feedbackInfo('Tunnelvision', `${playedCard.name}: +1 AP zahlen oder +1 Korruption.`);
 
-              log(`🔮 Tunnelvision: Regierungskarte ${ playedCard.name } benötigt Probe. W6 ≥${ requiredRoll } (Einfluss ${ influence }).`);
-              feedbackInfo('Tunnelvision-Probe', `${playedCard.name}: W6 ≥ ${requiredRoll} nötig.`);
+              // Return card to hand until the player chooses the tax; normal play AP already charged.
+              newState.hands[player] = [...newState.hands[player], playedCard];
+              chargePendingAp();
 
-              // Enqueue tunnelvision probe event and process immediately
               newState._effectQueue = newState._effectQueue || [];
               newState._effectQueue.push({
                 type: 'TUNNELVISION_GOV_PROBE_START',
                 player,
                 targetUid: playedCard.uid || playedCard.id,
-                influence
+                influence,
               } as any);
-
-              // Process the queue immediately to trigger the probe
               try {
                 resolveQueue(newState, newState._effectQueue);
                 newState._effectQueue = [];
               } catch (e) {
-                console.error('Error resolving tunnelvision probe queue:', e);
+                console.error('Error resolving tunnelvision choice queue:', e);
               }
-
-              // Return the card to hand until probe is resolved.
-              // Tunnelvision: 1 AP wird immer abgezogen (auch bei Misserfolg).
-              newState.hands[player] = [...newState.hands[player], playedCard];
-              chargePendingAp();
-
-              // Don't add card to board yet - wait for probe result
-              // The card will be added to board or kept in hand based on probe result
               return newState;
             }
           }
@@ -1326,12 +1427,65 @@ export function useGameActions(
                   enqueueHook({ type: 'LOG', msg: 'Wirtschaftlicher Druck: Oligarch gespielt → stärkste Regierung +1 Einfluss.' });
                 }
 
-                // Konzernfreundlicher Algorithmus (Dauerhaft): Plattform gespielt → ziehe 1 Karte
+                // Straßenmandat: Movement → +1 strongest (max +2/turn); if NGO also present → +1 AP once/turn
+                const hasStrassenmandat = permGov?.name === 'Straßenmandat' || permPub?.name === 'Straßenmandat';
+                if (hasStrassenmandat) {
+                  const { isMovementCard: isMov, isNgoCard: isNgo } = require('../utils/cardClassification');
+                  const flags = newState.effectFlags[player];
+                  if (isMov(playedCard)) {
+                    const used = flags.strassenmandatBuffThisTurn || 0;
+                    if (used < 2) {
+                      enqueueHook({ type: 'BUFF_STRONGEST_GOV', player, amount: 1 });
+                      flags.strassenmandatBuffThisTurn = used + 1;
+                      enqueueHook({ type: 'LOG', msg: `Straßenmandat: Bewegung → stärkste Regierung +1 (${used + 1}/2).` });
+                    }
+                    const hasNgo = (newState.board[player].innen || []).some(
+                      (c: any) => isNgo(c) && !c.deactivated && c.uid !== (playedCard as any).uid
+                    );
+                    if (hasNgo && !flags.strassenmandatApUsed) {
+                      enqueueHook({ type: 'ADD_AP', player, amount: 1 });
+                      flags.strassenmandatApUsed = true;
+                      enqueueHook({ type: 'LOG', msg: 'Straßenmandat: NGO vorhanden → +1 AP (1×/Zug).' });
+                    }
+                  }
+                }
+
+                // Konzernfreundlicher Algorithmus:
+                // Platform → draw 1 (engagement). Oligarch while you control a Platform →
+                // strongest gov +1 influence AND +1 corruption (corporate capture ambivalence).
                 const hasKonzernAlgo = permGov?.name === 'Konzernfreundlicher Algorithmus' || permPub?.name === 'Konzernfreundlicher Algorithmus';
-                if (hasKonzernAlgo && isPlatformCard(playedCard)) {
-                  enqueueHook({ type: 'DRAW_CARDS', player, amount: 1 });
-                  enqueueHook({ type: 'BUFF_STRONGEST_GOV', player, amount: 1 });
-                  enqueueHook({ type: 'LOG', msg: 'Konzernfreundlicher Algorithmus: Plattform gespielt → +1 Karte, +1 Einfluss.' });
+                if (hasKonzernAlgo) {
+                  if (isPlatformCard(playedCard)) {
+                    enqueueHook({ type: 'DRAW_CARDS', player, amount: 1 });
+                    enqueueHook({ type: 'LOG', msg: 'Konzernfreundlicher Algorithmus: Plattform gespielt → +1 Karte.' });
+                  } else if (isOligarchCard(playedCard)) {
+                    const hasPlatform = (newState.board[player].innen || []).some(
+                      (c: any) => isPlatformCard(c) && !c.deactivated
+                    );
+                    if (hasPlatform) {
+                      enqueueHook({ type: 'BUFF_STRONGEST_GOV', player, amount: 1 });
+                      const strong = (newState.board[player].aussen || [])
+                        .filter((c: any) => c.kind === 'pol' && !c.deactivated)
+                        .slice()
+                        .sort((a: any, b: any) =>
+                          (b.influence + (b.tempBuffs || 0) - (b.tempDebuffs || 0)) -
+                          (a.influence + (a.tempBuffs || 0) - (a.tempDebuffs || 0))
+                        )[0];
+                      if (strong) {
+                        enqueueHook({
+                          type: 'CHANGE_CORRUPTION',
+                          targetUid: (strong as any).uid,
+                          amount: 1,
+                          source: 'Konzernfreundlicher Algorithmus (Capture)',
+                          fromInitiative: true,
+                        } as any);
+                      }
+                      enqueueHook({
+                        type: 'LOG',
+                        msg: 'Konzernfreundlicher Algorithmus: Oligarch + Plattform → stärkste Regierung +1 Einfluss, +1 Korruption.',
+                      });
+                    }
+                  }
                 }
               } catch (e) { /* hooks are best-effort */ }
 
@@ -1362,6 +1516,19 @@ export function useGameActions(
           }
 
           // 4) Default: Traps/Interventions
+          // Schmidt / Diplomatie veto: next enemy intervention this round is annulled
+          {
+            const opp: Player = player === 1 ? 2 : 1;
+            if ((newState.effectFlags[opp] as any)?.vetoNextEnemyIntervention) {
+              (newState.effectFlags[opp] as any).vetoNextEnemyIntervention = false;
+              newState.discard = [...newState.discard, playedCard];
+              chargePendingAp();
+              log(`👑 Staatsräson: ${playedCard.name} von P${player} wird annuliert.`);
+              feedbackFail('Intervention annuliert', 'Gegnerischer Anführer blockt diese Intervention.');
+              return newState;
+            }
+          }
+
           // Falls Trap-Karte gelegt wird
           if (playedCard.kind === 'spec' && (playedCard as any).type?.toLowerCase().includes('trap')) {
             registerTrap(newState, player, playedCard.key || playedCard.name.toLowerCase().replace(/[- ]/g, '_'));
@@ -1455,6 +1622,15 @@ export function useGameActions(
 
         // 3) Normale Karten-Effekte der Sofort-Karte feuern
         (newState as any)._lastActivatedInitiative = instantCard.name;
+        // Technokratie: first sofort of the round tags a +1 numeric bonus for effect handlers
+        try {
+          const { consumeTechnocracyInitiativeBonus } = require('../utils/leadership');
+          const techBonus = consumeTechnocracyInitiativeBonus(newState, player);
+          if (techBonus > 0) {
+            (newState.effectFlags[player] as any).technocracyNumericBonus = techBonus;
+            log(`⚜️ Technokratie: erste Sofort-Initiative — numerische Effekte +${techBonus}.`);
+          }
+        } catch { /* optional */ }
         triggerCardEffects(newState, player, instantCard);
         // Ensure public steal reactions fire if the card handler omitted the event
         const q = (newState._effectQueue ??= []);
@@ -1488,24 +1664,6 @@ export function useGameActions(
           // Nach Queue-Auflösung: Hand-Arrays immutabel neu zuweisen
           afterQueueResolved?.();
         }
-
-        // Visual: listen for dice roll event to animate & bind to SKANDALSPIRALE_TRIGGER if present
-        try {
-          const diceHandler = (ev: any) => {
-            try {
-              const face = ev.detail?.face;
-              if (face == null) return;
-              // If last enqueued event was SKANDALSPIRALE_TRIGGER, attach a LOG with the face
-              const last = (newState._effectQueue ?? []).slice(-1)[0];
-              // Emit a LOG event for visibility
-              if (!newState._effectQueue) newState._effectQueue = [];
-              newState._effectQueue.push({ type: 'LOG', msg: `Würfel: ${ face }` } as any);
-            } catch (e) { }
-          };
-          window.addEventListener('pc:dice_roll', diceHandler as EventListener);
-          // remove after short timeout to avoid leaking listeners
-          setTimeout(() => window.removeEventListener('pc:dice_roll', diceHandler as EventListener), 2000);
-        } catch (e) { }
 
         return newState;
       })();
@@ -1554,63 +1712,6 @@ export function useGameActions(
     endTurn('auto');
   }, [endTurn]);
 
-  // Global listener: handle visual dice results and apply Skandalspirale effects automatically
-  useEffect(() => {
-    const handler = (ev: any) => {
-      const face = ev?.detail?.face;
-      if (typeof face !== 'number') return;
-      setGameState(prev => {
-        try {
-          const pending = (prev as any)._pendingSkandal as { player: Player; ts: number } | undefined;
-          if (!pending) return prev;
-          // only accept recent pending requests (avoid stale triggers)
-          if (Date.now() - (pending.ts || 0) > 8000) {
-            const n = { ...prev } as GameState & any;
-            delete n._pendingSkandal;
-            return n;
-          }
-
-          const newState = { ...prev } as GameState & any;
-          // clear pending marker
-          delete newState._pendingSkandal;
-
-          // Prepare events based on face
-          newState._effectQueue = newState._effectQueue || [];
-          if (face >= 1 && face <= 3) {
-            const loss = face;
-            // enqueue negative buff (debuff) on disadvantaged player's strongest gov
-            newState._effectQueue.push({ type: 'BUFF_STRONGEST_GOV', player: pending.player, amount: -loss } as any);
-            newState._effectQueue.push({ type: 'LOG', msg: `Skandalspirale: Spieler ${ pending.player } würfelt ${ face } → stärkste Regierung -${ loss }.` } as any);
-          } else {
-            newState._effectQueue.push({ type: 'LOG', msg: `Skandalspirale: Spieler ${ pending.player } würfelt ${ face } → Keine Auswirkung.` } as any);
-          }
-
-          // Resolve immediately so effect is visible without waiting
-          if (newState._effectQueue && newState._effectQueue.length > 0) {
-            try { resolveQueue(newState, [...newState._effectQueue]); } catch (e) { logger.dbg('resolveQueue failed on dice handler', e); }
-            newState._effectQueue = [];
-          }
-
-          // Ensure React sees shallow-copied hands for UI update
-          try {
-            newState.hands = { 1: [...newState.hands[1]], 2: [...newState.hands[2]] };
-          } catch (e) { }
-
-          // run after-queue hook if provided (best-effort)
-          try { if ((window as any).__afterQueueResolved) (window as any).__afterQueueResolved(); } catch (e) { }
-
-          return newState;
-        } catch (err) {
-          logger.dbg('dice handler setGameState error', err);
-          return prev;
-        }
-      });
-    };
-
-    window.addEventListener('pc:dice_roll', handler as EventListener);
-    return () => window.removeEventListener('pc:dice_roll', handler as EventListener);
-  }, [setGameState]);
-
   const passTurn = useCallback((player: Player) => {
     logger.info(`passTurn START P${ player }`);
 
@@ -1626,17 +1727,25 @@ export function useGameActions(
       logger.dbg(`Pass status updated P1=${ newState.passed[1] } P2=${ newState.passed[2] }`);
       log(`🚫 Spieler ${ player } passt.`);
 
-      // Pass-Kontext für die Säuberung: Handgröße steuert gierig (+1) vs. leer (−1).
-      // Kein Auto-Schweigegeld — die W6-Prüfung soll spürbar bleiben.
+      // Pass-Kontext für das Audit: Handgröße (gierig +1 / leer −1) + Schweigegeld (ungenutzte AP).
       try {
         const pf = (newState.effectFlags?.[player] as any);
         if (pf) {
           pf.passHandSize = (newState.hands?.[player] || []).length;
-          pf.hushMoneySpent = 0;
+          const styleId = (newState as any).leaders?.[player]?.styleId as string | undefined;
+          const hushCap = styleId === 'diplomatie' ? 3 : 2;
+          const hushAllowed = styleId !== 'bewegung';
+          const unspentAp = Math.max(0, Number(newState.actionPoints?.[player] || 0));
+          pf.hushMoneySpent = hushAllowed ? Math.min(hushCap, unspentAp) : 0;
+          if (pf.hushMoneySpent > 0) {
+            log(`💵 Schweigegeld: P${player} setzt ${pf.hushMoneySpent} ungenutzte AP ein (Audit-Stufe −${pf.hushMoneySpent}).`);
+          } else if (!hushAllowed && unspentAp > 0) {
+            log(`🚫 Bewegung: Schweigegeld unwirksam — ungenutzte AP helfen nicht beim Audit.`);
+          }
           const corruptCount = (newState.board[player]?.aussen || [])
             .filter((c: any) => c.kind === 'pol' && !c.deactivated && Number(c.corruption ?? 0) >= 1).length;
           if (corruptCount > 0) {
-            log(`🎲 Beim Rundenende: ${corruptCount} korrupte Regierungskarte(n) von P${player} werden mit W6 geprüft.`);
+            log(`📋 Beim Rundenende: ${corruptCount} korrupte Regierungskarte(n) von P${player} werden auditiert.`);
           }
         }
       } catch { /* best-effort */ }
@@ -1709,6 +1818,7 @@ export function useGameActions(
     playCard,
     activateInstantInitiative,
     activateGovernmentAbility,
+    activateLeader,
     passTurn,
     nextTurn,
     endTurn,

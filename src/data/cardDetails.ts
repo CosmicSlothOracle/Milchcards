@@ -1506,96 +1506,121 @@ export const SPECIAL_CARD_DETAILS: Record<string, DetailedCardInfo> = {
     example: 'Du ziehst 1 Karte, aber nichts passiert sonst',
   },
 
+  'Redaktionskonferenz': {
+    name: 'Redaktionskonferenz',
+    category: 'Sofort-Initiative',
+    gameEffect: 'Wenn du ≥1 Medien-/Plattform-Karte kontrollierst: stärkste Regierung +2 Einfluss. Sonst: ziehe 1 Karte.',
+    deckCost: 3,
+    subcategories: ['Mittel', 'Medien'],
+    cardType: 'Sofort-Initiative',
+    tier: 'T2',
+    usage: 'Media Control payoff ohne Oligarchen',
+    example: 'Oprah liegt → stärkste Regierung +2; sonst Kartenfluss',
+  },
+
   // Dauerhaft-Initiativen (Permanent Initiatives)
   'Koalitionszwang': {
     name: 'Koalitionszwang',
     category: 'Dauerhaft-Initiative',
-    gameEffect: 'Beim Ausspielen: +1 Einfluss pro eigener Regierung mit gleichem Einfluss wie eine gegnerische, plus +1 pro Aktivist/Denker in der Öffentlichkeit (gesamter Bonus max. +2, auf stärkste Regierung). Aura: Bei ≥2 Tier-2-Regierungen erhalten alle deine Tier-2-Regierungen +1 Einfluss.',
+    gameEffect: 'Beim Ausspielen: +1 Einfluss pro eigener Regierung mit gleichem Einfluss wie eine gegnerische, plus +1 pro Aktivist/Denker in der Öffentlichkeit (gesamter Bonus max. +2, auf stärkste Regierung). Aura: Bei ≥2 Tier-2-Regierungen erhalten alle deine Tier-2-Regierungen +1 Einfluss — entfällt im Zug, in dem der On-Play-Bonus bereits gefeuert hat (kein Double-Dip).',
     deckCost: 2,
     subcategories: ['Regierung'],
     cardType: 'Dauerhaft-Initiative',
     tier: 'T2',
     slot: 'Regierung',
     usage: 'Mit Regierungskarten gleichen Einflusses und Aktivisten/Denkern',
-    example: '3 Match-Boni + 2 Aktivisten → trotzdem nur +2 Cap auf stärkste Regierung'
+    example: 'On-Play +2 → T2-Aura pausiert diesen Zug; nächster Zug Aura wieder aktiv'
   },
 
   'Zivilgesellschaft': {
     name: 'Zivilgesellschaft',
     category: 'Dauerhaft-Initiative',
-    gameEffect: 'Movement cards +1 influence, NGOs give +1 AP on next initiative',
+    gameEffect: 'Pro aktiver Bewegung: +1 Einfluss auf stärkste Regierung (max +2). NGO → +1 AP bei nächster Initiative (1×/Zug). Bei Korruption ≥3 auf stärkster Regierung: +1 Korruption (Scrutiny). Säuberungswurf +1 wenn Korruption ≤1.',
     deckCost: 2,
     subcategories: ['Öffentlichkeit'],
     cardType: 'Dauerhaft-Initiative',
     tier: 'T2',
     slot: 'Öffentlichkeit',
     usage: 'With movement and NGO strategies',
-    example: 'Greta Thunberg +1 influence, Bill Gates gives +1 AP on next initiative'
+    example: 'Greta + Navalny → stärkste Regierung +2; Bill Gates → +1 AP; schmutzige Regierung bekommt Scrutiny'
+  },
+
+  'Straßenmandat': {
+    name: 'Straßenmandat',
+    category: 'Dauerhaft-Initiative',
+    gameEffect: 'Wenn du eine Bewegung spielst: stärkste Regierung +1 Einfluss (max +2/Zug). Hast du eine NGO, zusätzlich +1 AP (1×/Zug).',
+    deckCost: 3,
+    subcategories: ['Regierung'],
+    cardType: 'Dauerhaft-Initiative',
+    tier: 'T2',
+    slot: 'Regierung',
+    usage: 'Grassroots/Activist – lesbare Bewegung→Score-Kette',
+    example: 'Greta gespielt bei Gates auf dem Feld → +1 Einfluss und +1 AP',
   },
 
   'Milchglas Transparenz': {
     name: 'Milchglas Transparenz',
     category: 'Dauerhaft-Initiative',
-    gameEffect: '+1 Einfluss wenn keine NGO/Bewegung liegt',
+    gameEffect: '+1 Einfluss auf stärkste Regierung wenn du keine NGO/Bewegung hast. Eigene Korruptionsgewinne und -abbau jeweils −1. Säuberungsziel −1.',
     deckCost: 2,
     subcategories: ['Regierung'],
     cardType: 'Dauerhaft-Initiative',
     tier: 'T2',
     slot: 'Regierung',
-    usage: 'Gegen NGO/Bewegungs-Strategien',
-    example: 'Bonus-Einfluss wenn Gegner keine Aktivisten hat'
+    usage: 'Gegen NGO/Bewegungs-Strategien; ambivalente „Transparenz“',
+    example: 'Ohne Greta/Gates: stärkste Regierung +1; Schmutz und Säuberung sind beide unscharf'
   },
 
   'Alternative Fakten': {
     name: 'Alternative Fakten',
     category: 'Dauerhaft-Initiative',
-    gameEffect: 'Gegner-Interventionen -1 Wirkung (mindestens 0)',
+    gameEffect: 'Gegnerische Interventionen −1 Wirkung (min 0). Gegnerische Korruptionsgewinne −1. Wenn eine Intervention dadurch wirkungslos wird: ziehe 1 Karte.',
     deckCost: 2,
     subcategories: ['Öffentlichkeit'],
     cardType: 'Dauerhaft-Initiative',
     tier: 'T2',
     slot: 'Öffentlichkeit',
     usage: 'Gegen Interventionen-Strategien',
-    example: '"Fake News-Kampagne" ist schwächer'
+    example: 'Whistleblower −2 wird zu −1; bei −1-Hit → Spin: +1 Karte'
   },
 
   'Napoleon Komplex': {
     name: 'Napoleon Komplex',
     category: 'Dauerhaft-Initiative',
-    gameEffect: 'Deine stärkste Tier-1-Regierungskarte erhält +1 Einfluss. Einfluss verschieben ist nicht erlaubt.',
+    gameEffect: 'Stärkste Tier-1-Regierung +1 Einfluss. Einfluss-Transfer ist blockiert. Hybris: dieselbe Karte hat Säuberungsziel +1.',
     deckCost: 2,
     subcategories: ['Regierung'],
     cardType: 'Dauerhaft-Initiative',
     tier: 'T2',
     slot: 'Regierung',
     usage: 'Mit Tier-1-Regierungskarten',
-    example: 'Zwei T1 (7 und 5) → nur die 7er-Karte erhält +1'
+    example: 'Zwei T1 (7 und 5) → nur die 7er +1; Diplomat kann nicht umschichten; Säuberung härter'
   },
 
   'Konzernfreundlicher Algorithmus': {
     name: 'Konzernfreundlicher Algorithmus',
     category: 'Dauerhaft-Initiative',
-    gameEffect: 'Bei Plattform-Karten: ziehe 1 Karte, Oligarchen +1 Einfluss',
+    gameEffect: 'Plattform gespielt → ziehe 1. Oligarch gespielt während du eine Plattform kontrollierst → stärkste Regierung +1 Einfluss und +1 Korruption.',
     deckCost: 2,
     subcategories: ['Öffentlichkeit'],
     cardType: 'Dauerhaft-Initiative',
     tier: 'T2',
     slot: 'Öffentlichkeit',
     usage: 'Mit Plattform + Oligarchen-Kombinationen',
-    example: 'Mark Zuckerberg + Elon Musk = Kartenziehen + Einfluss'
+    example: 'Zuckerberg → +1 Karte; dann Elon → Putin +1 Einfluss, +1 Korruption'
   },
 
   'Algorithmischer Diskurs': {
     name: 'Algorithmischer Diskurs',
     category: 'Dauerhaft-Initiative',
-    gameEffect: 'Beim Ausspielen: Reduziert Einfluss basierend auf Plattform/KI-Karten in der Öffentlichkeit. Für jede Plattform/KI-Karte: -1 Einfluss auf stärkste Regierungskarte.',
+    gameEffect: 'Beim Ausspielen: −1 Einfluss auf gegnerische stärkste Regierung pro deren Plattform/KI-Karte (max −3) und +1 Korruption auf diese Regierung.',
     deckCost: 2,
     subcategories: ['Öffentlichkeit'],
     cardType: 'Dauerhaft-Initiative',
     tier: 'T2',
     slot: 'Öffentlichkeit',
     usage: 'Gegen Plattform/KI-Strategien',
-    example: '3 Plattform-Karten in Öffentlichkeit → -3 Einfluss auf stärkste Regierungskarte'
+    example: 'Gegner hat 3 Plattform/KI-Karten → dessen stärkste Regierung −3 Einfluss, +1 Korruption'
   },
 
   'Wirtschaftlicher Druck': {
@@ -1615,25 +1640,25 @@ export const SPECIAL_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Fake News-Kampagne': {
     name: 'Fake News-Kampagne',
     category: 'Intervention',
-    gameEffect: 'Die Öffentlichkeitskarte wird deaktiviert',
+    gameEffect: 'Medien-/Plattform-Öffentlichkeitskarte wird deaktiviert; stärkste Regierung des Gegners +1 Korruption',
     deckCost: 2,
     subcategories: ['Standard'],
     cardType: 'Intervention',
     tier: 'T2',
-    trigger: 'Gegner spielt eine Öffentlichkeitskarte',
-    example: 'Gegner spielt Oprah Winfrey → sie ist deaktiviert'
+    trigger: 'Gegner spielt eine Medien-/Plattform-Öffentlichkeitskarte',
+    example: 'Gegner spielt Oprah → deaktiviert; stärkste Regierung +1 Korruption'
   },
 
   'Whistleblower': {
     name: 'Whistleblower',
     category: 'Intervention',
-    gameEffect: '-2 Einfluss auf die Regierungskarte',
+    gameEffect: '−2 Einfluss (−1 pro Bewegung/Aktivist auf beiden Boards, max −6) und +1 Korruption auf die gespielte Regierung',
     deckCost: 3,
     subcategories: ['Standard'],
     cardType: 'Intervention',
     tier: 'T3',
     trigger: 'Gegner spielt eine Regierungskarte',
-    example: 'Gegner spielt Vladimir Putin → er verliert 2 Einfluss'
+    example: 'Putin bei 2 Aktivisten → −4 Einfluss, +1 Korruption'
   },
 
   'Cyber-Attacke': {
@@ -1651,13 +1676,13 @@ export const SPECIAL_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Strategische Enthüllung': {
     name: 'Strategische Enthüllung',
     category: 'Intervention',
-    gameEffect: 'Eine Regierungskarte zurück auf die Hand',
+    gameEffect: 'Wenn die gespielte Regierung den Gegner führen/gleichen lassen würde: zurück auf Hand. Blowback: deine stärkste Regierung +1 Korruption.',
     deckCost: 3,
     subcategories: ['Standard'],
     cardType: 'Intervention',
     tier: 'T3',
-    trigger: 'Gegner hat mehr als 2 Regierungskarten',
-    example: 'Gegner hat 3 Regierungskarten → eine geht zurück'
+    trigger: 'Gegner spielt eine Regierungskarte und würde dich damit einholen/überholen',
+    example: 'Gegner spielt 8er und würde führen → Karte zurück; du +1 Korruption'
   },
 
   'Interne Fraktionskämpfe': {
@@ -1687,13 +1712,13 @@ export const SPECIAL_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Deepfake-Skandal': {
     name: 'Deepfake-Skandal',
     category: 'Intervention',
-    gameEffect: 'Kein Einflusstransfer möglich',
+    gameEffect: 'Kein Einflusstransfer bis zum nächsten Zugbeginn des Gegners; der Diplomat erhält +1 Korruption',
     deckCost: 2,
     subcategories: ['Standard'],
     cardType: 'Intervention',
     tier: 'T2',
     trigger: 'Gegner spielt eine Diplomat-Karte',
-    example: 'Gegner spielt Joschka Fischer → er kann nicht verschieben'
+    example: 'Joschka Fischer → Transfer lock bis Zugbeginn, +1 Korruption'
   },
 
   'Bestechungsskandal 2.0': {
@@ -1711,13 +1736,13 @@ export const SPECIAL_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Maulwurf': {
     name: 'Maulwurf',
     category: 'Sofort-Initiative',
-    gameEffect: 'Übernimmt automatisch die schwächste gegnerische Regierungskarte bei erfolgreicher Probe: W6 ≥ 3 + Anzahl gegnerischer Regierungskarten.',
+    gameEffect: 'Übernimmt automatisch die schwächste gegnerische Regierungskarte bei erfolgreicher Probe: W6 ≥ 4. Bei Misserfolg kehrt die Karte auf die Hand zurück.',
     deckCost: 4,
     subcategories: ['Corruption'],
     cardType: 'Sofort-Initiative',
     tier: 'T3',
     trigger: 'Automatisch – schwächste Regierungskarte wird gewählt',
-    example: 'Gegner hat 2 Regierungskarten → du musst mindestens 5 würfeln'
+    example: 'Würfel ≥4 → Übernahme; sonst Maulwurf zurück auf die Hand'
   },
 
   'Grassroots-Widerstand': {
@@ -1747,13 +1772,13 @@ export const SPECIAL_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Berater-Affäre': {
     name: 'Berater-Affäre',
     category: 'Intervention',
-    gameEffect: '-2 Einfluss auf die Regierungskarte',
+    gameEffect: 'Tier-1-Regierung −2 Einfluss und +1 Korruption',
     deckCost: 2,
     subcategories: ['Standard'],
     cardType: 'Intervention',
     tier: 'T2',
-    trigger: 'Gegner spielt eine Regierungskarte',
-    example: 'Gegner spielt schwache Regierung → sie verliert 2 Einfluss'
+    trigger: 'Gegner spielt eine Tier-1-Regierungskarte',
+    example: 'Gegner spielt Olaf Scholz (T1) → −2 Einfluss, +1 Korruption'
   },
 
   'Parlament geschlossen': {
@@ -1807,38 +1832,49 @@ export const SPECIAL_CARD_DETAILS: Record<string, DetailedCardInfo> = {
   'Lobby Leak': {
     name: 'Lobby Leak',
     category: 'Intervention',
-    gameEffect: 'Gegner muss 1 Karte abwerfen',
+    gameEffect: 'Gegner wirft 1 Karte ab; seine stärkste Regierung +1 Korruption',
     deckCost: 2,
     subcategories: ['Standard'],
     cardType: 'Intervention',
     tier: 'T2',
-    trigger: 'Gegner spielt eine Öffentlichkeitskarte',
-    example: 'Gegner spielt Bill Gates → muss 1 Karte abwerfen'
+    trigger: 'Gegner spielt eine NGO- oder Oligarchen-Öffentlichkeitskarte',
+    example: 'Gegner spielt Bill Gates oder Elon → wirft 1 ab; stärkste Regierung +1 Korruption'
   },
 
+  'Aufsichtsmandat': {
+    name: 'Aufsichtsmandat',
+    category: 'Intervention',
+    gameEffect: 'Wenn die stärkste Regierung des Gegners in diesem Zug ≥2 Einfluss durch Auren/Temps gewinnt: diese Regierung −1 Einfluss und +1 Korruption.',
+    deckCost: 2,
+    subcategories: ['Standard'],
+    cardType: 'Intervention',
+    tier: 'T2',
+    trigger: 'Gegnerische stärkste Regierung erhält ≥2 Temp-Buff in einem Zug',
+    example: 'Spin + Shadow Lobby → Aufsichtsmandat −1 Einfluss und +1 Korruption',
+  },
 
   'Skandalspirale': {
     name: 'Skandalspirale',
     category: 'Sofort-Initiative',
-    gameEffect: 'Bei Aktivierung: Der Spieler mit dem geringeren Gesamt-Einfluss muss einen W6 würfeln. Bei 4-6 passiert nichts; bei 1-3 verliert er entsprechend der Augenzahl -1/-2/-3 Einfluss auf seine stärkste Regierungskarte.',
+    gameEffect: 'Bei Aktivierung: Die Seite mit dem geringeren Gesamt-Einfluss verliert deterministisch −2 Einfluss auf ihre stärkste Regierungskarte. Kein Würfel.',
     deckCost: 2,
     subcategories: ['Standard'],
     cardType: 'Sofort-Initiative',
     tier: 'T2',
-    usage: 'Comeback-Chance für den zurückliegenden Spieler',
-    example: 'P2 liegt hinten, würfelt eine 2 → stärkste Regierungskarte -2 Einfluss'
+    usage: 'Comeback-Druck für die zurückliegende Seite',
+    example: 'P2 hat weniger Einfluss → stärkste Regierung von P2 −2 Einfluss'
   },
 
   'Tunnelvision': {
     name: 'Tunnelvision',
     category: 'Dauerhaft-Initiative',
-    gameEffect: 'Solange aktiv: nur der Gegner muss bei Regierungskarten eine Probe bestehen (W6 ≥4, ≥5 bei Einfluss 9+). Bei Misserfolg bleibt die Karte in der Hand. 1 AP wird immer abgezogen.',
+    gameEffect: 'Solange aktiv: wenn der Gegner eine Regierungskarte spielt, wählt er deterministisch +1 AP oder +1 Korruption auf dieser Karte. Kein Würfel. 1 AP für das Spielen wird weiterhin abgezogen.',
     deckCost: 3,
     subcategories: ['Control'],
     cardType: 'Dauerhaft-Initiative',
     tier: 'T2',
     trigger: 'Dauerhaft aktiv – bei gegnerischen Regierungskarten',
-    example: 'Gegner spielt Regierungskarte → Probe W6 ≥4 → bei Misserfolg bleibt die Karte in der Hand'
+    example: 'Gegner spielt Regierung → Modal: +1 AP oder +1 Korruption'
   },
 
   'Satire-Show': {

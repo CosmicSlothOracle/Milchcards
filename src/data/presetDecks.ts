@@ -1,16 +1,32 @@
 import { BuilderEntry } from '../types/game';
 import { Pols, Specials } from './gameData';
+import { getChampionForPreset, getStyleForPreset, LeadershipStyleId } from './leadershipStyles';
 
-export type PresetDeck = { name: string; cards: string[] };
+export type PresetDeck = {
+  name: string;
+  cards: string[];
+  styleId?: LeadershipStyleId;
+  championName?: string;
+};
 
 // Premade decks: every catalog card appears ≥1×; lists aim for legal
 // builder constraints (10–15 cards, ≥6 Regierung, 75–105 BP).
+function withChampionMeta(deck: { name: string; cards: string[] }): PresetDeck {
+  const champ = getChampionForPreset(deck.name);
+  const style = getStyleForPreset(deck.name);
+  return {
+    ...deck,
+    styleId: style?.id,
+    championName: champ?.cardName,
+  };
+}
+
 export const PRESET_DECKS: PresetDeck[] = [
   {
     name: 'Tech Oligarchs',
     cards: [
-      'Donald Trump', 'Xi Jinping', 'Vladimir Putin', 'Mohammed bin Salman', 'Recep Tayyip Erdoğan',
-      'Javier Milei', 'Verzögerungsverfahren', 'Symbolpolitik', 'Think-tank', 'Influencer-Kampagne',
+      'Donald Trump', 'Xi Jinping', 'Vladimir Putin', 'Mohammed bin Salman', 'King Charles III',
+      'Javier Milei', 'Verzögerungsverfahren', 'Think-tank', 'Jack Ma', 'Konzernfreundlicher Algorithmus',
       'Systemrelevant'
     ],
   },
@@ -19,7 +35,7 @@ export const PRESET_DECKS: PresetDeck[] = [
     cards: [
       'Helmut Schmidt', 'Kamala Harris', 'Olaf Scholz', 'Rishi Sunak', 'Hans Dietrich Genscher',
       'George Soros', 'Warren Buffett', 'Spin Doctor', 'Think-tank', 'Koalitionszwang',
-      'Systemrelevant', 'Rainer Offergeld', 'Digitaler Wahlkampf'
+      'Systemrelevant', 'Rainer Offergeld', 'Digitaler Wahlkampf', 'Influencer-Kampagne'
     ],
   },
   {
@@ -27,23 +43,23 @@ export const PRESET_DECKS: PresetDeck[] = [
     cards: [
       'Volodymyr Zelenskyy', 'Ursula von der Leyen', 'Narendra Modi', 'Luiz Inácio Lula da Silva', 'Benjamin Netanyahu',
       'Joschka Fischer', 'Ai Weiwei', 'Alexei Navalny', 'Zivilgesellschaft', 'Boykott-Kampagne',
-      'Verzögerungsverfahren', 'Mark Zuckerberg', 'Oprah Winfrey'
+      'Verzögerungsverfahren', 'Bill Gates', 'Straßenmandat'
     ],
   },
   {
     name: 'Initiative Rush',
     cards: [
       'Emmanuel Macron', 'Giorgia Meloni', 'Ebrahim Raisi', 'Andrzej Duda', 'Anthony Albanese',
-      'King Charles III', 'Verzögerungsverfahren', 'Symbolpolitik', 'Opportunist', 'Shadow Lobbying',
-      'Whataboutism', 'Influencer-Kampagne', 'Tim Cook'
+      'King Charles III', 'Verzögerungsverfahren', 'Symbolpolitik', 'Opportunist', 'Think-tank',
+      'Whataboutism', 'Spin Doctor', 'Tim Cook'
     ],
   },
   {
     name: 'Media Control',
     cards: [
-      'Donald Trump', 'Vladimir Putin', 'Xi Jinping', 'Mohammed bin Salman', 'Recep Tayyip Erdoğan',
+      'Donald Trump', 'Vladimir Putin', 'Xi Jinping', 'Mohammed bin Salman', 'King Charles III',
       'Pedro Sánchez', 'Oprah Winfrey', 'Algorithmischer Diskurs', 'Fake News-Kampagne', 'Cancel Culture',
-      'Verzögerungsverfahren', 'Shadow Lobbying'
+      'Mark Zuckerberg', 'Redaktionskonferenz'
     ],
   },
   {
@@ -59,14 +75,14 @@ export const PRESET_DECKS: PresetDeck[] = [
     cards: [
       'Colin Powell', 'Condoleezza Rice', 'Donald Rumsfeld', 'Sergey Lavrov', 'Wolfgang Schäuble',
       'Justin Trudeau', 'Maulwurf', 'Tunnelvision', 'Cyber-Attacke', 'Deepfake-Skandal',
-      'Parlament geschlossen', 'Oppositionsblockade'
+      'Parlament geschlossen', 'Oppositionsblockade', 'Aufsichtsmandat'
     ],
   },
   {
     name: 'Reform Coalition',
     cards: [
       'Friedrich Merz', 'Pedro Sánchez', 'Keir Starmer', 'Otto Schily', 'Henry Paulson',
-      'Johannes Rau', 'Bill Gates', 'Jennifer Doudna', 'Anthony Fauci', 'Milchglas Transparenz',
+      'Johannes Rau', 'Bill Gates', 'Jennifer Doudna', 'Anthony Fauci', 'Alternative Fakten',
       'Partei-Offensive', 'Whistleblower', 'Vladimir Putin'
     ],
   },
@@ -75,15 +91,15 @@ export const PRESET_DECKS: PresetDeck[] = [
     cards: [
       'Karl Rove', 'Robert Gates', 'Shigeru Ishiba', 'Tedros Adhanom Ghebreyesus', 'Tom Ridge',
       'John Ashcroft', 'Edward Snowden', 'Julian Assange', 'Yuval Noah Harari', 'Noam Chomsky',
-      'Skandalspirale', 'Scandal Spiral', 'Xi Jinping', 'Elon Musk'
+      'Think-tank', 'Bill Gates', 'Sam Altman', 'Xi Jinping', 'Elon Musk'
     ],
   },
   {
     name: 'Grassroots Surge',
     cards: [
       'Heidemarie Wieczorek-Zeul', 'Renate Künast', 'Rudolf Scharping', 'Erhard Eppler', 'Edelgard Bulmahn',
-      'Annette Schavan', 'Greta Thunberg', 'Malala Yousafzai', 'Grassroots-Widerstand', 'Massenproteste',
-      'Zivilgesellschaft', 'Vladimir Putin', 'Xi Jinping', 'Sam Altman'
+      'Annette Schavan', 'Greta Thunberg', 'Malala Yousafzai', 'Alexei Navalny', 'Grassroots-Widerstand',
+      'Massenproteste', 'Zivilgesellschaft', 'Straßenmandat', 'Xi Jinping', 'Bill Gates'
     ],
   },
   {
@@ -91,7 +107,7 @@ export const PRESET_DECKS: PresetDeck[] = [
     cards: [
       'Hans Apel', 'Georg Leber', 'Franz Josef Jung', 'Peter Struck', 'Gerhart Baum',
       'Alberto Gonzales', 'Gautam Adani', 'Alisher Usmanov', 'Jack Ma', 'Zhang Yiming',
-      'Bestechungsskandal 2.0', 'Konzernfreundlicher Algorithmus', 'Vladimir Putin'
+      'Bestechungsskandal 2.0', 'Konzernfreundlicher Algorithmus', 'Milchglas Transparenz', 'Vladimir Putin'
     ],
   },
   {
@@ -107,10 +123,10 @@ export const PRESET_DECKS: PresetDeck[] = [
     cards: [
       'Colin Powell', 'Condoleezza Rice', 'Donald Rumsfeld', 'Christine Lagarde', 'Justin Trudeau',
       'King Charles III', 'Satire-Show', 'Strategische Enthüllung', 'Jeff Bezos', 'Alisher Usmanov',
-      'Shadow Lobbying', 'Whataboutism'
+      'Shadow Lobbying', 'Whataboutism', 'Skandalspirale', 'Scandal Spiral'
     ],
   },
-];
+].map(withChampionMeta);
 
 export function presetToBuilderEntries(preset: PresetDeck, warn?: (msg: string) => void): BuilderEntry[] {
   const entries: BuilderEntry[] = [];

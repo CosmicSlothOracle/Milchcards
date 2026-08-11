@@ -123,7 +123,7 @@ export const CARDS: CardDef[] = [
   T('trap.lobby_leak', 'Lobby Leak', ['Trap','Discard'], 4, 'trap.lobby_leak.force_discard_on_ngo'),
   I('corruption.mole', 'Maulwurf', ['Corruption','Dice','Control'], 4, 'corruption.mole.steal_weakest_gov'),
   T('trap.scandal_spiral', 'Scandal Spiral', ['Trap','Cancel'], 5, 'trap.scandal_spiral.cancel_one_of_two'),
-  I('init.tunnel_vision', 'Tunnelvision', ['Control','Dice','Dauerhaft'], 2, 'init.tunnel_vision.gov_probe_system'),
+  I('init.tunnel_vision', 'Tunnelvision', ['Control','Dauerhaft'], 2, 'init.tunnel_vision.gov_probe_system'),
   T('trap.satire_show', 'Satire Show', ['Trap','Debuff'], 4, 'trap.satire_show.minus2_enemy_gov'),
 ];
 

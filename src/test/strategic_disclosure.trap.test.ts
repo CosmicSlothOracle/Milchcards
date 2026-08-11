@@ -27,7 +27,7 @@ function createTestState(): GameState {
 }
 
 describe('Strategic Disclosure trap', () => {
-  test('deactivates played government if projected total influence >= opponent', () => {
+  test('returns played government to hand if projected total influence >= opponent', () => {
     const state = createTestState();
     const trapSetter: Player = 1;
     const playedBy: Player = 2;
@@ -35,20 +35,21 @@ describe('Strategic Disclosure trap', () => {
     // Prepare board: P1 has total influence 5
     const p1Pol = makePolInstance(Pols[0]);
     (p1Pol as any).influence = 5;
+    (p1Pol as any).corruption = 1;
+    (p1Pol as any).corruptionStart = 1;
     p1Pol.uid = 1111;
     state.board[1].aussen.push(p1Pol);
 
     // Trap set by P1
     registerTrap(state, trapSetter, 'trap.strategic_disclosure.return_gov');
 
-    // Opponent plays a government card with influence 3 -> projected 3 + existing 0 = 3
+    // Opponent plays a government card with influence 5 → ties P1 → bounce
     const polDef = Pols.find(p => p.name === 'Joschka Fischer') || Pols[0];
     const govCard = makePolInstance(polDef!);
     govCard.uid = 2222;
     govCard.influence = 5;
     state.board[playedBy].aussen.push(govCard);
 
-    // Apply traps
     applyTrapsOnCardPlayed(state, playedBy, govCard, (e) => {
       state._effectQueue = state._effectQueue || [];
       state._effectQueue.push(e);
@@ -56,9 +57,10 @@ describe('Strategic Disclosure trap', () => {
 
     resolveQueue(state, [...(state._effectQueue || [])]);
 
-    const target = state.board[playedBy].aussen.find(c => c.uid === 2222) as any;
-    expect(target).toBeDefined();
-    expect(target.deactivated).toBe(true);
+    expect(state.board[playedBy].aussen.find(c => c.uid === 2222)).toBeUndefined();
+    expect(state.hands[playedBy].some(c => c.uid === 2222)).toBe(true);
+    // Blowback: discloser's strongest gov gains corruption
+    expect(Number((state.board[1].aussen[0] as any).corruption)).toBeGreaterThanOrEqual(2);
   });
 
   test('does not trigger when projected influence < opponent', () => {
@@ -89,8 +91,6 @@ describe('Strategic Disclosure trap', () => {
 
     const target = state.board[playedBy].aussen.find(c => c.uid === 4444) as any;
     expect(target).toBeDefined();
-    expect(target.deactivated).not.toBe(true);
+    expect(state.hands[playedBy].some(c => c.uid === 4444)).toBe(false);
   });
 });
-
-

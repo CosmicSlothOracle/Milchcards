@@ -45,6 +45,9 @@ export function startOfTurn(state: GameState, p: Player) {
   // Corruption: reset per-turn pass/ability context for this player
   (f as any).hushMoneySpent = 0;
   (f as any).passHandSize = undefined;
+  (f as any).auraTaxThisTurn = 0;
+  (f as any).technocracyNumericBonus = 0;
+  // technocracyInitiativeUsed resets each round (not each turn) — clear on round start elsewhere
   (f as any).cheneyInterventionCorruption = false;
   (f as any).lavrovNjetAvailable = false;
   // Note: purgeTargetDelta / purgeRollBonus / corruptionReductionBlocked persist
@@ -56,6 +59,13 @@ export function startOfTurn(state: GameState, p: Player) {
   // Oppositionsblockade / Parlament geschlossen end at start of this player's turn
   f.initiativesLocked = false;
   f.cannotPlayMoreGovernment = false;
+  f.koalitionOnPlayFiredThisTurn = false;
+  f.strongestGovBuffGainThisTurn = 0;
+  f.aufsichtFiredThisTurn = false;
+  f.strassenmandatBuffThisTurn = 0;
+  f.strassenmandatApUsed = false;
+  // Deepfake-Skandal: transfer lock ends at start of the affected player's turn
+  f.influenceTransferBlocked = false;
   // Simplified AP system: No initiative-specific bonuses
 
   // Helper to consume double aura flag once

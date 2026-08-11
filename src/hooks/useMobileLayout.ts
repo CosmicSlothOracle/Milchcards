@@ -50,4 +50,5 @@ export function useMobileLayout(): MobileLayout {
 
 /** Vertical space reserved for the compact fixed HUD bars on mobile (px). */
 export const MOBILE_HUD_TOP = 48;
-export const MOBILE_HUD_BOTTOM = 56;
+/** Bottom bar must fit Anführer portrait (72) + caption + Zug-beenden + padding. */
+export const MOBILE_HUD_BOTTOM = 148;

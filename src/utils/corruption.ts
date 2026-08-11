@@ -2,18 +2,17 @@
  * Corruption system — second economy on government cards, resolved at the pass button.
  *
  * - Every government card carries `corruption` (0–6) with a lore floor (`corruptionStart`).
- * - Corruption grants influence (turn-start temp buff) and unlocks active abilities (≥3),
- *   but when both players pass, every corrupt government must survive a W6 purge check
- *   before round scoring. Failed cards are removed from board and score.
- * - Purge target = corruption + tier + modifiers, clamped to 5. Corruption 6 auto-fails
- *   unless a shield/protection is consumed.
+ * - Corruption grants influence (turn-start temp buff) and unlocks active abilities (≥3).
+ * - When both players pass, every corrupt government is audited deterministically
+ *   (no W6) before round scoring. Audit stage = corruption + tier ± modifiers.
+ *   Outcomes: 0–2 safe · 3–4 scandal (lose bonus, −1 influence) · 5–6 removal
+ *   (stage 5 avertible by shield or hush money → scandal; stage 6 by shield → scandal).
  * - AP stays a separate economy (soft coupling): unspent AP at pass time acts as
- *   "hush money" (purge target −1 each, max 2) but corruption never generates AP.
+ *   "hush money" (audit stage −1 each, max 2) but corruption never generates AP.
  */
 
 import { GameState, Player, PoliticianCard, Card } from '../types/game';
 import { EffectEvent } from '../types/effects';
-import { getGlobalRNG } from '../services/rng';
 import { consumeProtection, findActivePublicCard } from './cardClassification';
 
 function other(p: Player): Player { return p === 1 ? 2 : 1; }
@@ -209,7 +208,7 @@ export function applyCorruptionDelta(
       log(`🚫 Sergey Lavrov (Njet): Korruptionszuwachs auf ${card.name} annulliert (${source}).`);
       return 0;
     }
-    // Milchglas Transparenz: own gains −1 (min 0)
+    // Milchglas Transparenz: own gains −1 (min 0) — frost obscures how dirty you get
     if (hasPermanent(state, owner, 'Milchglas Transparenz')) {
       amt = Math.max(0, amt - 1);
       if (amt < amount) log(`🪟 Milchglas Transparenz: Korruptionszuwachs um 1 gedämpft (${source}).`);
@@ -226,6 +225,13 @@ export function applyCorruptionDelta(
     }
     if (amt <= 0) return 0;
   } else {
+    // Milchglas ambivalence: cleansing is also fogged — reductions dampened by 1
+    if (hasPermanent(state, owner, 'Milchglas Transparenz')) {
+      const beforeDamp = amt;
+      amt = Math.min(0, amt + 1);
+      if (amt !== beforeDamp) log(`🪟 Milchglas Transparenz: Korruptionsabbau um 1 gedämpft (${source}).`);
+      if (amt === 0) return 0;
+    }
     // Oppositionsblockade: reductions blocked
     if (flags?.corruptionReductionBlocked) {
       log(`⛔ Oppositionsblockade: P${owner} kann Korruption nicht senken (${card.name}).`);
@@ -297,103 +303,210 @@ export function applyCorruptionDelta(
 }
 
 // ============================================================
-// Purge check (heart of the system)
+// Deterministic audit (replaces W6 purge)
 // ============================================================
 
-export interface PurgeTargetInfo {
-  target: number;      // clamped roll target (roll < target → fail)
-  rollBonus: number;   // bonus added to the W6 roll
-  autoFail: boolean;   // corruption 6 → auto-fail unless protected
-  details: string[];   // human-readable modifier breakdown
+export type AuditOutcome = 'safe' | 'scandal' | 'remove';
+
+export interface AuditStageInfo {
+  /** Final audit stage 0–6 after modifiers */
+  stage: number;
+  /** Pre-clamp raw stage (for UI / debugging) */
+  rawStage: number;
+  autoFail: boolean;
+  details: string[];
+  outcome: AuditOutcome;
 }
 
-const PURGE_TARGET_CLAMP = 5;
+/** Cap for hush money AP → audit reduction. Diplomacy style raises this to 3. */
+export function getHushMoneyCap(state: GameState, owner: Player): number {
+  const style = (state as any).leaders?.[owner]?.styleId as string | undefined;
+  if (style === 'diplomatie') return 3;
+  return 2;
+}
 
-export function getPurgeTarget(state: GameState, card: PoliticianCard, owner: Player): PurgeTargetInfo {
+/** Bewegung style cannot spend hush money. */
+export function isHushMoneyAllowed(state: GameState, owner: Player): boolean {
+  const style = (state as any).leaders?.[owner]?.styleId as string | undefined;
+  return style !== 'bewegung';
+}
+
+/**
+ * Compute deterministic audit stage for a government card.
+ * Former roll bonuses are inverted into stage modifiers (Fauci −1 stage, Navalny +1, …).
+ */
+export function getAuditStage(state: GameState, card: PoliticianCard, owner: Player): AuditStageInfo {
   const corruption = getCorruption(card);
   const details: string[] = [];
-  let target = corruption + (card.T || 1);
+  let stage = corruption + (card.T || 1);
   details.push(`Korruption ${corruption} + Tier ${card.T || 1}`);
 
   const flags = state.effectFlags[owner] as any;
+  const leader = (state as any).leaders?.[owner];
+  const styleId = leader?.styleId as string | undefined;
 
   // Pass-context modifiers
   const handSize = Number(flags?.passHandSize ?? -1);
   if (handSize > 0 && !card._ignoreGreedyPass) {
-    target += 1;
+    stage += 1;
     details.push('gieriger Pass +1');
   } else if (handSize === 0) {
-    target -= 1;
+    stage -= 1;
     details.push('leere Hand −1');
   } else if (card._ignoreGreedyPass) {
     details.push('Alternative Wahrheit: gieriger Pass ignoriert');
   }
 
   if (card._corruptionTainted) {
-    target += 1;
+    stage += 1;
     details.push('korruptions-gebufft +1');
   }
   if (card.purgeMarked) {
-    target += 1;
+    stage += 1;
     details.push('Snowden-Markierung +1');
   }
   if (hasPermanent(state, owner, 'Milchglas Transparenz')) {
-    target -= 1;
+    stage -= 1;
     details.push('Milchglas Transparenz −1');
   }
-  const hush = Math.min(2, Number(flags?.hushMoneySpent || 0));
-  if (hush > 0) {
-    target -= hush;
-    details.push(`Schweigegeld −${hush}`);
+  if (hasPermanent(state, owner, 'Napoleon Komplex') && card.T === 1 && !(card as any).deactivated) {
+    const t1 = activeGovs(state, owner).filter(c => c.T === 1);
+    if (t1.length > 0) {
+      const strongest = t1.reduce((best, c) => {
+        const score = (c.influence || 0) + ((c as any).tempBuffs || 0) - ((c as any).tempDebuffs || 0);
+        const bestScore = (best.influence || 0) + ((best as any).tempBuffs || 0) - ((best as any).tempDebuffs || 0);
+        return score > bestScore ? c : best;
+      });
+      if (strongest.uid === card.uid) {
+        stage += 1;
+        details.push('Napoleon Komplex (Hybris) +1');
+      }
+    }
   }
+
+  const hushCap = getHushMoneyCap(state, owner);
+  const hushAllowed = isHushMoneyAllowed(state, owner);
+  const hush = hushAllowed ? Math.min(hushCap, Number(flags?.hushMoneySpent || 0)) : 0;
+  if (hush > 0) {
+    stage -= hush;
+    details.push(`Schweigegeld −${hush}`);
+  } else if (!hushAllowed && Number(flags?.hushMoneySpent || 0) > 0) {
+    details.push('Bewegung: Schweigegeld unwirksam');
+  }
+
   const delta = Number(flags?.purgeTargetDelta || 0);
   if (delta > 0) {
-    target -= delta;
+    stage -= delta;
     details.push(`Verzögerungsverfahren −${delta}`);
   }
-  // Koalitionszwang: tier-2 coalition covers for each other
   if (card.T === 2 && hasPermanent(state, owner, 'Koalitionszwang')) {
     const t2Count = activeGovs(state, owner).filter(c => c.T === 2).length;
     if (t2Count >= 2) {
-      target -= 1;
+      stage -= 1;
       details.push('Koalitionszwang −1');
     }
   }
-  // Oligarch trio: easy money, easy target
   if (oligarchTrioCount(state, owner) >= 2) {
-    target += 1;
+    stage += 1;
     details.push('Oligarchen-Trio +1');
   }
 
-  // Roll bonuses (equivalent to target reduction, but reads as "roll +1")
-  let rollBonus = 0;
+  // Former roll bonuses → stage reduction (same net effect as old W6 +bonus)
   if (hasActivePublic(state, owner, 'Anthony Fauci')) {
-    rollBonus += 1;
-    details.push('Fauci: Wurf +1');
+    stage -= 1;
+    details.push('Fauci: Stufe −1');
   }
   if (hasActivePublic(state, other(owner), 'Alexei Navalny')) {
-    rollBonus -= 1;
-    details.push('Navalny (Gegner): Wurf −1');
+    stage += 1;
+    details.push('Navalny (Gegner): Stufe +1');
   }
   if (hasPermanent(state, owner, 'Zivilgesellschaft') && corruption <= 1) {
-    rollBonus += 1;
-    details.push('Zivilgesellschaft: Wurf +1 (sauber)');
+    stage -= 1;
+    details.push('Zivilgesellschaft: Stufe −1 (sauber)');
   }
   const flatRollBonus = Number(flags?.purgeRollBonus || 0);
   if (flatRollBonus !== 0) {
-    rollBonus += flatRollBonus;
-    details.push(`Wurf-Bonus ${flatRollBonus > 0 ? '+' : ''}${flatRollBonus}`);
+    stage -= flatRollBonus;
+    details.push(`Audit-Bonus ${flatRollBonus > 0 ? '−' : '+'}${Math.abs(flatRollBonus)}`);
   }
 
-  const autoFail = corruption >= CORRUPTION_MAX;
-  target = Math.max(1, Math.min(PURGE_TARGET_CLAMP, target));
+  // Autokratie weakness: strongest own gov +1 audit
+  if (styleId === 'autokratie') {
+    const strongest = strongestOwnGov(state, owner);
+    if (strongest && strongest.uid === card.uid) {
+      stage += 1;
+      details.push('Autokratie (Hybris): Stufe +1');
+    }
+  }
 
-  return { target, rollBonus, autoFail, details };
+  // Schattenstaat weakness: own helpful audit modifiers are −1 weaker
+  // (applied as +1 if any own-side stage reduction was present beyond hush)
+  if (styleId === 'schattenstaat') {
+    const helpful = details.some(d =>
+      d.includes('Milchglas') || d.includes('Verzögerungsverfahren') ||
+      d.includes('Koalitionszwang') || d.includes('Fauci') || d.includes('Zivilgesellschaft') ||
+      d.includes('Audit-Bonus −')
+    );
+    if (helpful) {
+      stage += 1;
+      details.push('Schattenstaat: eigene Audit-Hilfe −1 schwächer');
+    }
+  }
+
+  // Champion active: Horst Köhler — per-card audit −2 this round
+  if ((card as any)._auditStageDelta) {
+    const d = Number((card as any)._auditStageDelta);
+    stage += d;
+    details.push(`Anführer-Effekt: Stufe ${d > 0 ? '+' : ''}${d}`);
+  }
+
+  const rawStage = stage;
+  const clamped = Math.max(0, Math.min(CORRUPTION_MAX, stage));
+  const autoFail = corruption >= CORRUPTION_MAX;
+
+  let outcome: AuditOutcome = 'safe';
+  if (autoFail || clamped >= 5) outcome = 'remove';
+  else if (clamped >= 3) outcome = 'scandal';
+
+  return { stage: clamped, rawStage, autoFail, details, outcome };
+}
+
+/**
+ * Compatibility shim: former purge "target" maps to audit stage.
+ * `rollBonus` is always 0 (no W6). `target` === stage for UI/tests.
+ */
+export interface PurgeTargetInfo {
+  target: number;
+  rollBonus: number;
+  autoFail: boolean;
+  details: string[];
+}
+
+export function getPurgeTarget(state: GameState, card: PoliticianCard, owner: Player): PurgeTargetInfo {
+  const info = getAuditStage(state, card, owner);
+  return {
+    target: info.stage,
+    rollBonus: 0,
+    autoFail: info.autoFail,
+    details: info.details,
+  };
 }
 
 export interface PurgeResult {
-  removed: { player: Player; card: PoliticianCard; roll: number | null; target: number }[];
-  survived: { player: Player; card: PoliticianCard; roll: number | null; target: number }[];
+  removed: { player: Player; card: PoliticianCard; roll: number | null; target: number; outcome?: AuditOutcome }[];
+  survived: { player: Player; card: PoliticianCard; roll: number | null; target: number; outcome?: AuditOutcome }[];
+}
+
+/** Apply scandal: strip corruption influence bonus for scoring + −1 influence. */
+export function applyAuditScandal(card: PoliticianCard, log: (msg: string) => void): void {
+  const corr = getCorruption(card);
+  const bonus = getCorruptionInfluenceBonus(corr);
+  if (bonus > 0) {
+    card.tempBuffs = Math.max(0, (card.tempBuffs || 0) - bonus);
+  }
+  card.tempDebuffs = (card.tempDebuffs || 0) + 1;
+  (card as any)._auditScandal = true;
+  log(`📰 Skandal: ${card.name} verliert Korruptionsbonus (−${bonus}) und −1 Einfluss für die Wertung.`);
 }
 
 export function applyPurgeGretaBonus(state: GameState, log: (msg: string) => void): void {
@@ -425,7 +538,7 @@ function findPurgeCard(state: GameState, player: Player, uid: number): Politicia
   return card && card.kind === 'pol' ? (card as PoliticianCard) : null;
 }
 
-/** Emit focus / dice-arm events for the current purge probe. Returns true if player must roll. */
+/** Emit focus events for the current audit stamp. Never waits for a W6. */
 export function presentPurgeProbe(state: GameState, log: (msg: string) => void): boolean {
   const pending = state.pendingPurge;
   if (!pending || pending.index >= pending.queue.length) return false;
@@ -435,9 +548,11 @@ export function presentPurgeProbe(state: GameState, log: (msg: string) => void):
     pending.index += 1;
     return presentPurgeProbe(state, log);
   }
-  const info = getPurgeTarget(state, card, entry.player);
+  const info = getAuditStage(state, card, entry.player);
   const corr = getCorruption(card);
-  log(`🎯 Säuberung: Prüfung von ${card.name} (P${entry.player}, K${corr}) — Ziel ${info.target}.`);
+  log(`🎯 Audit: ${card.name} (P${entry.player}, K${corr}) — Stufe ${info.stage} [${info.outcome}].`);
+
+  pending.awaitingRoll = false; // deterministic — auto-stamp advances via timer
 
   if (typeof window !== 'undefined') {
     try {
@@ -446,41 +561,36 @@ export function presentPurgeProbe(state: GameState, log: (msg: string) => void):
           player: entry.player,
           targetUid: card.uid,
           name: card.name,
-          target: info.target,
+          target: info.stage,
+          stage: info.stage,
+          outcome: info.outcome,
           autoFail: info.autoFail,
           corruption: corr,
         },
       }));
-      window.dispatchEvent(new CustomEvent('pc:corruption_roll_started', {
-        detail: { actor: entry.player, targetUid: card.uid, type: 'purge', autoFail: info.autoFail },
+      window.dispatchEvent(new CustomEvent('pc:audit_preview_changed', {
+        detail: {
+          player: entry.player,
+          targetUid: card.uid,
+          stage: info.stage,
+          outcome: info.outcome,
+          details: info.details,
+        },
       }));
     } catch { /* UI only */ }
   }
-
-  if (info.autoFail) {
-    pending.awaitingRoll = false;
-    return false; // caller should auto-resolve after focus beat
-  }
-  pending.awaitingRoll = true;
-  if (typeof window !== 'undefined') {
-    try {
-      window.dispatchEvent(new CustomEvent('pc:purge_await_roll', {
-        detail: { player: entry.player, targetUid: card.uid, target: info.target, name: card.name },
-      }));
-    } catch { /* UI only */ }
-  }
-  return true;
+  return false;
 }
 
 /**
- * Resolve the current purge probe. Pass `rawRoll` (1–6) for player rolls;
- * omit for auto-fail / engine RNG (sync tests).
+ * Resolve the current audit stamp deterministically (no W6).
+ * `opts.rawRoll` is ignored — kept for call-site compatibility.
  * Returns 'await_next' | 'done'.
  */
 export function resolveCurrentPurgeProbe(
   state: GameState,
   log: (msg: string) => void,
-  opts?: { rawRoll?: number }
+  _opts?: { rawRoll?: number }
 ): 'await_next' | 'done' {
   const pending = state.pendingPurge;
   if (!pending || pending.index >= pending.queue.length) {
@@ -495,51 +605,55 @@ export function resolveCurrentPurgeProbe(
     return pending.index >= pending.queue.length ? 'done' : 'await_next';
   }
 
-  const info = getPurgeTarget(state, card, entry.player);
+  const info = getAuditStage(state, card, entry.player);
   const corr = getCorruption(card);
   const p = entry.player;
+  const hushSpent = Number((state.effectFlags[p] as any)?.hushMoneySpent || 0);
 
-  if (info.autoFail) {
-    if (consumeProtection(card, state.shields as Set<number> | undefined)) {
-      log(`🛡️ Säuberung: ${card.name} (K${corr}) Auto-Fail — Schutz verbraucht, überlebt.`);
-      pending.survived.push({ player: p, card, roll: null, target: info.target });
-      dispatchPurgeVisual(p, card, null, info.target, true, 'auto-fail-shielded');
-    } else {
-      removeFromBoard(state, p, card);
-      log(`💀 Säuberung: ${card.name} (K${corr}) Absolut korrupt — Auto-Fail, vom Feld/Wertung entfernt.`);
-      pending.removed.push({ player: p, card, roll: null, target: info.target });
-      dispatchPurgeVisual(p, card, null, info.target, false, 'auto-fail');
+  let outcome = info.outcome;
+
+  // Stage 5–6 removal can be averted → scandal
+  if (outcome === 'remove') {
+    const shielded = consumeProtection(card, state.shields as Set<number> | undefined);
+    const hushSaves = info.stage === 5 && hushSpent > 0 && isHushMoneyAllowed(state, p);
+    if (shielded || hushSaves) {
+      const reason = shielded ? 'Schutz verbraucht' : 'Schweigegeld mildert';
+      log(`🛡️ Audit: ${card.name} (Stufe ${info.stage}) — ${reason}, Skandal statt Entfernung.`);
+      outcome = 'scandal';
     }
+  }
+
+  log(
+    `📋 Audit P${p}: ${card.name} (K${corr}, Tier ${card.T}) — ` +
+    `Stufe ${info.stage} [${info.details.join(', ')}] → ` +
+    `${outcome === 'safe' ? 'GEPRÜFT' : outcome === 'scandal' ? 'SKANDAL' : 'ENTFERNT'}.`
+  );
+
+  if (outcome === 'remove') {
+    removeFromBoard(state, p, card);
+    pending.removed.push({ player: p, card, roll: null, target: info.stage, outcome });
+    dispatchPurgeVisual(p, card, null, info.stage, false, 'audit-remove');
+  } else if (outcome === 'scandal') {
+    applyAuditScandal(card, log);
+    pending.survived.push({ player: p, card, roll: null, target: info.stage, outcome });
+    dispatchPurgeVisual(p, card, null, info.stage, true, 'audit-scandal');
   } else {
-    const rng = getGlobalRNG();
-    const raw = opts?.rawRoll != null ? opts.rawRoll : (1 + rng.randomInt(6));
-    const roll = raw + info.rollBonus;
-    const survived = roll >= info.target;
-    const bonusTxt = info.rollBonus !== 0 ? ` (${raw}${info.rollBonus > 0 ? '+' : ''}${info.rollBonus})` : '';
-    log(
-      `🎲 Säuberung P${p}: ${card.name} (K${corr}, Tier ${card.T}) — ` +
-      `Ziel ${info.target} [${info.details.join(', ')}], W6=${raw}${bonusTxt} → ` +
-      `${survived ? 'ÜBERLEBT' : 'ENTFERNT'}.`
-    );
+    pending.survived.push({ player: p, card, roll: null, target: info.stage, outcome });
+    dispatchPurgeVisual(p, card, null, info.stage, true, 'audit-safe');
+  }
 
-    if (typeof window !== 'undefined') {
-      try {
-        window.dispatchEvent(new CustomEvent('pc:engine_dice_result', {
-          detail: { roll: raw, player: p, targetUid: card.uid, purge: true, target: info.target, survived },
-        }));
-      } catch { /* UI only */ }
-    }
-    dispatchPurgeVisual(p, card, roll, info.target, survived, 'roll');
-
-    if (survived) {
-      pending.survived.push({ player: p, card, roll, target: info.target });
-    } else if (consumeProtection(card, state.shields as Set<number> | undefined)) {
-      log(`🛡️ ${card.name}: Wurf gescheitert, aber Schutz verbraucht — überlebt.`);
-      pending.survived.push({ player: p, card, roll, target: info.target });
-    } else {
-      removeFromBoard(state, p, card);
-      pending.removed.push({ player: p, card, roll, target: info.target });
-    }
+  if (typeof window !== 'undefined') {
+    try {
+      window.dispatchEvent(new CustomEvent('pc:audit_applied', {
+        detail: {
+          player: p,
+          targetUid: card.uid,
+          name: card.name,
+          stage: info.stage,
+          outcome,
+        },
+      }));
+    } catch { /* UI only */ }
   }
 
   pending.index += 1;
@@ -552,19 +666,20 @@ export function resolveCurrentPurgeProbe(
 
 function finalizePurgeLog(state: GameState, pending: NonNullable<GameState['pendingPurge']>, log: (msg: string) => void): void {
   if (pending.removed.length === 0 && pending.survived.length === 0) {
-    log('✅ Säuberung: keine korrupten Karten auf dem Feld.');
+    log('✅ Audit: keine korrupten Karten auf dem Feld.');
   } else if (pending.removed.length === 0) {
-    log(`✅ Säuberung: alle ${pending.survived.length} geprüften Regierungskarten überstehen das Audit.`);
+    const scandals = pending.survived.filter(s => s.outcome === 'scandal').length;
+    log(`✅ Audit: ${pending.survived.length} geprüft${scandals ? `, davon ${scandals} Skandal` : ''} — niemand entfernt.`);
   } else {
     const names = pending.removed.map(r => `${r.card.name} (P${r.player})`).join(', ');
-    log(`🧹 Säuberung: ${pending.removed.length} entfernt — ${names}. ${pending.survived.length} überlebt.`);
+    log(`🧹 Audit: ${pending.removed.length} entfernt — ${names}. ${pending.survived.length} bleiben.`);
   }
   if (typeof window !== 'undefined') {
     try {
       window.dispatchEvent(new CustomEvent('pc:purge_sequence_done', {
         detail: {
-          removed: pending.removed.map(r => ({ player: r.player, name: r.card.name, roll: r.roll, target: r.target })),
-          survived: pending.survived.map(r => ({ player: r.player, name: r.card.name, roll: r.roll, target: r.target })),
+          removed: pending.removed.map(r => ({ player: r.player, name: r.card.name, roll: r.roll, target: r.target, outcome: r.outcome })),
+          survived: pending.survived.map(r => ({ player: r.player, name: r.card.name, roll: r.roll, target: r.target, outcome: r.outcome })),
         },
       }));
     } catch { /* UI only */ }
@@ -572,13 +687,14 @@ function finalizePurgeLog(state: GameState, pending: NonNullable<GameState['pend
 }
 
 /**
- * Start interactive purge. Returns true if scoring must wait for player rolls.
- * False means purge finished synchronously (no candidates).
+ * Start interactive audit stamp sequence. Returns true if scoring must wait
+ * for timed stamps. False means finished synchronously (no candidates).
+ * Never waits for dice — awaitingRoll stays false so the UI timer advances.
  */
 export function beginInteractivePurge(state: GameState, log: (msg: string) => void): boolean {
   applyPurgeGretaBonus(state, log);
   const queue = collectPurgeQueue(state);
-  log('🎲 SÄUBERUNG (Pass): Jede korrupte Regierungskarte wird mit W6 geprüft — vor der Punkteauswertung.');
+  log('📋 AUDIT (Pass): Jede korrupte Regierungskarte wird deterministisch geprüft — vor der Punkteauswertung.');
 
   if (typeof window !== 'undefined') {
     try {
@@ -587,7 +703,7 @@ export function beginInteractivePurge(state: GameState, log: (msg: string) => vo
   }
 
   if (queue.length === 0) {
-    log('✅ Säuberung: keine korrupten Karten auf dem Feld.');
+    log('✅ Audit: keine korrupten Karten auf dem Feld.');
     state.pendingPurge = undefined;
     if (typeof window !== 'undefined') {
       try {
@@ -601,7 +717,7 @@ export function beginInteractivePurge(state: GameState, log: (msg: string) => vo
 
   for (const p of [1, 2] as const) {
     const has = queue.some(q => q.player === p);
-    if (!has) log(`🎲 Säuberung P${p}: keine korrupten Regierungskarten — übersprungen.`);
+    if (!has) log(`📋 Audit P${p}: keine korrupten Regierungskarten — übersprungen.`);
   }
 
   state.pendingPurge = {
@@ -616,19 +732,17 @@ export function beginInteractivePurge(state: GameState, log: (msg: string) => vo
 }
 
 /**
- * Run the full purge sequence synchronously (tests / legacy).
- * Live play uses beginInteractivePurge + player rolls instead.
+ * Run the full audit sequence synchronously (tests / AI / CORRUPTION_PURGE_CHECK).
+ * Live play uses beginInteractivePurge + timed stamp advances.
  */
 export function runPurgeSequence(state: GameState, log: (msg: string) => void): PurgeResult {
   const started = beginInteractivePurge(state, log);
   if (!started || !state.pendingPurge) {
     return { removed: [], survived: [] };
   }
-  // Auto-resolve every probe (including ones that would await a player roll)
   while (state.pendingPurge && state.pendingPurge.index < state.pendingPurge.queue.length) {
     const status = resolveCurrentPurgeProbe(state, log);
     if (status === 'done') break;
-    // present next for logging/focus but resolve immediately
     presentPurgeProbe(state, log);
   }
   const pending = state.pendingPurge;

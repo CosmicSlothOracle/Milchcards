@@ -4,14 +4,15 @@ Regierungskarten (Government) — mit Korruptionswerten
 Count: 63
 
 Korruptionssystem: Jede Regierung startet mit einem Lore-Wert (1–3),
-steigt/fällt durch Effekte (0–6). Bei Pass beider Spieler: W6-Säuberung
-vor der Wertung (Ziel = Korruption + Tier, Clamp 5; Korruption 6 = Auto-Fail).
+steigt/fällt durch Effekte (0–6). Bei Pass beider Spieler: deterministisches
+Audit vor der Wertung (Stufe = Korruption + Tier ± Mods, Clamp 0–6;
+0–2 sicher / 3–4 Skandal / 5–6 Entfernung). Details: 06_corruption_system.txt.
 Ab Korruption 3: aktive Fähigkeit freigeschaltet (1 AP).
 
 - Vladimir Putin [Start-Korruption 3, Tier 2, Einfluss 10] Aktiv (≥3): Vertikale der Macht — deaktiviere schwächste gegnerische Regierung; Selbst +1 Korruption.
 - Xi Jinping [Start-Korruption 3, Tier 2, Einfluss 10] Aktiv (≥3): Anti-Korruptions-Kampagne — transferiere 2 Korruption auf ein Ziel.
 - Recep Tayyip Erdoğan [Start-Korruption 3, Tier 2, Einfluss 10] Aktiv (≥3): Dekret — annulliere gegnerische Dauerhaft-Aura; Selbst +1 Korruption.
-- Justin Trudeau [Start-Korruption 2, Tier 2, Einfluss 8] Aktiv (≥3): Sunny Ways — −1 Korruption; nächster Säuberungswurf +1.
+- Justin Trudeau [Start-Korruption 2, Tier 2, Einfluss 8] Aktiv (≥3): Sunny Ways — −1 Korruption; nächstes Audit −1 Stufe.
 - Volodymyr Zelenskyy [Start-Korruption 2, Tier 2, Einfluss 9]
 - Ursula von der Leyen [Start-Korruption 2, Tier 2, Einfluss 9]
 - Narendra Modi [Start-Korruption 2, Tier 2, Einfluss 9]

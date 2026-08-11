@@ -297,66 +297,18 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     };
   }, []);
 
-  // Tunnelvision probe mode
+  // Tunnelvision Freigabe (deterministic choice — GameBoard owns the modal)
   const tunnelvisionProbeActorRef = useRef<Player | null>(null);
   useEffect(() => {
     const onEnterTunnelvisionProbe = (ev: any) => {
       try {
         const actor = ev.detail?.player as Player | undefined;
-        const targetUid = ev.detail?.targetUid as number | undefined;
-        const requiredRoll = ev.detail?.requiredRoll as number | undefined;
-        const influence = ev.detail?.influence as number | undefined;
-        console.log('🔥 GAMECANVAS RECEIVED pc:tunnelvision_probe_start - Actor:', actor, 'Target:', targetUid, 'Required:', requiredRoll, 'Influence:', influence);
         tunnelvisionProbeActorRef.current = actor ?? null;
-        console.log('🔥 SET tunnelvisionProbeActorRef.current:', tunnelvisionProbeActorRef.current);
-
-        // Create modal for tunnelvision probe
+        // Clear any legacy canvas modal; GameBoard renders the choice UI.
         const el = document.getElementById('pc-modal-root');
-        if (!el) return;
-
-        el.innerHTML = `<div style="display:flex;flex-direction:column;gap:8px;min-width:280px;">
-          <div style="font-weight:700">Tunnelvision — Regierungskarte Probe</div>
-          <div>Einfluss: <b>${influence || 'Unbekannt'}</b></div>
-          <div>Probe: W6 ≥ ${requiredRoll || 4} ${(influence || 0) >= 9 ? '(Einfluss 9+)' : '(Standard)'}</div>
-          <div style="font-size:12px;color:#666;">Bei Misserfolg bleibt die Karte in der Hand (1 AP wird abgezogen).</div>
-          <div style="display:flex;gap:8px;justify-content:flex-end;">
-            <button id="pc-tunnelvision-roll" style="background:#2563eb;color:white;border:none;padding:6px 10px;border-radius:6px;cursor:pointer;">Würfeln</button>
-            <button id="pc-tunnelvision-cancel" style="background:#374151;color:white;border:none;padding:6px 10px;border-radius:6px;cursor:pointer;">Abbrechen</button>
-          </div>
-        </div>`;
-
-        // Add event listeners for buttons
-        const rollBtn = document.getElementById('pc-tunnelvision-roll');
-        const cancelBtn = document.getElementById('pc-tunnelvision-cancel');
-
-        if (rollBtn) {
-          rollBtn.onclick = () => {
-            try {
-              window.dispatchEvent(new CustomEvent('pc:tunnelvision_request_roll', {
-                detail: { player: actor, targetUid, requiredRoll, influence }
-              }));
-              el.innerHTML = '';
-            } catch (e) {
-              console.error('Error dispatching tunnelvision request roll:', e);
-            }
-          };
-        }
-
-        if (cancelBtn) {
-          cancelBtn.onclick = () => {
-            el.innerHTML = '';
-            // Cancel the probe - card stays in hand
-            try {
-              window.dispatchEvent(new CustomEvent('pc:tunnelvision_request_roll', {
-                detail: { player: actor, targetUid, requiredRoll, influence, cancel: true }
-              }));
-            } catch (e) {
-              console.error('Error canceling tunnelvision probe:', e);
-            }
-          };
-        }
+        if (el) el.innerHTML = '';
       } catch (e) {
-        console.error('🔥 ERROR in tunnelvision probe handler:', e);
+        console.error('🔥 ERROR in tunnelvision choice handler:', e);
       }
     };
 
@@ -1762,14 +1714,17 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       ctx.restore();
     }
 
-    // Draw tunnelvision probe mode indicator
-    const tunnelvisionActive = !!((gameState as any).pendingAbilitySelect && (gameState as any).pendingAbilitySelect.type === 'tunnelvision_probe');
+    // Draw tunnelvision Freigabe mode indicator
+    const tunnelvisionActive = !!((gameState as any).pendingAbilitySelect && (
+      (gameState as any).pendingAbilitySelect.type === 'tunnelvision_choice' ||
+      (gameState as any).pendingAbilitySelect.type === 'tunnelvision_probe'
+    ));
     if (tunnelvisionActive) {
       ctx.save();
-      ctx.fillStyle = 'rgba(75, 0, 130, 0.8)'; // Purple color for tunnelvision
+      ctx.fillStyle = 'rgba(75, 0, 130, 0.8)';
       ctx.font = 'bold 32px sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('🔮 TUNNELVISION PROBE ACTIVE 🔮', 960, 100);
+      ctx.fillText('TUNNELVISION — FREIGABE', 960, 100);
 
       ctx.fillStyle = 'rgba(255, 255, 0, 0.9)';
       ctx.font = 'bold 24px sans-serif';

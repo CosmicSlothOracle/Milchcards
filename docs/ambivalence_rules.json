@@ -1,0 +1,608 @@
+{
+  "generatedAt": "2026-08-11T06:43:00.000Z",
+  "method": "Static rule catalog derived from scoring auras, queue buffs, hooks, and known conflict pairs. AV = Receiver/Emitter/Conflict intensity.",
+  "weights": {
+    "receiver": 0.4,
+    "emitter": 0.4,
+    "conflict": 0.2
+  },
+  "bands": {
+    "solo": [0, 15],
+    "interactive": [16, 40],
+    "engineCore": [41, 60],
+    "unstable": [61, 80],
+    "toxic": [81, 100]
+  },
+  "rules": [
+    {
+      "id": "koalitionszwang_t2_aura",
+      "emitter": "Koalitionszwang",
+      "receivers": ["Tier-2 Government"],
+      "polarity": "positive",
+      "timing": "continuous",
+      "stackGroup": "permanent_aura",
+      "maxDelta": 1,
+      "condition": ">=2 Tier-2 governments on board",
+      "conflictWith": []
+    },
+    {
+      "id": "koalitionszwang_onplay",
+      "emitter": "Koalitionszwang",
+      "receivers": ["Strongest Government"],
+      "polarity": "positive",
+      "timing": "onPlay",
+      "stackGroup": "koalition",
+      "maxDelta": 2,
+      "condition": "matching opponent influence + activist/denker cards",
+      "conflictWith": []
+    },
+    {
+      "id": "napoleon_strongest_t1",
+      "emitter": "Napoleon Komplex",
+      "receivers": ["Strongest Tier-1 Government"],
+      "polarity": "positive",
+      "timing": "continuous",
+      "stackGroup": "permanent_aura",
+      "maxDelta": 1,
+      "condition": "strongest active Tier-1",
+      "conflictWith": ["diplomat_transfer"]
+    },
+    {
+      "id": "zivilgesellschaft_movement",
+      "emitter": "Zivilgesellschaft",
+      "receivers": ["Strongest Government"],
+      "polarity": "positive",
+      "timing": "continuous",
+      "stackGroup": "permanent_aura",
+      "maxDelta": 2,
+      "condition": "per Movement on board (cap 2)",
+      "conflictWith": ["milchglas_no_ngo"]
+    },
+    {
+      "id": "zivilgesellschaft_ngo_ap",
+      "emitter": "Zivilgesellschaft",
+      "receivers": ["Owner"],
+      "polarity": "resource",
+      "timing": "onInitiative",
+      "stackGroup": "ap_engine",
+      "maxDelta": 1,
+      "condition": "NGO present on initiative activation",
+      "conflictWith": []
+    },
+    {
+      "id": "milchglas_no_ngo",
+      "emitter": "Milchglas Transparenz",
+      "receivers": ["Strongest Government"],
+      "polarity": "positive",
+      "timing": "continuous",
+      "stackGroup": "permanent_aura",
+      "maxDelta": 1,
+      "condition": "no NGO/Movement on own board",
+      "conflictWith": ["zivilgesellschaft_movement", "joschka_ngo"]
+    },
+    {
+      "id": "joschka_ngo",
+      "emitter": "Joschka Fischer",
+      "receivers": ["Joschka Fischer"],
+      "polarity": "positive",
+      "timing": "continuous",
+      "stackGroup": "permanent_aura",
+      "maxDelta": 1,
+      "condition": "NGO present",
+      "conflictWith": ["milchglas_no_ngo"]
+    },
+    {
+      "id": "strassenmandat_movement",
+      "emitter": "Straßenmandat",
+      "receivers": ["Strongest Government"],
+      "polarity": "positive",
+      "timing": "onPlay",
+      "stackGroup": "movement_payload",
+      "maxDelta": 2,
+      "condition": "Movement played (max +2/turn)",
+      "conflictWith": []
+    },
+    {
+      "id": "strassenmandat_ngo_ap",
+      "emitter": "Straßenmandat",
+      "receivers": ["Owner"],
+      "polarity": "resource",
+      "timing": "onPlay",
+      "stackGroup": "ap_engine",
+      "maxDelta": 1,
+      "condition": "NGO present once/turn",
+      "conflictWith": []
+    },
+    {
+      "id": "wirtschaftlicher_druck_oligarch",
+      "emitter": "Wirtschaftlicher Druck",
+      "receivers": ["Strongest Government"],
+      "polarity": "positive",
+      "timing": "onPlay",
+      "stackGroup": "oligarch_payload",
+      "maxDelta": 1,
+      "condition": "Oligarch played",
+      "conflictWith": []
+    },
+    {
+      "id": "konzernalgo_platform_draw",
+      "emitter": "Konzernfreundlicher Algorithmus",
+      "receivers": ["Owner"],
+      "polarity": "resource",
+      "timing": "onPlay",
+      "stackGroup": "draw_engine",
+      "maxDelta": 1,
+      "condition": "Platform played",
+      "conflictWith": []
+    },
+    {
+      "id": "konzernalgo_oligarch_capture",
+      "emitter": "Konzernfreundlicher Algorithmus",
+      "receivers": ["Strongest Government"],
+      "polarity": "positive",
+      "timing": "onPlay",
+      "stackGroup": "oligarch_payload",
+      "maxDelta": 1,
+      "condition": "Oligarch played while Platform present",
+      "conflictWith": []
+    },
+    {
+      "id": "think_tank_next_gov",
+      "emitter": "Think-tank",
+      "receivers": ["Next Government Played"],
+      "polarity": "positive",
+      "timing": "setup",
+      "stackGroup": "setup_payload",
+      "maxDelta": 2,
+      "condition": "next gov played gets +2/-1 corruption",
+      "conflictWith": []
+    },
+    {
+      "id": "spin_doctor_strongest",
+      "emitter": "Spin Doctor",
+      "receivers": ["Strongest Government"],
+      "polarity": "positive",
+      "timing": "onPlay",
+      "stackGroup": "temp_buff",
+      "maxDelta": 2,
+      "condition": "corruption >=3 gives +2 instead of +1",
+      "conflictWith": []
+    },
+    {
+      "id": "shadow_lobbying_oligarch",
+      "emitter": "Shadow Lobbying",
+      "receivers": ["Strongest Government"],
+      "polarity": "positive",
+      "timing": "onPlay",
+      "stackGroup": "oligarch_payload",
+      "maxDelta": 3,
+      "condition": "per Oligarch on board (max 3)",
+      "conflictWith": []
+    },
+    {
+      "id": "redaktionskonferenz_media",
+      "emitter": "Redaktionskonferenz",
+      "receivers": ["Strongest Government"],
+      "polarity": "positive",
+      "timing": "onPlay",
+      "stackGroup": "temp_buff",
+      "maxDelta": 2,
+      "condition": "if Media/Platform present; else draw 1",
+      "conflictWith": []
+    },
+    {
+      "id": "doudna_science_init",
+      "emitter": "Jennifer Doudna",
+      "receivers": ["Strongest Government"],
+      "polarity": "positive",
+      "timing": "onInitiative",
+      "stackGroup": "temp_buff",
+      "maxDelta": 1,
+      "condition": "any initiative activation",
+      "conflictWith": []
+    },
+    {
+      "id": "fauci_health_init",
+      "emitter": "Anthony Fauci",
+      "receivers": ["Strongest Government"],
+      "polarity": "positive",
+      "timing": "onInitiative",
+      "stackGroup": "temp_buff",
+      "maxDelta": 1,
+      "condition": "any initiative activation",
+      "conflictWith": []
+    },
+    {
+      "id": "chomsky_military_penalty",
+      "emitter": "Noam Chomsky",
+      "receivers": ["Activator Strongest Government"],
+      "polarity": "negative",
+      "timing": "onInitiative",
+      "stackGroup": "temp_debuff",
+      "maxDelta": -1,
+      "condition": "opponent initiative activation",
+      "conflictWith": []
+    },
+    {
+      "id": "ai_weiwei_ap_steal",
+      "emitter": "Ai Weiwei",
+      "receivers": ["Opponent"],
+      "polarity": "resource",
+      "timing": "onInitiative",
+      "stackGroup": "ap_engine",
+      "maxDelta": -1,
+      "condition": "opponent initiative activation (once/turn)",
+      "conflictWith": []
+    },
+    {
+      "id": "mark_zuckerberg_ap_steal",
+      "emitter": "Mark Zuckerberg",
+      "receivers": ["Opponent"],
+      "polarity": "resource",
+      "timing": "onInitiative",
+      "stackGroup": "ap_engine",
+      "maxDelta": -1,
+      "condition": "opponent initiative activation (once/turn)",
+      "conflictWith": []
+    },
+    {
+      "id": "buffett_aura_strongest",
+      "emitter": "Warren Buffett",
+      "receivers": ["Strongest Government"],
+      "polarity": "positive",
+      "timing": "startOfTurn",
+      "stackGroup": "temp_buff",
+      "maxDelta": 1,
+      "condition": "if no government played last turn",
+      "conflictWith": ["gov_curve"]
+    },
+    {
+      "id": "buffett_draw_ap",
+      "emitter": "Warren Buffett",
+      "receivers": ["Owner"],
+      "polarity": "resource",
+      "timing": "onPlay",
+      "stackGroup": "draw_ap",
+      "maxDelta": 2,
+      "condition": "draw 2 + AP on play",
+      "conflictWith": []
+    },
+    {
+      "id": "corruption_turn_start_buff",
+      "emitter": "Corruption System",
+      "receivers": ["All Governments"],
+      "polarity": "positive",
+      "timing": "startOfTurn",
+      "stackGroup": "corruption_payload",
+      "maxDelta": 4,
+      "condition": "corruption band 0-1:+0, 2:+1, 3:+2, 4-5:+3, 6:+4",
+      "conflictWith": []
+    },
+    {
+      "id": "oligarch_trio_buff",
+      "emitter": "Oligarch Trio (Adani/Usmanov/Abramovich)",
+      "receivers": ["Strongest Government"],
+      "polarity": "positive",
+      "timing": "startOfTurn",
+      "stackGroup": "corruption_payload",
+      "maxDelta": 3,
+      "condition": "+floor(totalCorr/2) capped 3 on strongest",
+      "conflictWith": []
+    },
+    {
+      "id": "algorithmischer_diskurs_debuff",
+      "emitter": "Algorithmischer Diskurs",
+      "receivers": ["Opponent Strongest Government"],
+      "polarity": "negative",
+      "timing": "onPlay",
+      "stackGroup": "temp_debuff",
+      "maxDelta": -3,
+      "condition": "per opponent Platform/KI (max 3)",
+      "conflictWith": []
+    },
+    {
+      "id": "aufsichtsmandat_counter",
+      "emitter": "Aufsichtsmandat",
+      "receivers": ["Opponent Strongest Government"],
+      "polarity": "negative",
+      "timing": "reactive",
+      "stackGroup": "counter_stack",
+      "maxDelta": -1,
+      "condition": "when opponent strongest gains >=2 temp buff in one turn",
+      "conflictWith": []
+    },
+    {
+      "id": "whataboutism_reactivate",
+      "emitter": "Whataboutism",
+      "receivers": ["Deactivated Own Card"],
+      "polarity": "mixed",
+      "timing": "onPlay",
+      "stackGroup": "reactivate",
+      "maxDelta": -2,
+      "condition": "reactivate with -2 influence",
+      "conflictWith": []
+    },
+    {
+      "id": "partei_offensive_deactivate",
+      "emitter": "Partei-Offensive",
+      "receivers": ["Opponent Strongest Government"],
+      "polarity": "negative",
+      "timing": "onPlay",
+      "stackGroup": "hard_control",
+      "maxDelta": -999,
+      "condition": "deactivate strongest enemy gov",
+      "conflictWith": []
+    },
+    {
+      "id": "bestechungsskandal_steal",
+      "emitter": "Bestechungsskandal 2.0",
+      "receivers": ["Opponent Government"],
+      "polarity": "negative",
+      "timing": "onPlay",
+      "stackGroup": "steal",
+      "maxDelta": -999,
+      "condition": "W6 >= influence steals target",
+      "conflictWith": []
+    },
+    {
+      "id": "maulwurf_steal",
+      "emitter": "Maulwurf",
+      "receivers": ["Opponent Weakest Government"],
+      "polarity": "negative",
+      "timing": "onPlay",
+      "stackGroup": "steal",
+      "maxDelta": -999,
+      "condition": "W6 >= 4 steals weakest; fail returns to hand",
+      "conflictWith": []
+    },
+    {
+      "id": "jeff_bezos_removal",
+      "emitter": "Jeff Bezos",
+      "receivers": ["Opponent Oligarchs"],
+      "polarity": "negative",
+      "timing": "onPlay",
+      "stackGroup": "board_wipe",
+      "maxDelta": -999,
+      "condition": "remove all opponent oligarchs",
+      "conflictWith": []
+    },
+    {
+      "id": "tunnelvision_tax",
+      "emitter": "Tunnelvision",
+      "receivers": ["Opponent Government"],
+      "polarity": "negative",
+      "timing": "onPlay",
+      "stackGroup": "tax",
+      "maxDelta": -1,
+      "condition": "opponent gov play: +1 AP or +1 corruption (deterministic)",
+      "conflictWith": []
+    },
+    {
+      "id": "digitaler_wahlkampf_draw",
+      "emitter": "Digitaler Wahlkampf",
+      "receivers": ["Owner"],
+      "polarity": "resource",
+      "timing": "onPlay",
+      "stackGroup": "draw_engine",
+      "maxDelta": 2,
+      "condition": "draw 1 per media/platform (cap 2)",
+      "conflictWith": []
+    },
+    {
+      "id": "malala_ngo_draw",
+      "emitter": "Malala Yousafzai",
+      "receivers": ["Owner"],
+      "polarity": "resource",
+      "timing": "onPlay",
+      "stackGroup": "draw_engine",
+      "maxDelta": 1,
+      "condition": "NGO played draws 1",
+      "conflictWith": []
+    },
+    {
+      "id": "assange_ngo_draw",
+      "emitter": "Julian Assange",
+      "receivers": ["Owner"],
+      "polarity": "resource",
+      "timing": "onPlay",
+      "stackGroup": "draw_engine",
+      "maxDelta": 2,
+      "condition": "NGO played draws +1 (base 1)",
+      "conflictWith": []
+    },
+    {
+      "id": "bill_gates_ap_steal",
+      "emitter": "Bill Gates",
+      "receivers": ["Opponent"],
+      "polarity": "resource",
+      "timing": "onInitiative",
+      "stackGroup": "ap_engine",
+      "maxDelta": -1,
+      "condition": "opponent plays NGO/Think-tank (once/turn)",
+      "conflictWith": []
+    },
+    {
+      "id": "elon_oligarch_ap_draw",
+      "emitter": "Elon Musk",
+      "receivers": ["Opponent"],
+      "polarity": "resource",
+      "timing": "onPlay",
+      "stackGroup": "ap_engine",
+      "maxDelta": -1,
+      "condition": "opponent plays Oligarch or high-influence gov (once/turn)",
+      "conflictWith": []
+    },
+    {
+      "id": "oppositionsblockade_lock",
+      "emitter": "Oppositionsblockade",
+      "receivers": ["Opponent"],
+      "polarity": "negative",
+      "timing": "onPlay",
+      "stackGroup": "hard_control",
+      "maxDelta": -999,
+      "condition": "opponent cannot play initiatives until EOT",
+      "conflictWith": []
+    },
+    {
+      "id": "parlament_geschlossen_lock",
+      "emitter": "Parlament geschlossen",
+      "receivers": ["Opponent"],
+      "polarity": "negative",
+      "timing": "reactive",
+      "stackGroup": "hard_control",
+      "maxDelta": -999,
+      "condition": "after opponent plays >=2 govs: no more govs until next turn",
+      "conflictWith": []
+    },
+    {
+      "id": "cancel_culture_public",
+      "emitter": "Cancel Culture",
+      "receivers": ["Opponent Public"],
+      "polarity": "negative",
+      "timing": "reactive",
+      "stackGroup": "hard_control",
+      "maxDelta": -999,
+      "condition": "deactivate opponent public on play",
+      "conflictWith": []
+    },
+    {
+      "id": "cyber_attacke_destroy",
+      "emitter": "Cyber-Attacke",
+      "receivers": ["Opponent Platform"],
+      "polarity": "negative",
+      "timing": "reactive",
+      "stackGroup": "hard_control",
+      "maxDelta": -999,
+      "condition": "destroy opponent platform (permanent)",
+      "conflictWith": []
+    },
+    {
+      "id": "whistleblower_debuff",
+      "emitter": "Whistleblower",
+      "receivers": ["Opponent Next Government"],
+      "polarity": "negative",
+      "timing": "reactive",
+      "stackGroup": "temp_debuff",
+      "maxDelta": -2,
+      "condition": "next Tier-2 gov played gets -2",
+      "conflictWith": []
+    },
+    {
+      "id": "massenproteste_debuff",
+      "emitter": "Massenproteste",
+      "receivers": ["Opponent Governments"],
+      "polarity": "negative",
+      "timing": "reactive",
+      "stackGroup": "temp_debuff",
+      "maxDelta": -2,
+      "condition": "2nd gov played this turn gets -2 split",
+      "conflictWith": []
+    },
+    {
+      "id": "satire_show_debuff",
+      "emitter": "Satire-Show",
+      "receivers": ["Opponent Strongest Government"],
+      "polarity": "negative",
+      "timing": "reactive",
+      "stackGroup": "temp_debuff",
+      "maxDelta": -2,
+      "condition": "if actor trails in influence",
+      "conflictWith": []
+    },
+    {
+      "id": "alternative_fakten_dampen",
+      "emitter": "Alternative Fakten",
+      "receivers": ["Owner"],
+      "polarity": "defensive",
+      "timing": "reactive",
+      "stackGroup": "intervention_dampen",
+      "maxDelta": 1,
+      "condition": "enemy interventions -1 magnitude; nullify draws 1",
+      "conflictWith": []
+    },
+    {
+      "id": "opportunist_mirror",
+      "emitter": "Opportunist",
+      "receivers": ["Opportunist Owner"],
+      "polarity": "positive",
+      "timing": "reactive",
+      "stackGroup": "mirror",
+      "maxDelta": 3,
+      "condition": "mirror positive BUFF_STRONGEST_GOV once",
+      "conflictWith": []
+    }
+  ],
+  "conflictPairs": [
+    {
+      "id": "milchglas_watchdogs",
+      "cards": ["Milchglas Transparenz", "NGO/Movement"],
+      "penalty": 14,
+      "note": "Milchglas wants no NGO/movement; most activist decks self-destroy it"
+    },
+    {
+      "id": "buffett_gov_spam",
+      "cards": ["Warren Buffett", "Many Governments"],
+      "penalty": 5,
+      "note": "Buffett skip-gov aura fights heavy gov curves"
+    },
+    {
+      "id": "napoleon_diplomat_transfer",
+      "cards": ["Napoleon Komplex", "Diplomat"],
+      "penalty": 8,
+      "note": "Napoleon blocks transfer; diplomats waste value"
+    },
+    {
+      "id": "shadow_no_oligarch",
+      "cards": ["Shadow Lobbying", "No Oligarchs"],
+      "penalty": 14,
+      "note": "Shadow Lobbying starved without oligarchs"
+    },
+    {
+      "id": "digital_no_media",
+      "cards": ["Digitaler Wahlkampf", "No Media/Platform"],
+      "penalty": 10,
+      "note": "Digitaler Wahlkampf with 0 media/platform"
+    },
+    {
+      "id": "influencer_no_public",
+      "cards": ["Influencer-Kampagne", "No Public Aura"],
+      "penalty": 8,
+      "note": "Influencer doublePublicAura with no publics"
+    },
+    {
+      "id": "joschka_no_ngo",
+      "cards": ["Joschka Fischer", "No NGO"],
+      "penalty": 7,
+      "note": "Joschka NGO boost never lights"
+    },
+    {
+      "id": "malala_no_ngo",
+      "cards": ["Malala Yousafzai", "No NGO"],
+      "penalty": 8,
+      "note": "Malala draw hook never fires"
+    },
+    {
+      "id": "assange_no_ngo",
+      "cards": ["Julian Assange", "No NGO"],
+      "penalty": 5,
+      "note": "Assange misses draw-2 bonus"
+    },
+    {
+      "id": "zivil_no_ngo_ap",
+      "cards": ["Zivilgesellschaft", "No NGO"],
+      "penalty": 4,
+      "note": "Zivil NGO->AP branch dead"
+    }
+  ],
+  "stackGroups": {
+    "permanent_aura": { "maxRecommended": 3, "note": "Continuous auras that stack on strongest gov" },
+    "temp_buff": { "maxRecommended": 3, "note": "One-time buffs from initiatives/auras" },
+    "oligarch_payload": { "maxRecommended": 2, "note": "Oligarch-scaled payoffs" },
+    "corruption_payload": { "maxRecommended": 2, "note": "Corruption-derived turn-start buffs" },
+    "draw_engine": { "maxRecommended": 2, "note": "Uncapped draw is banned" },
+    "ap_engine": { "maxRecommended": 2, "note": "AP steal/draw engines" },
+    "hard_control": { "maxRecommended": 1, "note": "Deactivations/steals/locks should be sparse" },
+    "steal": { "maxRecommended": 1, "note": "Permanent board theft" },
+    "board_wipe": { "maxRecommended": 1, "note": "Board wipe of an archetype" }
+  }
+}

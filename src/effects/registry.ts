@@ -309,6 +309,14 @@ export const EFFECTS: Record<string, EffectHandler> = {
     log('🟢 init.symbolic_politics.draw1');
   },
 
+  // Redaktionskonferenz – Media/Platform → strongest +2; else draw 1
+  'init.redaktionskonferenz.media_or_draw': ({ enqueue, player, log }) => {
+    enqueue({ type: 'REDAKTIONSKONFERENZ', player });
+    enqueue({ type: 'INITIATIVE_ACTIVATED', player });
+    enqueue({ type: 'LOG', msg: 'Redaktionskonferenz: Medien/Plattform → +2 stärkste Regierung, sonst ziehe 1.' });
+    log('🟢 init.redaktionskonferenz.media_or_draw');
+  },
+
   // =================================
   // B) INTERVENTIONS – neue Traps
   // =================================
@@ -424,8 +432,8 @@ export const EFFECTS: Record<string, EffectHandler> = {
   },
 
   'init.tunnel_vision.gov_probe_system': ({ enqueue, player, log }) => {
-    enqueue({ type: 'LOG', msg: 'Tunnelvision: Gegner muss bei Regierungskarten eine Probe bestehen.' });
-    enqueue({ type: 'LOG', msg: '🔔 Tunnelvision: W6 ≥4 (≥5 bei Einfluss 9+) – bei Misserfolg bleibt die Karte in der Hand.' });
+    enqueue({ type: 'LOG', msg: 'Tunnelvision: Gegnerische Regierung braucht Freigabe — +1 AP oder +1 Korruption.' });
+    enqueue({ type: 'LOG', msg: '🔔 Tunnelvision: deterministisch, kein Würfel.' });
     log('🟢 init.tunnel_vision.gov_probe_system');
   },
 
@@ -437,13 +445,13 @@ export const EFFECTS: Record<string, EffectHandler> = {
 
   'trap.strategic_disclosure.return_gov': ({ enqueue, player, log }) => {
     enqueue({ type: 'REGISTER_TRAP', player, key: 'trap.strategic_disclosure.return_gov' } as any);
-    enqueue({ type: 'LOG', msg: 'Trap set: Strategic Disclosure (return gov on trigger).' });
+    enqueue({ type: 'LOG', msg: 'Trap set: Strategic Disclosure (return gov when opponent would lead/tie; blowback +1 corruption).' });
     log('🟢 trap.strategic_disclosure.return_gov');
   },
 
   // === ONGOING INITIATIVES ===
   'init.napoleon_komplex.tier1_gov_plus1': ({ enqueue, player, log }) => {
-    enqueue({ type: 'LOG', msg: 'Napoleon Komplex: stärkste Tier-1-Regierung +1 Einfluss.' });
+    enqueue({ type: 'LOG', msg: 'Napoleon Komplex: stärkste Tier-1 +1 Einfluss; kein Transfer; Hybris: Säuberungsziel +1.' });
     log('🟢 init.napoleon_komplex.tier1_gov_plus1');
   },
 
@@ -456,11 +464,11 @@ export const EFFECTS: Record<string, EffectHandler> = {
     log('🟢 init.opportunist.mirror_ap_effects (AP + Buff-Spiegelung)');
   },
 
-  'init.skandalspirale.w6_check': ({ enqueue, player, log }) => {
+  'init.skandalspirale.deterministic': ({ enqueue, player, log }) => {
     enqueue({ type: 'SKANDALSPIRALE_TRIGGER', player } as any);
     enqueue({ type: 'INITIATIVE_ACTIVATED', player });
-    enqueue({ type: 'LOG', msg: 'Skandalspirale: W6-Probe wird durchgeführt.' });
-    log('🟢 init.skandalspirale.w6_check');
+    enqueue({ type: 'LOG', msg: 'Skandalspirale: einflussschwächere Seite — stärkste Regierung −2 Einfluss.' });
+    log('🟢 init.skandalspirale.deterministic');
   },
 
   // === PUBLIC KARTEN - Registry Keys für Legacy Handler ===
@@ -584,8 +592,8 @@ export const EFFECTS: Record<string, EffectHandler> = {
   },
 
   'init.algorithmischer_diskurs.media_aura': ({ enqueue, player, log }) => {
-    // On play: -1 influence on opponent's strongest gov per opposing platform/AI card
     enqueue({ type: 'ALGO_DISCOURSE_DEBUFF', player });
+    enqueue({ type: 'LOG', msg: 'Algorithmischer Diskurs: −1 Einfluss pro gegnerischer Plattform/KI (max 3) +1 Korruption auf debuffte Regierung.' });
     log('🟢 init.algorithmischer_diskurs.media_aura');
   },
 
@@ -595,23 +603,34 @@ export const EFFECTS: Record<string, EffectHandler> = {
   },
 
   'init.zivilgesellschaft.movement_aura': ({ enqueue, player, log }) => {
-    enqueue({ type: 'LOG', msg: 'Zivilgesellschaft: Aura – Bewegungen +1 Einfluss; NGOs geben +1 AP auf nächste Initiative.' });
+    enqueue({ type: 'LOG', msg: 'Zivilgesellschaft: Aura – +1 Einfluss pro Bewegung auf stärkste Regierung (max +2); NGO → +1 AP/Zug; Scrutiny bei Korruption ≥3.' });
     log('🟢 init.zivilgesellschaft.movement_aura');
   },
 
   'init.milchglas_transparenz.no_ngo_bonus': ({ enqueue, player, log }) => {
-    enqueue({ type: 'LOG', msg: 'Milchglas Transparenz: Aura – +1 Einfluss ohne NGO/Bewegung; eigene Korruptionsgewinne −1; Säuberungsziele −1.' });
+    enqueue({ type: 'LOG', msg: 'Milchglas Transparenz: Aura – +1 auf stärkste Regierung ohne NGO/Bewegung; Zuwachs und Abbau von Korruption −1; Säuberungsziel −1.' });
     log('🟢 init.milchglas_transparenz.no_ngo_bonus');
   },
 
   'init.alternative_fakten.intervention_dampen': ({ enqueue, player, log }) => {
-    enqueue({ type: 'LOG', msg: 'Alternative Fakten: Aura – gegnerische Interventionen haben -1 Wirkung.' });
+    enqueue({ type: 'LOG', msg: 'Alternative Fakten: Aura – gegnerische Interventionen −1; gegnerische Korruption −1; voller Spin → +1 Karte.' });
     log('🟢 init.alternative_fakten.intervention_dampen');
   },
 
   'init.konzernfreundlicher_algorithmus.platform_aura': ({ enqueue, player, log }) => {
-    enqueue({ type: 'LOG', msg: 'Konzernfreundlicher Algorithmus: Aura – bei Plattform-Karten ziehe 1 Karte, Oligarchen-Buff.' });
+    enqueue({ type: 'LOG', msg: 'Konzernfreundlicher Algorithmus: Plattform → +1 Karte; Oligarch mit Plattform → +1 Einfluss und +1 Korruption.' });
     log('🟢 init.konzernfreundlicher_algorithmus.platform_aura');
+  },
+
+  'init.strassenmandat.movement_aura': ({ enqueue, player, log }) => {
+    enqueue({ type: 'LOG', msg: 'Straßenmandat: Aura – Bewegung gespielt → stärkste Regierung +1 (max +2/Zug); mit NGO zusätzlich +1 AP (1×/Zug).' });
+    log('🟢 init.strassenmandat.movement_aura');
+  },
+
+  'trap.aufsichtsmandat.counter_stack': ({ enqueue, player, log }) => {
+    enqueue({ type: 'REGISTER_TRAP', player, key: 'trap.aufsichtsmandat.counter_stack' } as any);
+    enqueue({ type: 'LOG', msg: 'Trap set: Aufsichtsmandat (bei ≥2 Temp-Buff auf gegnerischer stärkster Regierung: −1 Einfluss +1 Korruption).' });
+    log('🟢 trap.aufsichtsmandat.counter_stack');
   },
 
   'init.propaganda_network.buff_aura': ({ enqueue, player, log }) => {
@@ -694,9 +713,12 @@ export const LEGACY_NAME_TO_KEY: Record<string, string> = {
   'Influencer-Kampagne': 'init.influencer_campaign.double_public',
   'Systemrelevant': 'init.system_critical.shield1',
   'Symbolpolitik': 'init.symbolic_politics.draw1',
+  'Redaktionskonferenz': 'init.redaktionskonferenz.media_or_draw',
+  'Straßenmandat': 'init.strassenmandat.movement_aura',
+  'Aufsichtsmandat': 'trap.aufsichtsmandat.counter_stack',
   'Napoleon Komplex': 'init.napoleon_komplex.tier1_gov_plus1',
   'Opportunist': 'init.opportunist.mirror_ap_effects',
-  'Skandalspirale': 'init.skandalspirale.w6_check',
+  'Skandalspirale': 'init.skandalspirale.deterministic',
   'Whataboutism': 'init.whataboutism.reactivate_minus1',
 
   // INITIATIVES — ONGOING (Dauerhaft)

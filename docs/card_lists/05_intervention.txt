@@ -1,22 +1,23 @@
 Interventionen
 ==============
 
-Count: 17
+Count: 18
 
-- Fake News-Kampagne: Die Öffentlichkeitskarte wird deaktiviert
-- Whistleblower: -2 Einfluss auf die Regierungskarte
-- Strategische Enthüllung: Eine Regierungskarte zurück auf die Hand
+- Fake News-Kampagne: Medien-/Plattform-Öffentlichkeitskarte wird deaktiviert; stärkste Regierung des Gegners +1 Korruption
+- Whistleblower: −2 Einfluss (−1 pro Bewegung/Aktivist auf beiden Boards, max −6) und +1 Korruption auf die gespielte Regierung
+- Strategische Enthüllung: Wenn die gespielte Regierung den Gegner führen/gleichen lassen würde → zurück auf Hand; Blowback: deine stärkste Regierung +1 Korruption
 - Interne Fraktionskämpfe: Die große Initiative wird annulliert
-- Boykott-Kampagne: Die Karte wird deaktiviert
-- Deepfake-Skandal: Kein Einflusstransfer möglich
+- Boykott-Kampagne: NGO/Bewegung wird deaktiviert
+- Deepfake-Skandal: Kein Einflusstransfer bis zum nächsten Zugbeginn des Gegners; Diplomat +1 Korruption
 - Cyber-Attacke: Die Plattform-Karte wird deaktiviert
-- Grassroots-Widerstand: Eine Öffentlichkeitskarte wird deaktiviert
-- Massenproteste: Beide Regierungskarten -1 Einfluss
-- Berater-Affäre: -2 Einfluss auf die Regierungskarte
-- Parlament geschlossen: Gegner kann bis zu seinem nächsten Zug keine weiteren Regierungskarten spielen.
-- "Unabhängige" Untersuchung: Die Intervention wird annulliert
-- Soft Power-Kollaps: -3 Einfluss auf die Diplomat-Karte
-- Cancel Culture: Die Öffentlichkeitskarte wird deaktiviert, wenn sie Oligarch oder Medien/Plattform ist.
-- Lobby Leak: Gegner muss 1 Karte abwerfen
-- Satire-Show: Eine Regierungskarte des Gegners -2 Einfluss
+- Grassroots-Widerstand: Eine Öffentlichkeitskarte wird deaktiviert (bei ≥3 Öffentlichkeitskarten)
+- Massenproteste: Beide stärksten Regierungskarten −1 Einfluss (Oligarch-Fallout: +1 Korruption)
+- Berater-Affäre: Tier-1-Regierung −2 Einfluss und +1 Korruption
+- Parlament geschlossen: Gegner kann bis zu seinem nächsten Zug keine weiteren Regierungskarten spielen (Turn-Lock, kein Round-Lock).
+- "Unabhängige" Untersuchung: Die Intervention wird annulliert (sonst: eigene stärkste Regierung −2 Korruption)
+- Soft Power-Kollaps: −3 Einfluss auf die Diplomat-Karte
+- Cancel Culture: Oligarch- oder Medien-/Plattform-Öffentlichkeitskarte wird deaktiviert
+- Lobby Leak: Bei NGO oder Oligarch → Gegner wirft 1 Karte ab; stärkste Regierung +1 Korruption
+- Satire-Show: Eine Regierungskarte des Gegners −2 Einfluss (wenn Gegner mehr/gleich Einfluss hat)
 - Scandal Spiral: Die zweite Öffentlichkeitskarte des Gegners wird annulliert
+- Aufsichtsmandat: Wenn gegnerische stärkste Regierung ≥2 Einfluss durch Auren/Temps in einem Zug gewinnt → −1 Einfluss und +1 Korruption.

@@ -80,7 +80,7 @@ const NAMED: Record<string, GovAbilityDef> = {
   'Justin Trudeau': {
     key: 'trudeau_sunny',
     name: 'Sunny Ways',
-    description: '−1 Korruption auf Trudeau; nächster Säuberungswurf einer eigenen Karte +1.',
+    description: '−1 Korruption auf Trudeau; nächstes Audit einer eigenen Karte −1 Stufe.',
   },
   'Sergey Lavrov': {
     key: 'lavrov_njet',

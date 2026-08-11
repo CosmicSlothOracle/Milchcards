@@ -1,0 +1,51 @@
+Führungsstile & Champions
+=========================
+
+Prinzip
+-------
+Charaktertiefe, keine Entscheidungsmechanik: Stil-Passive ≤1 Punkt Swing/Runde.
+Champion trägt den Stil — Passiv = Stil-Passiv. Aktiv = 1×/Match, 1 AP.
+Champion betritt nie das Board (Promotion aus Deck bei Matchstart).
+
+Stile
+-----
+Autokratie (Tech Oligarchs, Media Control)
+  Passiv: höchst-korruptes eigenes Gov +1 Einfluss bei Wertung
+  Schwäche: stärkstes Gov Audit-Stufe +1
+  Farbe: rose × amber — „Macht fragt nicht.“
+
+Diplomatie (Diplomatic Power, Institutional Core, Shadow Cabinet)
+  Passiv: Schweigegeld-Cap 3 statt 2
+  Farbe: teal — „Der Raum entscheidet, nicht die Bühne.“
+
+Bewegung (Activist Movement, Grassroots Surge)
+  Passiv: K0-Govs +1 bei Wertung (stapelt nicht mit Greta)
+  Schwäche: Schweigegeld unwirksam
+  Farbe: sage — „Die Straße zählt die Stimmen.“
+
+Technokratie (Initiative Rush, Economic Influence, Reform Coalition)
+  Passiv: erste Sofort-Initiative der Runde: +1 auf numerische Effekte
+  Farbe: teal × ink — „Effizienz ist die einzige Ideologie.“
+
+Schattenstaat (Security State, Information War, Corporate Capture)
+  Passiv: eigene Intervention/Falle für Gegner unsichtbar
+  Schwäche: eigene Audit-Hilfe −1 schwächer
+  Farbe: mauve × ink — „Was du nicht siehst, regiert.“
+
+Champions (Premade → Karte / Aktiv)
+----------------------------------
+Tech Oligarchs → Jack Ma — Plattform-Deal (ziehe 1, Gov +1 Korruption)
+Media Control → Mark Zuckerberg — Algorithmus-Drossel (gegnerische Auren −1 diesen Zug)
+Diplomatic Power → Helmut Schmidt — Staatsräson (nächste gegnerische Intervention annuliert)
+Institutional Core → Horst Köhler — Institutionsschild (Gov Audit −2)
+Shadow Cabinet → Christine Lagarde — Korruption verschieben
+Activist Movement → Volodymyr Zelenskyy — alle Govs +1 Einfluss
+Grassroots Surge → Greta Thunberg — K0-Govs +1 Einfluss
+Initiative Rush → Emmanuel Macron — +1 AP
+Economic Influence → Warren Buffett — −1 Korruption (unter Lore erlaubt)
+Reform Coalition → Friedrich Merz — nächstes Gov −1 Korruption
+Security State → Colin Powell — stärkstes Gov einmalig schützen
+Information War → Edward Snowden — gegnerisches Gov markieren (Audit +1)
+Corporate Capture → Gautam Adani — stärkstes Gov +2 Einfluss / +1 Korruption
+
+Custom Decks: Phase 2 — Spieler wählt Gov/Public als Champion; Tags bestimmen Stil.

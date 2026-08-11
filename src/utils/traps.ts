@@ -63,10 +63,18 @@ export function applyTrapsOnCardPlayed(
   traps.forEach(t => {
     switch (t.key) {
       // bereits live benutzt
+      // Fake News-Kampagne: media/platform deactivate + strongest gov +1 corruption (disinfo rot)
       case 'trap.fake_news.deactivate_media':
         if (isMediaLike && (card as any).uid != null) {
           enqueue({ type: 'DEACTIVATE_CARD', player: opp, targetUid: (card as any).uid });
-          log('Trap: Fake News – deactivated media/platform card.');
+          const strong = (state.board[playedBy].aussen || [])
+            .filter(c => c.kind === 'pol' && !(c as any).deactivated)
+            .slice()
+            .sort((a: any, b: any) => (b.influence || 0) - (a.influence || 0))[0];
+          if (strong) {
+            enqueue({ type: 'CHANGE_CORRUPTION', targetUid: (strong as any).uid, amount: 1, source: 'Fake News-Kampagne', enemySourcePlayer: opp } as any);
+          }
+          log('Trap: Fake News – Medien/Plattform deaktiviert; stärkste Regierung +1 Korruption.');
           consumed.push(t);
         }
         break;
@@ -100,12 +108,15 @@ export function applyTrapsOnCardPlayed(
         }
         break;
 
-      // Deepfake-Skandal: bei Diplomat – kein Einflusstransfer mehr möglich
+      // Deepfake-Skandal: lock diplomat transfer until that player's next turn start + taint the diplomat
       case 'trap.deepfake.lock_diplomat_transfer':
         if (isDiplomatCard(card)) {
           state.effectFlags[playedBy].influenceTransferBlocked = true;
-          enqueue({ type: 'LOG', msg: 'Trap: Deepfake-Skandal – Einflusstransfer blockiert.' });
-          log('Trap: Deepfake-Skandal – influence transfer blocked.');
+          if ((card as any).uid != null) {
+            enqueue({ type: 'CHANGE_CORRUPTION', targetUid: (card as any).uid, amount: 1, source: 'Deepfake-Skandal', enemySourcePlayer: opp } as any);
+          }
+          enqueue({ type: 'LOG', msg: 'Trap: Deepfake-Skandal – Einflusstransfer bis Zugbeginn blockiert; Diplomat +1 Korruption.' });
+          log('Trap: Deepfake-Skandal – influence transfer blocked until next turn; +1 corruption.');
           consumed.push(t);
         }
         break;
@@ -225,9 +236,9 @@ export function applyTrapsOnCardPlayed(
         }
         break;
 
-      // Lobby Leak: bei NGO – Gegner muss 1 Karte abwerfen; stärkste Regierung +1 Korruption
+      // Lobby Leak: NGO oder Oligarch → Gegner wirft 1 ab; stärkste Regierung +1 Korruption
       case 'trap.lobby_leak.force_discard_on_ngo':
-        if (isNgoCard(card)) {
+        if (isNgoCard(card) || isOligarchCard(card)) {
           enqueue({ type: 'DISCARD_RANDOM_FROM_HAND', player: playedBy, amount: 1 });
           const strong = (state.board[playedBy].aussen || [])
             .filter(c => c.kind === 'pol' && !(c as any).deactivated)
@@ -332,31 +343,37 @@ export function applyTrapsOnCardPlayed(
         }
         break;
 
-      // Strategic Disclosure: Deactivate government card if opponent's total influence
-      // would be >= your total influence after the card is played
+      // Strategic Disclosure: when opponent would lead/tie after playing a gov, bounce it to hand
       case 'trap.strategic_disclosure.return_gov':
         if (isGovernment && (card as any).uid != null) {
           try {
-            // compute opponent (playedBy) total influence if this card remains active
             const { sumGovernmentInfluenceWithAuras } = require('./gameUtils');
             const oppBefore = sumGovernmentInfluenceWithAuras(state, playedBy);
-            // If the card is not yet part of board in this context, include its influence
             const cardInfluence = (card as any).influence || 0;
-            const oppProjected = oppBefore + cardInfluence;
+            // Card is usually already on board when traps fire — don't double-count
+            const onBoard = (state.board[playedBy].aussen || []).some((c: any) => c && c.uid === (card as any).uid);
+            const oppProjected = onBoard ? oppBefore : oppBefore + cardInfluence;
 
             const you = playedBy === 1 ? 2 : 1;
             const youTotal = sumGovernmentInfluenceWithAuras(state, you);
 
             if (oppProjected >= youTotal) {
-              enqueue({ type: 'DEACTIVATE_CARD', player: you, targetUid: (card as any).uid });
-              log('Trap: Strategic Disclosure – deactivated government card (projected score check).');
+              enqueue({ type: 'RETURN_TO_HAND', player: playedBy, targetUid: (card as any).uid });
+              // Ambivalence: leak cuts both ways — your strongest gov +1 corruption (you burned a source)
+              const yourStrong = (state.board[you].aussen || [])
+                .filter(c => c.kind === 'pol' && !(c as any).deactivated)
+                .slice()
+                .sort((a: any, b: any) => (b.influence || 0) - (a.influence || 0))[0];
+              if (yourStrong) {
+                enqueue({ type: 'CHANGE_CORRUPTION', targetUid: (yourStrong as any).uid, amount: 1, source: 'Strategische Enthüllung (Blowback)', fromInitiative: false } as any);
+              }
+              log('Trap: Strategic Disclosure – Regierungskarte zurück auf Hand; Enthüller +1 Korruption.');
               consumed.push(t);
             } else {
               enqueue({ type: 'LOG', msg: 'Strategic Disclosure present but projected influence check not met.' });
             }
           } catch (e) {
-            // Fallback: if something goes wrong, do not block play; log debug
-            try { log(`DEBUG: Strategic Disclosure error: ${String(e)}`); } catch (e) {}
+            try { log(`DEBUG: Strategic Disclosure error: ${String(e)}`); } catch (err) {}
           }
         }
         break;
@@ -374,22 +391,14 @@ export function applyTrapsOnCardPlayed(
           break;
         }
 
-        // Compute number of Activist cards on both players' boards (innen + aussen)
-        const cd = require('../data/cardDetails') as any;
+        // Count Movements/Activists on both boards — whistle grows with civic heat
         let activistCount = 0;
         for (const p of [1, 2] as const) {
           const innen = state.board[p]?.innen || [];
           const aussen = state.board[p]?.aussen || [];
-          const all = [...innen, ...aussen];
-          for (const c of all) {
-            if (!c) continue;
-            const subcats = cd.getCardDetails?.((c as any).name)?.subcategories as string[] | undefined;
-            const legacyTag = (c as any).tag === 'Activist' || (c as any).tag === 'Aktivist' || (c as any).tag === 'Activists' || (c as any).tag === 'Movement';
-            const hasActivistSubcat = Array.isArray(subcats) && (subcats.includes('Activist') || subcats.includes('Aktivist'));
-            if (hasActivistSubcat || legacyTag) {
-              // ignore deactivated public/pol cards
-              if (!(c as any).deactivated) activistCount++;
-            }
+          for (const c of [...innen, ...aussen]) {
+            if (!c || (c as any).deactivated) continue;
+            if (isMovementCard(c)) activistCount++;
           }
         }
 

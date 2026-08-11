@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { Card, GameState, Player, PoliticianCard, SpecialCard } from '../types/game';
 import { ActiveAbilitiesManager, EffectQueueManager, adjustInfluence, drawCards, hasDiplomatCard, sumRow } from '../utils/gameUtils';
+import { hasInfluenceTransferBlock } from '../utils/effectUtils';
 import { getCardDetails } from '../data/cardDetails';
 
 type GameEffectLoggers = {
@@ -212,9 +213,9 @@ export function useGameEffects(
     if (card.kind === 'spec' && (card as SpecialCard).type === 'Dauerhaft-Initiative') {
       const specCard = card as SpecialCard;
       if (specCard.name === 'Algorithmischer Diskurs') {
-        logCardEffect(specCard.name, 'Dauerhafte Initiative: Alle Medien-Karten geben +1 Einfluss');
+        logCardEffect(specCard.name, 'Beim Ausspielen: −1 Einfluss pro gegnerischer Plattform/KI (max 3) +1 Korruption');
       } else if (specCard.name === 'Alternative Fakten') {
-        logCardEffect(specCard.name, 'Dauerhafte Initiative: Alle Oligarchen geben +1 Einfluss');
+        logCardEffect(specCard.name, 'Aura: gegnerische Interventionen −1 Wirkung; gegnerische Korruptionsgewinne −1');
       }
     } else if (card.kind === 'pol') {
       const polCard = card as PoliticianCard;
@@ -289,6 +290,8 @@ export function useGameEffects(
 
       const flags = prev.effectFlags?.[player];
       if (!flags || flags.diplomatInfluenceTransferUsed || flags.influenceTransferBlocked) return prev;
+      // Napoleon Komplex (and similar Dauerhaft): transfer permanently locked while aura is active
+      if (hasInfluenceTransferBlock(player, prev)) return prev;
       if (!hasDiplomatCard(player, prev)) return prev;
 
       const governmentCards = prev.board[player].aussen;

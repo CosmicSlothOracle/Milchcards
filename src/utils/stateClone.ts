@@ -33,5 +33,19 @@ export function cloneStateForMutation(prev: GameState): GameState {
           survived: [...prev.pendingPurge.survived],
         }
       : undefined,
+    leaders: prev.leaders
+      ? {
+          1: prev.leaders[1] ? { ...prev.leaders[1] } : null,
+          2: prev.leaders[2] ? { ...prev.leaders[2] } : null,
+        }
+      : prev.leaders,
+    effectFlags: {
+      1: { ...(prev.effectFlags?.[1] || {}) },
+      2: { ...(prev.effectFlags?.[2] || {}) },
+    } as GameState['effectFlags'],
+    permanentSlots: {
+      1: { ...prev.permanentSlots[1] },
+      2: { ...prev.permanentSlots[2] },
+    },
   };
 }

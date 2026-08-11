@@ -161,6 +161,14 @@ export interface EffectFlags {
   harariCorruptionDrawUsed?: boolean; // Harari draw on gov reaching corruption 5+ (1×/Runde)
   sorosCleanseUsed?: boolean;         // Soros foundation cleanse (1×/Zug)
   oligarchCorruptionRound?: number;   // round in which the oligarch-pair corruption gain already fired
+  /** Koalitionszwang on-play already applied this turn — skip T2 aura double-dip */
+  koalitionOnPlayFiredThisTurn?: boolean;
+  /** Cumulative positive temp gain on strongest gov this turn (Aufsichtsmandat) */
+  strongestGovBuffGainThisTurn?: number;
+  aufsichtFiredThisTurn?: boolean;
+  /** Straßenmandat: +1 strongest per Movement (max +2/turn); NGO → +1 AP once */
+  strassenmandatBuffThisTurn?: number;
+  strassenmandatApUsed?: boolean;
 }
 
 export function createDefaultEffectFlags(): EffectFlags {
@@ -222,8 +230,13 @@ export interface GameState {
     2: ActiveAbility[];
   };
   pendingAbilitySelect?: AbilitySelect;
-  /** Interactive W6 purge audit between double-pass and scoring */
+  /** Interactive deterministic audit stamp sequence between double-pass and scoring */
   pendingPurge?: PendingPurge;
+  /** Champion / Führungsstil slots — never on the board */
+  leaders?: {
+    1: import('../utils/leadership').LeaderSlot | null;
+    2: import('../utils/leadership').LeaderSlot | null;
+  };
   isEndingTurn?: boolean;
 }
 
@@ -235,9 +248,10 @@ export interface PurgeProbeEntry {
 export interface PendingPurge {
   queue: PurgeProbeEntry[];
   index: number;
+  /** Legacy name: always false under deterministic audit (timed stamps advance). */
   awaitingRoll: boolean;
-  removed: { player: Player; card: PoliticianCard; roll: number | null; target: number }[];
-  survived: { player: Player; card: PoliticianCard; roll: number | null; target: number }[];
+  removed: { player: Player; card: PoliticianCard; roll: number | null; target: number; outcome?: 'safe' | 'scandal' | 'remove' }[];
+  survived: { player: Player; card: PoliticianCard; roll: number | null; target: number; outcome?: 'safe' | 'scandal' | 'remove' }[];
 }
 
 export interface BuilderState {

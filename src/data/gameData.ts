@@ -31,6 +31,7 @@ export const Specials: BaseSpecial[] = [
   {id:10, key:'Influencer_Kampagne', name:'Influencer-Kampagne', type:'Sofort-Initiative', speed:'Schnell', bp:2, tier:2, impl:'influencer_campaign', effectKey:'init.influencer_campaign.double_public'},
   {id:11, key:'Systemrelevant', name:'Systemrelevant', type:'Sofort-Initiative', speed:'Schnell', bp:2, tier:2, impl:'system_relevant', effectKey:'init.system_critical.shield1'},
   {id:12, key:'Symbolpolitik', name:'Symbolpolitik', type:'Sofort-Initiative', speed:'Schnell', bp:1, tier:1, impl:'symbolic_politics', effectKey:'init.symbolic_politics.draw1'},
+  {id:89, key:'Redaktionskonferenz', name:'Redaktionskonferenz', type:'Sofort-Initiative', speed:'Schnell', bp:3, tier:2, impl:'editorial_conference', effectKey:'init.redaktionskonferenz.media_or_draw'},
 
   // Dauerhaft-Initiativen (Permanent Initiatives)
   {id:13, key:'Koalitionszwang', name:'Koalitionszwang', type:'Dauerhaft-Initiative', speed:'Dauerhaft', bp:2, tier:2, impl:'coalition_force', effectKey:'gov.koalitionszwang.coalition_bonus'},
@@ -41,6 +42,7 @@ export const Specials: BaseSpecial[] = [
   {id:18, key:'Alternative_Fakten', name:'Alternative Fakten', type:'Dauerhaft-Initiative', speed:'Dauerhaft', bp:2, tier:2, impl:'alternative_facts', effectKey:'init.alternative_fakten.intervention_dampen'},
   {id:19, key:'Napoleon_Komplex', name:'Napoleon Komplex', type:'Dauerhaft-Initiative', speed:'Dauerhaft', bp:2, tier:2, impl:'napoleon_complex', effectKey:'init.napoleon_komplex.tier1_gov_plus1'},
   {id:20, key:'Konzernfreundlicher_Algorithmus', name:'Konzernfreundlicher Algorithmus', type:'Dauerhaft-Initiative', speed:'Dauerhaft', bp:2, tier:2, impl:'corporate_algorithm', effectKey:'init.konzernfreundlicher_algorithmus.platform_aura'},
+  {id:90, key:'Strassenmandat', name:'Straßenmandat', type:'Dauerhaft-Initiative', speed:'Dauerhaft', bp:3, tier:2, impl:'street_mandate', effectKey:'init.strassenmandat.movement_aura'},
 
   // Interventionen (Trap Cards)
   {id:21, key:'Fake_News_Kampagne', name:'Fake News-Kampagne', type:'Intervention', speed:'Bei Medien-Karte', bp:2, tier:2, impl:'fake_news_campaign', effectKey:'trap.fake_news.deactivate_media'},
@@ -60,10 +62,11 @@ export const Specials: BaseSpecial[] = [
   {id:35, key:'Cancel_Culture', name:'Cancel Culture', type:'Intervention', speed:'Bei ÖFF-Karte', bp:2, tier:2, impl:'cancel_culture', effectKey:'trap.cancel_culture.deactivate_public'},
   {id:36, key:'Lobby_Leak', name:'Lobby Leak', type:'Intervention', speed:'Bei NGO', bp:2, tier:2, impl:'lobby_leak', effectKey:'trap.lobby_leak.force_discard_on_ngo'},
   {id:41, key:'Maulwurf', name:'Maulwurf', type:'Sofort-Initiative', speed:'Schnell', bp:4, tier:3, impl:'corruption_mole', effectKey:'corruption.mole.steal_weakest_gov', tag:'Corruption'},
-  {id:38, key:'Skandalspirale', name:'Skandalspirale', type:'Sofort-Initiative', speed:'Schnell', bp:2, tier:2, impl:'skandalspirale', effectKey:'init.skandalspirale.w6_check'},
+  {id:38, key:'Skandalspirale', name:'Skandalspirale', type:'Sofort-Initiative', speed:'Schnell', bp:2, tier:2, impl:'skandalspirale', effectKey:'init.skandalspirale.deterministic'},
   {id:39, key:'Tunnelvision', name:'Tunnelvision', type:'Dauerhaft-Initiative', speed:'Dauerhaft', bp:3, tier:2, impl:'tunnel_vision', effectKey:'init.tunnel_vision.gov_probe_system', tag:'Control'},
   {id:40, key:'Satire_Show', name:'Satire-Show', type:'Intervention', speed:'Bei mehr Einfluss Gegner', bp:2, tier:2, impl:'satire_show', effectKey:'trap.satire_show.minus2_enemy_gov'},
   {id:42, key:'Scandal_Spiral', name:'Scandal Spiral', type:'Intervention', speed:'Bei 2. ÖFF', bp:2, tier:2, impl:'scandal_spiral', effectKey:'trap.scandal_spiral.cancel_one_of_two'},
+  {id:91, key:'Aufsichtsmandat', name:'Aufsichtsmandat', type:'Intervention', speed:'Bei Stack ≥2', bp:2, tier:2, impl:'oversight_mandate', effectKey:'trap.aufsichtsmandat.counter_stack'},
 
   // Public Cards (Öffentlichkeitskarten) - From Karten_Oeffentlichkeit.md
   {id:64, key:'Elon_Musk', name:'Elon Musk', type:'Öffentlichkeitskarte', speed:'Passiv', bp:8, tier:2, impl:'elon_musk', effectKey:'public.elon.draw_ap'},
@@ -269,6 +272,9 @@ export const FILENAME_MAPPING: Record<string, string> = {
   'Influencer_Kampagne': 'Sofort-Initiative_T2_Influencer_Kampagne.png',
   'Systemrelevant': 'Sofort-Initiative_T2_Systemrelevant.png',
   'Symbolpolitik': 'Sofort-Initiative_T1_Symbolpolitik.png',
+  'Redaktionskonferenz': 'Sofort-Initiative_T3_Digitaler_Wahlkampf.png',
+  'Strassenmandat': 'Initiative-Dauerhaft_T2_Zivilgesellschaft.png',
+  'Aufsichtsmandat': 'Intervention_T2_Lobby_Leak.png',
   'Koalitionszwang': 'Initiative-Dauerhaft_T2_Koalitionszwang.png',
   'Algorithmischer_Diskurs': 'Initiative-Dauerhaft_T2_Algorithmischer_Diskurs.png',
   'Wirtschaftlicher_Druck': 'Initiative-Dauerhaft_T2_Wirtschaftlicher-Druck.png',

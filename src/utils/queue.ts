@@ -415,6 +415,19 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
           amount = 2;
           events.unshift({ type: 'LOG', msg: `Spin Doctor: ${tgt.name} ist kompromittiert → +2 Einfluss.` });
         }
+        // Technokratie: first sofort numeric +1 (consumed once)
+        const techBonus = Number((state.effectFlags[player] as any)?.technocracyNumericBonus || 0);
+        if (techBonus > 0 && amount > 0) {
+          amount += techBonus;
+          (state.effectFlags[player] as any).technocracyNumericBonus = 0;
+          events.unshift({ type: 'LOG', msg: `⚜️ Technokratie: numerischer Effekt +${techBonus}.` });
+        }
+        // Zuckerberg champion: enemy aura tax this turn (−1 on positive buffs)
+        const auraTax = Number((state.effectFlags[player] as any)?.auraTaxThisTurn || 0);
+        if (auraTax > 0 && amount > 0) {
+          amount = Math.max(0, amount - auraTax);
+          events.unshift({ type: 'LOG', msg: `👑 Algorithmus-Drossel: Aura/Buff −${auraTax}.` });
+        }
         if (tgt && amount !== 0) {
           if (amount >= 0) {
             (tgt as PoliticianCard).tempBuffs = ((tgt as PoliticianCard).tempBuffs || 0) + amount;
@@ -777,6 +790,7 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
       }
 
       case 'SKANDALSPIRALE_TRIGGER': {
+        // Deterministic: lower-influence side's strongest gov takes −2 (no W6).
         const sumGov = (p: Player) => (state.board[p].aussen || []).reduce((a, c) => {
           if (c.kind !== 'pol' || (c as any).deactivated) return a;
           const pc = c as PoliticianCard;
@@ -785,28 +799,17 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
         const p1 = sumGov(1);
         const p2 = sumGov(2);
         const loser: Player = p1 <= p2 ? 1 : 2;
-        const roll = 1 + rng.randomInt(6);
-        if (typeof window !== 'undefined') {
-          try {
-            window.dispatchEvent(new CustomEvent('pc:engine_dice_result', { detail: { roll, player: loser } }));
-          } catch (e) { /* UI only */ }
-        }
-        if (roll <= 3) {
-          events.unshift({ type: 'BUFF_STRONGEST_GOV', player: loser, amount: -roll });
-          events.unshift({ type: 'LOG', msg: `Skandalspirale: P${loser} (weniger Einfluss) würfelt ${roll} → stärkste Regierung -${roll}.` });
-          // Corruption rider: the spiral compounds on an already-dirty leader
-          const loserStrongest = strongestOwnGov(state, loser);
-          if (loserStrongest && getCorruption(loserStrongest) >= 2) {
-            events.unshift({
-              type: 'CHANGE_CORRUPTION',
-              targetUid: loserStrongest.uid,
-              amount: 1,
-              source: 'Skandalspirale (kompromittiert)',
-              fromInitiative: true,
-            } as EffectEvent);
-          }
-        } else {
-          events.unshift({ type: 'LOG', msg: `Skandalspirale: P${loser} würfelt ${roll} → keine Auswirkung.` });
+        events.unshift({ type: 'BUFF_STRONGEST_GOV', player: loser, amount: -2 });
+        events.unshift({ type: 'LOG', msg: `Skandalspirale: P${loser} (weniger Einfluss) — stärkste Regierung −2 Einfluss.` });
+        const loserStrongest = strongestOwnGov(state, loser);
+        if (loserStrongest && getCorruption(loserStrongest) >= 2) {
+          events.unshift({
+            type: 'CHANGE_CORRUPTION',
+            targetUid: loserStrongest.uid,
+            amount: 1,
+            source: 'Skandalspirale (kompromittiert)',
+            fromInitiative: true,
+          } as EffectEvent);
         }
         break;
       }
@@ -1233,88 +1236,77 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
         break;
       }
 
-      // === TUNNELVISION: Government Card Probe System ===
+      // === TUNNELVISION: deterministic tax (no W6) — +1 AP or +1 corruption on entry ===
       case 'TUNNELVISION_GOV_PROBE_START': {
         const { player: actor, targetUid, influence } = ev as any;
-        const requiredRoll = influence >= 9 ? 5 : 4;
-
-        // Signal UI that player must roll dice for government card probe
         (state as any).pendingAbilitySelect = {
-          type: 'tunnelvision_probe',
+          type: 'tunnelvision_choice',
           actorPlayer: actor,
-          targetUid: targetUid,
-          requiredRoll: requiredRoll,
-          influence: influence
+          targetUid,
+          influence,
         } as any;
 
-        events.unshift({ type: 'LOG', msg: `Tunnelvision: Regierungskarte benötigt Probe. W6 ≥${requiredRoll} (${influence >= 9 ? 'Einfluss 9+' : 'Standard'}).` });
+        events.unshift({
+          type: 'LOG',
+          msg: `Tunnelvision: ${influence}-Einfluss-Regierung braucht Freigabe — +1 AP zahlen oder +1 Korruption beim Eintritt.`,
+        });
 
         if (typeof window !== 'undefined') {
           window.dispatchEvent(new CustomEvent('pc:tunnelvision_probe_start', {
-            detail: {
-              player: actor,
-              targetUid: targetUid,
-              requiredRoll: requiredRoll,
-              influence: influence
-            }
+            detail: { player: actor, targetUid, influence, mode: 'choice' },
           }));
         }
         break;
       }
 
       case 'TUNNELVISION_GOV_PROBE_RESOLVE': {
-        const { player: actor, targetUid, roll, requiredRoll, influence } = ev as any;
+        const { player: actor, targetUid, choice } = ev as any;
+        const mode: 'ap' | 'corruption' =
+          choice === 'corruption' || choice === 'ap'
+            ? choice
+            : (state.actionPoints[actor as Player] >= 1 ? 'ap' : 'corruption');
 
-        // Dispatch the roll to UI for 3D dice display
-        if (typeof window !== 'undefined') {
-          try {
-            window.dispatchEvent(new CustomEvent('pc:engine_dice_result', {
-              detail: { roll, player: actor, targetUid }
-            }));
-          } catch(e) {
-            console.error('🎲 ENGINE: Error dispatching dice result for Tunnelvision:', e);
-          }
+        const hand = state.hands[actor as Player];
+        const cardIndex = hand.findIndex(c => c.uid === targetUid);
+        if (cardIndex === -1) {
+          events.unshift({ type: 'LOG', msg: 'Tunnelvision: Karte nicht mehr in der Hand — Freigabe abgebrochen.' });
+          (state as any).pendingAbilitySelect = undefined;
+          break;
         }
 
-        events.unshift({ type: 'LOG', msg: `Tunnelvision: Roll ${roll} vs benötigt ${requiredRoll} (Einfluss ${influence}).` });
+        const card = hand[cardIndex] as PoliticianCard;
+        hand.splice(cardIndex, 1);
+        state.board[actor as Player].aussen.push(card as any);
 
-        if (roll >= requiredRoll) {
-          // Success: Card can be played normally
-          events.unshift({ type: 'LOG', msg: 'Tunnelvision: Probe bestanden - Regierungskarte kann gespielt werden.' });
-
-          // Add the card to the government board
-          const hand = state.hands[actor as Player];
-          const cardIndex = hand.findIndex(c => c.uid === targetUid);
-          if (cardIndex !== -1) {
-            const card = hand[cardIndex];
-            hand.splice(cardIndex, 1);
-            state.board[actor as Player].aussen.push(card as any);
-            events.unshift({ type: 'LOG', msg: `Tunnelvision: ${card.name} erfolgreich in Regierung platziert.` });
-            if (typeof window !== 'undefined') {
-              try {
-                const { feedbackSuccess } = require('./feedback');
-                feedbackSuccess('Probe bestanden', `${card.name} in der Regierung.`);
-                window.dispatchEvent(new CustomEvent('pc:probe_resolved', { detail: { success: true, targetUid, type: 'tunnelvision' } }));
-              } catch { /* ignore */ }
-            }
+        if (mode === 'ap') {
+          if (state.actionPoints[actor as Player] >= 1) {
+            state.actionPoints[actor as Player] -= 1;
+            events.unshift({ type: 'LOG', msg: `Tunnelvision: ${card.name} freigegeben — +1 AP als Kontrollgebühr.` });
+          } else {
+            applyCorruptionDelta(state, card, actor as Player, 1, {
+              source: 'Tunnelvision (keine AP — Korruption)',
+              log: (m) => logPush(state, m),
+            });
+            events.unshift({ type: 'LOG', msg: `Tunnelvision: keine AP — ${card.name} kommt mit +1 Korruption.` });
           }
         } else {
-          // Failure: card stays in hand (no critical-fail exile)
-          events.unshift({ type: 'LOG', msg: 'Tunnelvision: Probe misslungen - Regierungskarte bleibt in der Hand.' });
-          if (typeof window !== 'undefined') {
-            try {
-              const { feedbackFail } = require('./feedback');
-              feedbackFail('Probe misslungen', 'Regierungskarte bleibt in der Hand.');
-              window.dispatchEvent(new CustomEvent('pc:probe_resolved', { detail: { success: false, targetUid, type: 'tunnelvision' } }));
-            } catch { /* ignore */ }
-          }
+          applyCorruptionDelta(state, card, actor as Player, 1, {
+            source: 'Tunnelvision (Freigabe gegen Korruption)',
+            log: (m) => logPush(state, m),
+          });
+          events.unshift({ type: 'LOG', msg: `Tunnelvision: ${card.name} freigegeben — +1 Korruption beim Eintritt.` });
         }
 
-        // Always deduct 1 AP regardless of outcome (this is the cost for the probe)
-        state.actionPoints[actor as Player] = Math.max(0, state.actionPoints[actor as Player] - 1);
-        events.unshift({ type: 'LOG', msg: 'Tunnelvision: 1 AP abgezogen für Probe.' });
+        if (typeof window !== 'undefined') {
+          try {
+            const { feedbackSuccess } = require('./feedback');
+            feedbackSuccess('Tunnelvision', `${card.name} in der Regierung (${mode === 'ap' ? '+1 AP' : '+1 Korruption'}).`);
+            window.dispatchEvent(new CustomEvent('pc:probe_resolved', {
+              detail: { success: true, targetUid, type: 'tunnelvision', choice: mode },
+            }));
+          } catch { /* ignore */ }
+        }
 
-        // Clear pending selection
         (state as any).pendingAbilitySelect = undefined;
         break;
       }

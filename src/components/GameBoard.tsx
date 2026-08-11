@@ -1,8 +1,12 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { Card, GameState } from '../types/game';
+import { Card, GameState, PoliticianCard } from '../types/game';
 import { getCardImagePath } from '../data/gameData';
+import { LEADERSHIP_STYLES } from '../data/leadershipStyles';
 import { LAYOUT, UI_BASE, computeSlotRects, getGovernmentRects, getPublicRects, getSofortRect, getUiTransform, getZone } from '../ui/layout';
 import { sortHandCards } from '../utils/gameUtils';
+import { getAuditStage, getCorruption } from '../utils/corruption';
+import { getLeaderImageSrc } from '../utils/leaderArt';
+import { canActivateLeader } from '../utils/leadership';
 import { MOBILE_HUD_BOTTOM, MOBILE_HUD_TOP, useMobileLayout } from '../hooks/useMobileLayout';
 import { LiveCastFeed } from './LiveCastFeed';
 
@@ -57,17 +61,64 @@ const GameBoard: React.FC<GameBoardProps> = ({
   const { ref: boardRef, size } = useBoardSize();
   const mobile = useMobileLayout();
   const useCompactHud = mobile.isMobile && mobile.isLandscape;
+  const LIVE_CAST_GUTTER = 220;
+
+  const leaderSelf = gameState.leaders?.[localPlayer] ?? null;
+  const leaderOpp = gameState.leaders?.[localPlayer === 1 ? 2 : 1] ?? null;
+  const styleSelf = leaderSelf ? LEADERSHIP_STYLES[leaderSelf.styleId] : null;
+  const styleOpp = leaderOpp ? LEADERSHIP_STYLES[leaderOpp.styleId] : null;
+
+  const leaderGate = useMemo(
+    () => (leaderSelf ? canActivateLeader(gameState, localPlayer) : { ok: false as const, reason: 'Kein Anführer.' }),
+    [gameState, localPlayer, leaderSelf]
+  );
+
+  const leaderImageSrc = useMemo(() => getLeaderImageSrc(leaderSelf), [leaderSelf]);
+  const leaderOppImageSrc = useMemo(() => getLeaderImageSrc(leaderOpp), [leaderOpp]);
+
+  const leaderState = useMemo(() => {
+    if (!leaderSelf) return null;
+    if (leaderSelf.activeUsed) return 'spent' as const;
+    if (leaderGate.ok) return 'ready' as const;
+    return 'wait' as const;
+  }, [leaderSelf, leaderGate.ok]);
+
+  /** Bottom HUD grows when Anführer is present so the portrait does not crush the bar. */
+  const bottomHudHeight = useCompactHud
+    ? (leaderSelf ? MOBILE_HUD_BOTTOM : 56)
+    : (leaderSelf ? 210 : 70);
+
+  const auditExposure = useMemo(() => {
+    const govs = (gameState.board[localPlayer]?.aussen || []).filter(
+      c => c.kind === 'pol' && !(c as any).deactivated && getCorruption(c as PoliticianCard) >= 1
+    ) as PoliticianCard[];
+    return govs.reduce((sum, g) => sum + getAuditStage(gameState, g, localPlayer).stage, 0);
+  }, [gameState, localPlayer]);
+
+  const styleVars = useMemo(() => ({
+    ['--style-p1-accent' as string]: styleSelf?.accent ?? 'var(--teal-600)',
+    ['--style-p1-subtle' as string]: styleSelf?.accentSubtle ?? 'var(--teal-400)',
+    ['--style-p2-accent' as string]: styleOpp?.accent ?? 'var(--mauve-600)',
+    ['--style-p2-subtle' as string]: styleOpp?.accentSubtle ?? 'var(--mauve-400)',
+    ['--style-accent' as string]: styleSelf?.accent ?? 'var(--teal-600)',
+    ['--style-accent-subtle' as string]: styleSelf?.accentSubtle ?? 'var(--teal-400)',
+  }), [styleSelf, styleOpp]);
 
   const transform = useMemo(() => {
-    const hudTop = useCompactHud ? MOBILE_HUD_TOP : 0;
-    const hudBottom = useCompactHud ? MOBILE_HUD_BOTTOM : 0;
+    // Reserve the top HUD strip on desktop too (60px) so the board never
+    // slides underneath the scoreboard — this was the main composition bug.
+    const hudTop = useCompactHud ? MOBILE_HUD_TOP : 60;
+    // Desktop: reserve space so Anführer stack does not cover board slots
+    const hudBottom = useCompactHud
+      ? MOBILE_HUD_BOTTOM
+      : (gameState.leaders?.[localPlayer] ? 210 : 70);
     const playHeight = Math.max(180, size.height - hudTop - hudBottom);
-    const t = getUiTransform(size.width, playHeight);
-    if (useCompactHud) {
-      return { ...t, offsetY: t.offsetY + hudTop };
-    }
-    return t;
-  }, [size.height, size.width, useCompactHud]);
+    // Desktop: reserve side rails between screen edge and hand columns for live-cast
+    const t = getUiTransform(size.width, playHeight, {
+      sideGutter: useCompactHud ? 0 : LIVE_CAST_GUTTER,
+    });
+    return { ...t, offsetY: t.offsetY + hudTop };
+  }, [size.height, size.width, useCompactHud, gameState.leaders, localPlayer]);
   const pendingAbility = (gameState as any).pendingAbilitySelect;
   const corruptionActive = pendingAbility?.type === 'corruption_steal';
   const corruptionPending = pendingAbility?.type === 'corruption_steal' ? pendingAbility : null;
@@ -125,6 +176,62 @@ const GameBoard: React.FC<GameBoardProps> = ({
     if (!pp || pp.index >= pp.queue.length) return purgeFocusUid;
     return pp.queue[pp.index]?.uid ?? purgeFocusUid;
   }, [gameState.pendingPurge, purgeFocusUid]);
+
+  /** Effective influence of a government card incl. temp buffs/debuffs. */
+  const effectiveInfluence = (card: Card): number => {
+    const pol = card as PoliticianCard as any;
+    return (pol.influence || 0) + (pol.tempBuffs || 0) - (pol.tempDebuffs || 0);
+  };
+
+  // Per-card influence change flash (gain = surge, loss = shake)
+  const prevCardInfluence = useRef<Map<number, number>>(new Map());
+  const [influenceFlash, setInfluenceFlash] = useState<Map<number, 'gain' | 'loss'>>(new Map());
+  const influenceFlashTimers = useRef<Map<number, number>>(new Map());
+
+  useEffect(() => {
+    const current = new Map<number, number>();
+    ([1, 2] as const).forEach((player) => {
+      const slots = gameState.permanentSlots[player];
+      [...gameState.board[player].aussen, ...gameState.board[player].innen, slots.government, slots.public]
+        .forEach((card) => {
+          if (card && card.kind === 'pol') current.set(card.uid, effectiveInfluence(card));
+        });
+    });
+
+    const changed: Array<[number, 'gain' | 'loss']> = [];
+    current.forEach((value, uid) => {
+      const prev = prevCardInfluence.current.get(uid);
+      if (prev != null && prev !== value) changed.push([uid, value > prev ? 'gain' : 'loss']);
+    });
+
+    if (changed.length) {
+      setInfluenceFlash((prev) => {
+        const next = new Map(prev);
+        changed.forEach(([uid, dir]) => next.set(uid, dir));
+        return next;
+      });
+      changed.forEach(([uid]) => {
+        const existing = influenceFlashTimers.current.get(uid);
+        if (existing) window.clearTimeout(existing);
+        influenceFlashTimers.current.set(uid, window.setTimeout(() => {
+          setInfluenceFlash((prev) => {
+            const next = new Map(prev);
+            next.delete(uid);
+            return next;
+          });
+          influenceFlashTimers.current.delete(uid);
+        }, 1300));
+      });
+    }
+    prevCardInfluence.current = current;
+  }, [gameState]);
+
+  useEffect(() => (
+    () => {
+      influenceFlashTimers.current.forEach((timer) => window.clearTimeout(timer));
+      influenceFlashTimers.current.clear();
+    }
+  ), []);
 
   useEffect(() => {
     const currentUids = new Set<number>();
@@ -265,12 +372,42 @@ const GameBoard: React.FC<GameBoardProps> = ({
     card: Card,
     style: React.CSSProperties,
     data: any,
-    options?: { selected?: boolean; showActivate?: boolean; onActivate?: () => void; highlight?: boolean }
+    options?: {
+      selected?: boolean;
+      showActivate?: boolean;
+      onActivate?: () => void;
+      highlight?: boolean;
+      owner?: 1 | 2;
+      handAccent?: boolean;
+    }
   ) => {
     const spawn = recentlyPlayed.has(card.uid);
     const corrOk = corruptionSuccessUids.has(card.uid);
     const corrFail = corruptionFailUids.has(card.uid);
     const purgeFocus = pendingPurgeUid === card.uid;
+    const owner = options?.owner ?? localPlayer;
+    const ownerStyle = gameState.leaders?.[owner]
+      ? LEADERSHIP_STYLES[gameState.leaders[owner]!.styleId]
+      : null;
+    const corr = card.kind === 'pol' ? getCorruption(card as PoliticianCard) : 0;
+    const audit = card.kind === 'pol' && corr >= 1
+      ? getAuditStage(gameState, card as PoliticianCard, owner)
+      : null;
+    const corrClass =
+      card.kind === 'pol'
+        ? corr <= 0
+          ? 'game-board__card--corr-sauber'
+          : corr <= 2
+            ? 'game-board__card--corr-verstrickt'
+            : corr <= 4
+              ? 'game-board__card--corr-kompromittiert'
+              : corr === 5
+                ? 'game-board__card--corr-kleptokrat'
+                : 'game-board__card--corr-absolut'
+        : '';
+    const handAccentShadow = options?.handAccent && ownerStyle
+      ? `inset 3px 0 0 0 ${ownerStyle.accent}`
+      : null;
     return (
       <div
         key={card.uid}
@@ -282,14 +419,61 @@ const GameBoard: React.FC<GameBoardProps> = ({
           corrOk ? 'game-board__card--corruption-success' : '',
           corrFail ? 'game-board__card--corruption-fail' : '',
           purgeFocus ? 'game-board__card--purge-focus' : '',
+          options?.handAccent ? 'game-board__card--hand' : '',
+          corrClass,
         ].filter(Boolean).join(' ')}
-        style={style}
+        style={{
+          ...style,
+          boxShadow: [
+            handAccentShadow,
+            audit && audit.stage >= 3
+              ? `0 6px 16px color-mix(in srgb, var(--audit-scandal) ${Math.min(40, audit.stage * 8)}%, transparent)`
+              : null,
+            style.boxShadow,
+          ].filter(Boolean).join(', ') || undefined,
+        }}
         onClick={() => onCardClick(data)}
         onMouseEnter={(event) => handleHover(card, event)}
         onMouseMove={(event) => handleHover(card, event)}
         onMouseLeave={() => handleHover(null)}
       >
         <img src={getCardImagePath(card, 'ui')} alt={card.name} />
+        {card.kind === 'pol' && !options?.handAccent && (() => {
+          const pol = card as PoliticianCard as any;
+          const base = pol.influence || 0;
+          const eff = effectiveInfluence(card);
+          const delta = eff - base;
+          const flash = influenceFlash.get(card.uid);
+          const deactivated = Boolean(pol.deactivated);
+          return (
+            <span
+              className={[
+                'game-board__inf-pill',
+                deactivated ? 'game-board__inf-pill--dead' : '',
+                delta > 0 ? 'game-board__inf-pill--buffed' : delta < 0 ? 'game-board__inf-pill--debuffed' : '',
+                flash === 'gain' ? 'game-board__inf-pill--gain' : flash === 'loss' ? 'game-board__inf-pill--loss' : '',
+              ].filter(Boolean).join(' ')}
+              title={deactivated
+                ? `${card.name}: deaktiviert (0 Einfluss)`
+                : delta !== 0
+                  ? `Basis ${base} ${delta > 0 ? '+' : ''}${delta} durch Effekte`
+                  : `Einfluss ${base}`}
+            >
+              {deactivated ? 0 : eff}
+              {!deactivated && delta !== 0 && (
+                <em>{delta > 0 ? `+${delta}` : delta}</em>
+              )}
+            </span>
+          );
+        })()}
+        {audit && (
+          <span
+            className={`game-board__audit-pill game-board__audit-pill--${audit.outcome}`}
+            title={`Audit-Stufe ${audit.stage}: ${audit.details.join(', ')}`}
+          >
+            A{audit.stage}
+          </span>
+        )}
         {options?.showActivate && options.onActivate && (
           <button
             type="button"
@@ -387,7 +571,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
         card,
         style,
         { type: player === 1 ? 'hand_p1' : 'hand_p2', index: originalIndex, card },
-        { selected },
+        { selected, owner: player, handAccent: true },
       );
     });
   };
@@ -446,7 +630,12 @@ const GameBoard: React.FC<GameBoardProps> = ({
     const zone = getZone(`interventions.${ player === 1 ? 'player' : 'opponent' }`);
     const rect = computeSlotRects(zone)[0];
     const style = { left: rect.x, top: rect.y, width: rect.w, height: rect.h } as React.CSSProperties;
-    const card = (gameState.traps[player] || [])[0];
+    let card = (gameState.traps[player] || [])[0];
+    // Schattenstaat: opponent does not see the trap (viewer-dependent)
+    if (card && player !== localPlayer) {
+      const ownerStyle = gameState.leaders?.[player]?.styleId;
+      if (ownerStyle === 'schattenstaat') card = undefined as any;
+    }
 
     if (!card) {
       return renderSlot(
@@ -515,22 +704,76 @@ const GameBoard: React.FC<GameBoardProps> = ({
     prevLeadRef.current = leadPlayer;
   }, [leadPlayer, p1Influence, p2Influence, localPlayer]);
 
-  const tunnelvisionPending = pendingAbility?.type === 'tunnelvision_probe' ? pendingAbility : null;
+  // Scoreboard gain/loss animation: pulse+surge on gain, shake on loss,
+  // floating delta label; big swings (|Δ| >= 3) get a lightning surge flash.
+  type ScoreFx = { dir: 'gain' | 'loss'; delta: number; surge: boolean; key: number };
+  const prevScoreRef = useRef<{ 1: number; 2: number } | null>(null);
+  const [scoreFx, setScoreFx] = useState<{ 1: ScoreFx | null; 2: ScoreFx | null }>({ 1: null, 2: null });
+  const scoreFxTimers = useRef<{ 1: number | null; 2: number | null }>({ 1: null, 2: null });
 
-  const requestTunnelvisionRoll = useCallback(() => {
+  useEffect(() => {
+    const prev = prevScoreRef.current;
+    prevScoreRef.current = { 1: p1Influence, 2: p2Influence };
+    if (!prev) return;
+    ([1, 2] as const).forEach((player) => {
+      const value = player === 1 ? p1Influence : p2Influence;
+      const delta = value - prev[player];
+      if (delta === 0) return;
+      setScoreFx((cur) => ({
+        ...cur,
+        [player]: {
+          dir: delta > 0 ? 'gain' : 'loss',
+          delta,
+          surge: Math.abs(delta) >= 3,
+          key: Date.now() + player,
+        },
+      }));
+      const existing = scoreFxTimers.current[player];
+      if (existing) window.clearTimeout(existing);
+      scoreFxTimers.current[player] = window.setTimeout(() => {
+        setScoreFx((cur) => ({ ...cur, [player]: null }));
+        scoreFxTimers.current[player] = null;
+      }, 1500);
+    });
+  }, [p1Influence, p2Influence]);
+
+  useEffect(() => (
+    () => {
+      ([1, 2] as const).forEach((player) => {
+        const timer = scoreFxTimers.current[player];
+        if (timer) window.clearTimeout(timer);
+      });
+    }
+  ), []);
+
+  // Audit drama: both players passed → the round is being decided right now.
+  const auditDramaActive = !gameState.gameWinner && (
+    gameState.pendingPurge != null
+    || (Boolean(gameState.passed[1]) && Boolean(gameState.passed[2]))
+  );
+
+  const tunnelvisionPending =
+    pendingAbility?.type === 'tunnelvision_choice' || pendingAbility?.type === 'tunnelvision_probe'
+      ? pendingAbility
+      : null;
+
+  const resolveTunnelvisionChoice = useCallback((choice: 'ap' | 'corruption') => {
     if (!tunnelvisionPending) return;
-    window.dispatchEvent(new CustomEvent('pc:tunnelvision_request_roll', {
+    window.dispatchEvent(new CustomEvent('pc:tunnelvision_choice', {
       detail: {
         player: tunnelvisionPending.actorPlayer,
         targetUid: tunnelvisionPending.targetUid,
-        requiredRoll: tunnelvisionPending.requiredRoll,
-        influence: tunnelvisionPending.influence,
+        choice,
       },
     }));
   }, [tunnelvisionPending]);
 
   return (
-    <div className={`game-board${ useCompactHud ? ' game-board--mobile-landscape' : '' }`} ref={boardRef}>
+    <div
+      className={`game-board${ useCompactHud ? ' game-board--mobile-landscape' : '' }${ isMyTurn ? ' game-board--turn-active' : '' }${ gameState.passed[localPlayer] ? ' game-board--passed' : '' }`}
+      ref={boardRef}
+      style={styleVars as React.CSSProperties}
+    >
       {/* Top HUD Bar */}
       <div className={`game-board__hud game-board__hud--top${ useCompactHud ? ' game-board__hud--compact' : '' }`} style={{
         position: 'absolute',
@@ -590,31 +833,64 @@ const GameBoard: React.FC<GameBoardProps> = ({
           </div>
         </div>
 
-        {/* Central scoreboard */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-          <div style={{ textAlign: 'right' }} className={leadPulse === 1 ? 'score-lead-pulse' : undefined}>
-            <div style={{ fontSize: '10px', color: 'var(--player-strong)', fontWeight: 700, letterSpacing: '1px' }}>{localPlayer === 1 ? 'SPIELER 1 (DU)' : 'SPIELER 1 (GEGNER)'}</div>
-            <div style={{ fontSize: '24px', fontWeight: 900, color: leadPulse === 1 ? 'var(--player-strong)' : 'var(--content-primary)' }}>{p1Influence}</div>
-          </div>
-          <div style={{
-            fontSize: '11px',
-            fontWeight: 800,
-            background: 'var(--surface-muted)',
-            padding: '4px 10px',
-            borderRadius: '4px',
-            color: 'var(--content-muted)',
-            border: '1px solid var(--border-subtle)',
-            letterSpacing: '1px',
-          }}>
-            EINFLUSS
-          </div>
-          <div style={{ textAlign: 'left' }} className={leadPulse === 2 ? 'score-lead-pulse' : undefined}>
-            <div style={{ fontSize: '10px', color: 'var(--opponent)', fontWeight: 700, letterSpacing: '1px' }}>{localPlayer === 2 ? 'SPIELER 2 (DU)' : 'SPIELER 2 (GEGNER)'}</div>
-            <div style={{ fontSize: '24px', fontWeight: 900, color: leadPulse === 2 ? 'var(--opponent-strong)' : 'var(--content-primary)' }}>{p2Influence}</div>
-          </div>
+        {/* Central scoreboard — the focal element of the HUD */}
+        <div className={`game-board__scoreboard${scoreFx[1]?.surge || scoreFx[2]?.surge ? ' game-board__scoreboard--surge' : ''}`}>
+          {([1, 2] as const).map((player) => {
+            const value = player === 1 ? p1Influence : p2Influence;
+            const fx = scoreFx[player];
+            const you = localPlayer === player;
+            const accent = player === 1 ? 'var(--player-strong)' : 'var(--opponent)';
+            const isLead = leadPlayer === player;
+            const column = (
+              <div
+                key={player}
+                style={{ textAlign: player === 1 ? 'right' : 'left', position: 'relative' }}
+                className={leadPulse === player ? 'score-lead-pulse' : undefined}
+              >
+                <div style={{ fontSize: '10px', color: accent, fontWeight: 700, letterSpacing: '1px' }}>
+                  {`SPIELER ${player} ${you ? '(DU)' : '(GEGNER)'}`}
+                </div>
+                <div
+                  className={[
+                    'game-board__score-value',
+                    isLead ? 'game-board__score-value--lead' : '',
+                    fx ? `game-board__score-value--${fx.dir}` : '',
+                  ].filter(Boolean).join(' ')}
+                  style={{ color: isLead ? accent : 'var(--content-primary)' }}
+                >
+                  {value}
+                </div>
+                {fx && (
+                  <span
+                    key={fx.key}
+                    className={`game-board__score-delta game-board__score-delta--${fx.dir}`}
+                    aria-hidden
+                  >
+                    {fx.delta > 0 ? `+${fx.delta}` : fx.delta}
+                  </span>
+                )}
+              </div>
+            );
+            return player === 1
+              ? [column, (
+                <div key="label" style={{
+                  fontSize: '11px',
+                  fontWeight: 800,
+                  background: 'var(--surface-muted)',
+                  padding: '4px 10px',
+                  borderRadius: '4px',
+                  color: 'var(--content-muted)',
+                  border: '1px solid var(--border-subtle)',
+                  letterSpacing: '1px',
+                }}>
+                  EINFLUSS
+                </div>
+              )]
+              : column;
+          })}
         </div>
 
-        {/* AP display */}
+        {/* AP display + opponent Anführer (read-only identity through mauve veil) */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           <div style={{
             background: 'color-mix(in srgb, var(--sage-500) 16%, transparent)',
@@ -626,6 +902,11 @@ const GameBoard: React.FC<GameBoardProps> = ({
             gap: '8px',
           }}>
             <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--player-strong)', letterSpacing: '0.5px' }}>P1 AP</span>
+            <span className="game-board__ap-lamps" style={{ ['--lamp-color' as string]: 'var(--player-strong)' }} aria-hidden>
+              {[0, 1, 2, 3].map((i) => (
+                <span key={i} className={`game-board__ap-lamp${i < Math.min(gameState.actionPoints[1], 4) ? ' game-board__ap-lamp--on' : ''}`} />
+              ))}
+            </span>
             <strong style={{ fontSize: '14px', fontWeight: 800, color: 'var(--player-strong)' }}>{gameState.actionPoints[1]}</strong>
           </div>
           <div style={{
@@ -638,8 +919,34 @@ const GameBoard: React.FC<GameBoardProps> = ({
             gap: '8px',
           }}>
             <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--feedback-negative)', letterSpacing: '0.5px' }}>P2 AP</span>
+            <span className="game-board__ap-lamps" style={{ ['--lamp-color' as string]: 'var(--feedback-negative)' }} aria-hidden>
+              {[0, 1, 2, 3].map((i) => (
+                <span key={i} className={`game-board__ap-lamp${i < Math.min(gameState.actionPoints[2], 4) ? ' game-board__ap-lamp--on' : ''}`} />
+              ))}
+            </span>
             <strong style={{ fontSize: '14px', fontWeight: 800, color: 'var(--feedback-negative)' }}>{gameState.actionPoints[2]}</strong>
           </div>
+          {leaderOpp && (
+            <div
+              className="game-board__leader game-board__leader--opponent"
+              title={`Gegner: ${leaderOpp.championName} — ${LEADERSHIP_STYLES[leaderOpp.styleId]?.doctrine || ''}`}
+            >
+              <div
+                className="game-board__leader-frame game-board__leader-frame--opponent"
+                style={{ borderColor: styleOpp?.accent ?? 'var(--mauve-600)' }}
+              >
+                {leaderOppImageSrc ? (
+                  <img className="game-board__leader-art" src={leaderOppImageSrc} alt={leaderOpp.championName} draggable={false} />
+                ) : (
+                  <div className="game-board__leader-fallback">{leaderOpp.championName.slice(0, 2)}</div>
+                )}
+                <span className={`game-board__leader-badge ${leaderOpp.activeUsed ? 'game-board__leader-badge--spent' : 'game-board__leader-badge--wait'}`}>
+                  {leaderOpp.activeUsed ? 'VERBRAUCHT' : 'GEGNER'}
+                </span>
+              </div>
+              <span className="game-board__leader-caption">{leaderOpp.championName}</span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -658,11 +965,33 @@ const GameBoard: React.FC<GameBoardProps> = ({
           style={{ backgroundImage: LAYOUT.background?.src ? `url(${ LAYOUT.background.src })` : undefined }}
         />
 
-        {/* Mirrored hand columns (player left, opponent right) */}
-        <div className="game-board__hand-panel" style={{ left: 0, top: 0, width: 224, height: 1080 }}>
+        {/* Mirrored hand columns (player left, opponent right) — style accent per owner */}
+        <div
+          className="game-board__hand-panel"
+          style={{
+            left: 0,
+            top: 0,
+            width: 224,
+            height: 1080,
+            ['--style-accent' as string]: localPlayer === 1
+              ? (styleSelf?.accent ?? 'var(--teal-600)')
+              : (styleOpp?.accent ?? 'var(--mauve-600)'),
+          }}
+        >
           <span>{localPlayer === 1 ? 'DEINE HAND' : 'GEGNER HAND'}</span>
         </div>
-        <div className="game-board__hand-panel game-board__hand-panel--opponent" style={{ left: 1696, top: 0, width: 224, height: 1080 }}>
+        <div
+          className="game-board__hand-panel game-board__hand-panel--opponent"
+          style={{
+            left: 1696,
+            top: 0,
+            width: 224,
+            height: 1080,
+            ['--style-accent' as string]: localPlayer === 2
+              ? (styleSelf?.accent ?? 'var(--teal-600)')
+              : (styleOpp?.accent ?? 'var(--mauve-600)'),
+          }}
+        >
           <span>{localPlayer === 2 ? 'DEINE HAND' : 'GEGNER HAND'}</span>
         </div>
 
@@ -680,28 +1009,58 @@ const GameBoard: React.FC<GameBoardProps> = ({
         {renderInterventionSlot(1)}
         {renderHand(1)}
         {renderHand(2)}
-
-        {!useCompactHud && (
-          <>
-            <div className="game-board__live-cast game-board__live-cast--left">
-              <LiveCastFeed
-                side="left"
-                player={1}
-                log={gameState.log}
-                guidance={localPlayer === 1 && !gameState.gameWinner ? guidanceHint : null}
-              />
-            </div>
-            <div className="game-board__live-cast game-board__live-cast--right">
-              <LiveCastFeed
-                side="right"
-                player={2}
-                log={gameState.log}
-                guidance={localPlayer === 2 && !gameState.gameWinner ? guidanceHint : null}
-              />
-            </div>
-          </>
-        )}
       </div>
+
+      {!useCompactHud && !gameState.gameWinner && (() => {
+        const gutterPad = 8;
+        const leftW = Math.max(0, transform.offsetX - gutterPad * 2);
+        const rightEdge = transform.offsetX + UI_BASE.width * transform.scale;
+        const rightW = Math.max(0, size.width - rightEdge - gutterPad * 2);
+        const top = transform.offsetY + 52 * transform.scale;
+        const maxH = Math.max(120, UI_BASE.height * transform.scale - 100);
+        // Only render rails when there is real room between screen edge and hands
+        if (leftW < 96 && rightW < 96) return null;
+        return (
+          <>
+            {leftW >= 96 && (
+              <div
+                className="game-board__live-cast game-board__live-cast--rail game-board__live-cast--left"
+                style={{
+                  left: gutterPad,
+                  width: leftW,
+                  top,
+                  maxHeight: maxH,
+                }}
+              >
+                <LiveCastFeed
+                  side="left"
+                  player={1}
+                  log={gameState.log}
+                  guidance={localPlayer === 1 ? guidanceHint : null}
+                />
+              </div>
+            )}
+            {rightW >= 96 && (
+              <div
+                className="game-board__live-cast game-board__live-cast--rail game-board__live-cast--right"
+                style={{
+                  left: rightEdge + gutterPad,
+                  width: rightW,
+                  top,
+                  maxHeight: maxH,
+                }}
+              >
+                <LiveCastFeed
+                  side="right"
+                  player={2}
+                  log={gameState.log}
+                  guidance={localPlayer === 2 ? guidanceHint : null}
+                />
+              </div>
+            )}
+          </>
+        );
+      })()}
 
       {useCompactHud && !gameState.gameWinner && (
         <div className="game-board__live-cast game-board__live-cast--mobile">
@@ -715,25 +1074,26 @@ const GameBoard: React.FC<GameBoardProps> = ({
         </div>
       )}
 
-      {/* Bottom HUD Bar */}
-      <div className={`game-board__hud game-board__hud--bottom${ useCompactHud ? ' game-board__hud--compact' : '' }`} style={{
+      {/* Bottom HUD Bar — taller when Anführer portrait is present */}
+      <div className={`game-board__hud game-board__hud--bottom${ useCompactHud ? ' game-board__hud--compact' : '' }${ leaderSelf ? ' game-board__hud--bottom-with-leader' : '' }`} style={{
         position: 'absolute',
         bottom: 0,
         left: 0,
         right: 0,
-        height: '70px',
+        height: bottomHudHeight,
         background: 'linear-gradient(0deg, var(--surface-panel) 0%, var(--surface-raised) 100%)',
         borderTop: '1px solid var(--border-subtle)',
         display: 'flex',
-        alignItems: 'center',
+        alignItems: 'flex-end',
         justifyContent: 'space-between',
-        padding: '0 30px',
+        padding: '8px 30px 10px',
         zIndex: 100,
         backdropFilter: 'blur(10px)',
         boxShadow: '0 -4px 20px color-mix(in srgb, var(--ink-900) 28%, transparent)',
+        overflow: 'visible',
       }}>
         {/* Exit + turn indicator */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', alignSelf: 'center' }}>
           {onExitToMenu && (
             <button
               type="button"
@@ -768,11 +1128,13 @@ const GameBoard: React.FC<GameBoardProps> = ({
         </div>
 
         {/* Action Buttons */}
-        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-end' }}>
           <button
             onClick={() => onCardClick({ type: 'button_pass_turn' })}
             disabled={!isMyTurn || gameState.passed[localPlayer]}
+            className="game-board__pass"
             style={{
+              position: 'relative',
               background: gameState.passed[localPlayer] ? 'var(--action-primary-disabled)' : (isMyTurn ? 'color-mix(in srgb, var(--amber-500) 22%, transparent)' : 'var(--surface-muted)'),
               color: gameState.passed[localPlayer] ? 'var(--content-muted)' : (isMyTurn ? 'var(--amber-700)' : 'var(--content-muted)'),
               border: gameState.passed[localPlayer] ? '1px solid var(--border-subtle)' : (isMyTurn ? '1px solid color-mix(in srgb, var(--amber-500) 40%, transparent)' : '1px solid var(--border-subtle)'),
@@ -784,6 +1146,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
               textTransform: 'uppercase',
               letterSpacing: '1px',
               transition: 'all 0.2s',
+              overflow: 'hidden',
             }}
             onMouseEnter={(e) => {
               if (isMyTurn && !gameState.passed[localPlayer]) {
@@ -797,38 +1160,87 @@ const GameBoard: React.FC<GameBoardProps> = ({
             }}
           >
             {gameState.passed[localPlayer] ? 'Gepasst ✓' : 'Passen'}
+            {/* Ambient audit exposure underline — length = board debt.
+                Keyed on exposure so every change (e.g. Schweigegeld relief)
+                replays the pulse animation while the width glides. */}
+            {!gameState.passed[localPlayer] && auditExposure > 0 && (
+              <span
+                key={auditExposure}
+                aria-hidden
+                className="game-board__audit-underline"
+                style={{ width: `${Math.min(80, 12 + auditExposure * 8)}%` }}
+              />
+            )}
           </button>
 
-          <button
-            onClick={() => onCardClick({ type: 'button_end_turn' })}
-            disabled={!isMyTurn}
-            style={{
-              background: isMyTurn ? 'var(--action-primary)' : 'var(--surface-muted)',
-              color: isMyTurn ? 'var(--content-on-action)' : 'var(--content-muted)',
-              border: 'none',
-              padding: '10px 24px',
-              borderRadius: '8px',
-              fontSize: '13px',
-              fontWeight: 700,
-              cursor: isMyTurn ? 'pointer' : 'not-allowed',
-              textTransform: 'uppercase',
-              letterSpacing: '1px',
-              boxShadow: isMyTurn ? '0 4px 12px color-mix(in srgb, var(--teal-500) 28%, transparent)' : 'none',
-              transition: 'all 0.2s',
-            }}
-            onMouseEnter={(e) => {
-              if (isMyTurn) {
-                e.currentTarget.style.transform = 'translateY(-1px)';
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (isMyTurn) {
-                e.currentTarget.style.transform = 'translateY(0)';
-              }
-            }}
-          >
-            Zug beenden
-          </button>
+          {/* Anführer portrait stacked directly above Zug beenden — card asset + state cue */}
+          <div className="game-board__leader-stack">
+            {leaderSelf && (
+              <button
+                type="button"
+                title={`${leaderSelf.championName}: ${leaderSelf.activeDescription}${leaderGate.ok ? '' : ` (${leaderGate.reason})`}`}
+                disabled={!leaderGate.ok}
+                onClick={() => onCardClick({ type: 'activate_leader', player: localPlayer })}
+                className={[
+                  'game-board__leader',
+                  leaderState === 'spent' ? 'game-board__leader--spent' : '',
+                  leaderState === 'ready' ? 'game-board__leader--ready' : '',
+                  leaderState === 'wait' ? 'game-board__leader--wait' : '',
+                ].filter(Boolean).join(' ')}
+                aria-label={`Anführer ${leaderSelf.championName}, ${
+                  leaderState === 'ready' ? 'Aktiv bereit' : leaderState === 'spent' ? 'Aktiv verbraucht' : 'Wartet'
+                }`}
+              >
+                <div className="game-board__leader-frame">
+                  {leaderImageSrc ? (
+                    <img
+                      className="game-board__leader-art"
+                      src={leaderImageSrc}
+                      alt={leaderSelf.championName}
+                      draggable={false}
+                    />
+                  ) : (
+                    <div className="game-board__leader-fallback">{leaderSelf.championName.slice(0, 2)}</div>
+                  )}
+                  <span className={`game-board__leader-badge game-board__leader-badge--${leaderState}`}>
+                    {leaderState === 'ready' ? 'BEREIT' : leaderState === 'spent' ? 'VERBRAUCHT' : 'WARTE'}
+                  </span>
+                </div>
+                <span className="game-board__leader-caption">{leaderSelf.championName}</span>
+              </button>
+            )}
+            <button
+              onClick={() => onCardClick({ type: 'button_end_turn' })}
+              disabled={!isMyTurn}
+              className="game-board__end-turn"
+              style={{
+                background: isMyTurn ? 'var(--action-primary)' : 'var(--surface-muted)',
+                color: isMyTurn ? 'var(--content-on-action)' : 'var(--content-muted)',
+                border: 'none',
+                padding: '10px 24px',
+                borderRadius: '8px',
+                fontSize: '13px',
+                fontWeight: 700,
+                cursor: isMyTurn ? 'pointer' : 'not-allowed',
+                textTransform: 'uppercase',
+                letterSpacing: '1px',
+                boxShadow: isMyTurn ? '0 4px 12px color-mix(in srgb, var(--teal-500) 28%, transparent)' : 'none',
+                transition: 'all 0.2s',
+              }}
+              onMouseEnter={(e) => {
+                if (isMyTurn) {
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (isMyTurn) {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                }
+              }}
+            >
+              Zug beenden
+            </button>
+          </div>
         </div>
       </div>
 
@@ -954,6 +1366,34 @@ const GameBoard: React.FC<GameBoardProps> = ({
         </div>
       )}
 
+      {/* Audit drama — full-screen focus once both players pass: the round is decided NOW */}
+      {auditDramaActive && (
+        <div className="game-board__audit-drama" aria-hidden>
+          <div className="game-board__audit-drama-vignette" />
+          <div className="game-board__audit-drama-flash" />
+          <div className="game-board__audit-drama-banner">
+            <span className="game-board__audit-drama-kicker">⚖ AUDIT</span>
+            <span className="game-board__audit-drama-title">JETZT ENTSCHEIDET SICH DIE RUNDE</span>
+            <div className="game-board__audit-drama-scores">
+              <span className={`game-board__audit-drama-score${leadPlayer === 1 ? ' game-board__audit-drama-score--lead' : ''}`} style={{ color: 'var(--player-strong)' }}>
+                {p1Influence}
+              </span>
+              <span className="game-board__audit-drama-vs">:</span>
+              <span className={`game-board__audit-drama-score${leadPlayer === 2 ? ' game-board__audit-drama-score--lead' : ''}`} style={{ color: 'var(--opponent)' }}>
+                {p2Influence}
+              </span>
+            </div>
+            <span className="game-board__audit-drama-sub">
+              {gameState.pendingPurge
+                ? 'Belastete Regierungen werden geprüft…'
+                : leadPlayer === 0
+                  ? 'Gleichstand — jede Prüfung zählt.'
+                  : `Spieler ${leadPlayer} führt — Audits können alles drehen.`}
+            </span>
+          </div>
+        </div>
+      )}
+
       {tunnelvisionPending && (
         <div
           style={{
@@ -974,21 +1414,36 @@ const GameBoard: React.FC<GameBoardProps> = ({
               padding: '18px 20px',
               color: 'var(--content-primary)',
               fontSize: '14px',
-              minWidth: '300px',
+              minWidth: '320px',
               boxShadow: '0 12px 40px color-mix(in srgb, var(--ink-900) 28%, transparent)',
             }}
           >
-            <div style={{ fontWeight: 700, marginBottom: '8px' }}>Tunnelvision — Probe</div>
+            <div style={{ fontWeight: 700, marginBottom: '8px' }}>Tunnelvision — Freigabe</div>
             <div style={{ marginBottom: '6px' }}>
               Einfluss: <strong>{tunnelvisionPending.influence ?? '?'}</strong>
             </div>
             <div style={{ marginBottom: '12px', color: 'var(--content-muted)' }}>
-              Benötigter Wurf: W6 ≥ {tunnelvisionPending.requiredRoll ?? '?'}
+              Wähle den Preis — kein Würfel.
             </div>
             <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
               <button
                 type="button"
-                onClick={requestTunnelvisionRoll}
+                onClick={() => resolveTunnelvisionChoice('corruption')}
+                style={{
+                  background: 'var(--feedback-warning-subtle)',
+                  color: 'var(--feedback-warning)',
+                  border: '1px solid var(--feedback-warning)',
+                  padding: '8px 14px',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontWeight: 700,
+                }}
+              >
+                +1 Korruption
+              </button>
+              <button
+                type="button"
+                onClick={() => resolveTunnelvisionChoice('ap')}
                 style={{
                   background: 'var(--action-primary)',
                   color: 'var(--content-on-action)',
@@ -999,7 +1454,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
                   fontWeight: 700,
                 }}
               >
-                Würfeln
+                +1 AP zahlen
               </button>
             </div>
           </div>

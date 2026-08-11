@@ -20,7 +20,7 @@ export const LEGACY_NAME_TO_KEY: Record<string, string> = {
   'Digitaler Wahlkampf':     'init.digital_campaign.per_media',
   'Whataboutism':            'init.whataboutism.reactivate_minus1',
   'Scandal Spiral':          'trap.scandal_spiral.cancel_one_of_two',
-  'Skandalspirale':          'init.skandalspirale.w6_check',
+  'Skandalspirale':          'init.skandalspirale.deterministic',
 
   // --- Traps ---
   'Interne Fraktionskämpfe': 'trap.internal_faction_strife.cancel_big_initiative',

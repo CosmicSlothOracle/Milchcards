@@ -142,7 +142,7 @@ describe('Koalitionszwang Effect', () => {
 
       expect(details.usage).toContain('Regierungskarten gleichen Einflusses');
       expect(details.usage).toContain('Aktivisten/Denkern');
-      expect(details.example).toContain('+2 Cap');
+      expect(details.example).toContain('On-Play +2');
     });
   });
 });

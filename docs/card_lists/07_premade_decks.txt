@@ -1,210 +1,43 @@
-Premade Decks
+Premade decks
 =============
 
-Count: 13
+Source: src/data/presetDecks.ts · ambivalence pass Aug 2026
 
-## Tech Oligarchs
-Cards (11):
-- Donald Trump
-- Xi Jinping
-- Vladimir Putin
-- Mohammed bin Salman
-- Recep Tayyip Erdoğan
-- Javier Milei
-- Verzögerungsverfahren
-- Symbolpolitik
-- Think-tank
-- Influencer-Kampagne
-- Systemrelevant
+## Tech Oligarchs (11 cards)
+Donald Trump, Xi Jinping, Vladimir Putin, Mohammed bin Salman, Recep Tayyip Erdoğan, Javier Milei, Verzögerungsverfahren, Think-tank, Jack Ma, Konzernfreundlicher Algorithmus, Systemrelevant
 
-## Diplomatic Power
-Cards (13):
-- Helmut Schmidt
-- Kamala Harris
-- Olaf Scholz
-- Rishi Sunak
-- Hans Dietrich Genscher
-- George Soros
-- Warren Buffett
-- Spin Doctor
-- Think-tank
-- Koalitionszwang
-- Systemrelevant
-- Rainer Offergeld
-- Digitaler Wahlkampf
+## Diplomatic Power (13 cards)
+Helmut Schmidt, Kamala Harris, Olaf Scholz, Rishi Sunak, Hans Dietrich Genscher, George Soros, Warren Buffett, Spin Doctor, Think-tank, Koalitionszwang, Systemrelevant, Rainer Offergeld, Digitaler Wahlkampf
 
-## Activist Movement
-Cards (13):
-- Volodymyr Zelenskyy
-- Ursula von der Leyen
-- Narendra Modi
-- Luiz Inácio Lula da Silva
-- Benjamin Netanyahu
-- Joschka Fischer
-- Ai Weiwei
-- Alexei Navalny
-- Zivilgesellschaft
-- Boykott-Kampagne
-- Verzögerungsverfahren
-- Mark Zuckerberg
-- Oprah Winfrey
+## Activist Movement (13 cards)
+Volodymyr Zelenskyy, Ursula von der Leyen, Narendra Modi, Luiz Inácio Lula da Silva, Benjamin Netanyahu, Joschka Fischer, Ai Weiwei, Alexei Navalny, Zivilgesellschaft, Boykott-Kampagne, Verzögerungsverfahren, Bill Gates, Straßenmandat
 
-## Initiative Rush
-Cards (13):
-- Emmanuel Macron
-- Giorgia Meloni
-- Ebrahim Raisi
-- Andrzej Duda
-- Anthony Albanese
-- King Charles III
-- Verzögerungsverfahren
-- Symbolpolitik
-- Opportunist
-- Shadow Lobbying
-- Whataboutism
-- Influencer-Kampagne
-- Tim Cook
+## Initiative Rush (13 cards)
+Emmanuel Macron, Giorgia Meloni, Ebrahim Raisi, Andrzej Duda, Anthony Albanese, King Charles III, Verzögerungsverfahren, Symbolpolitik, Opportunist, Think-tank, Whataboutism, Spin Doctor, Tim Cook
 
-## Media Control
-Cards (12):
-- Donald Trump
-- Vladimir Putin
-- Xi Jinping
-- Mohammed bin Salman
-- Recep Tayyip Erdoğan
-- Pedro Sánchez
-- Oprah Winfrey
-- Algorithmischer Diskurs
-- Fake News-Kampagne
-- Cancel Culture
-- Verzögerungsverfahren
-- Shadow Lobbying
+## Media Control (12 cards)
+Donald Trump, Vladimir Putin, Xi Jinping, Mohammed bin Salman, Recep Tayyip Erdoğan, Pedro Sánchez, Oprah Winfrey, Algorithmischer Diskurs, Fake News-Kampagne, Cancel Culture, Mark Zuckerberg, Redaktionskonferenz
 
-## Economic Influence
-Cards (12):
-- Helmut Schmidt
-- Jens Stoltenberg
-- Kamala Harris
-- Olaf Scholz
-- Rishi Sunak
-- Dick Cheney
-- Warren Buffett
-- Jeff Bezos
-- Mukesh Ambani
-- Roman Abramovich
-- Wirtschaftlicher Druck
-- Lobby Leak
+## Economic Influence (12 cards)
+Helmut Schmidt, Jens Stoltenberg, Kamala Harris, Olaf Scholz, Rishi Sunak, Dick Cheney, Warren Buffett, Jeff Bezos, Mukesh Ambani, Roman Abramovich, Wirtschaftlicher Druck, Lobby Leak
 
-## Security State
-Cards (12):
-- Colin Powell
-- Condoleezza Rice
-- Donald Rumsfeld
-- Sergey Lavrov
-- Wolfgang Schäuble
-- Justin Trudeau
-- Maulwurf
-- Tunnelvision
-- Cyber-Attacke
-- Deepfake-Skandal
-- Parlament geschlossen
-- Oppositionsblockade
+## Security State (12 cards)
+Colin Powell, Condoleezza Rice, Donald Rumsfeld, Sergey Lavrov, Wolfgang Schäuble, Justin Trudeau, Maulwurf, Tunnelvision, Cyber-Attacke, Deepfake-Skandal, Parlament geschlossen, Oppositionsblockade
 
-## Reform Coalition
-Cards (13):
-- Friedrich Merz
-- Pedro Sánchez
-- Keir Starmer
-- Otto Schily
-- Henry Paulson
-- Johannes Rau
-- Bill Gates
-- Jennifer Doudna
-- Anthony Fauci
-- Milchglas Transparenz
-- Partei-Offensive
-- Whistleblower
-- Vladimir Putin
+## Reform Coalition (13 cards)
+Friedrich Merz, Pedro Sánchez, Keir Starmer, Otto Schily, Henry Paulson, Johannes Rau, Bill Gates, Jennifer Doudna, Anthony Fauci, Alternative Fakten, Partei-Offensive, Whistleblower, Vladimir Putin
 
-## Information War
-Cards (14):
-- Karl Rove
-- Robert Gates
-- Shigeru Ishiba
-- Tedros Adhanom Ghebreyesus
-- Tom Ridge
-- John Ashcroft
-- Edward Snowden
-- Julian Assange
-- Yuval Noah Harari
-- Noam Chomsky
-- Skandalspirale
-- Scandal Spiral
-- Xi Jinping
-- Elon Musk
+## Information War (14 cards)
+Karl Rove, Robert Gates, Shigeru Ishiba, Tedros Adhanom Ghebreyesus, Tom Ridge, John Ashcroft, Edward Snowden, Julian Assange, Yuval Noah Harari, Noam Chomsky, Think-tank, Bill Gates, Xi Jinping, Elon Musk
 
-## Grassroots Surge
-Cards (14):
-- Heidemarie Wieczorek-Zeul
-- Renate Künast
-- Rudolf Scharping
-- Erhard Eppler
-- Edelgard Bulmahn
-- Annette Schavan
-- Greta Thunberg
-- Malala Yousafzai
-- Grassroots-Widerstand
-- Massenproteste
-- Zivilgesellschaft
-- Vladimir Putin
-- Xi Jinping
-- Sam Altman
+## Grassroots Surge (14 cards)
+Heidemarie Wieczorek-Zeul, Renate Künast, Rudolf Scharping, Erhard Eppler, Edelgard Bulmahn, Annette Schavan, Greta Thunberg, Malala Yousafzai, Grassroots-Widerstand, Massenproteste, Zivilgesellschaft, Straßenmandat, Xi Jinping, Bill Gates
 
-## Corporate Capture
-Cards (13):
-- Hans Apel
-- Georg Leber
-- Franz Josef Jung
-- Peter Struck
-- Gerhart Baum
-- Alberto Gonzales
-- Gautam Adani
-- Alisher Usmanov
-- Jack Ma
-- Zhang Yiming
-- Bestechungsskandal 2.0
-- Konzernfreundlicher Algorithmus
-- Vladimir Putin
+## Corporate Capture (13 cards)
+Hans Apel, Georg Leber, Franz Josef Jung, Peter Struck, Gerhart Baum, Alberto Gonzales, Gautam Adani, Alisher Usmanov, Jack Ma, Zhang Yiming, Bestechungsskandal 2.0, Konzernfreundlicher Algorithmus, Vladimir Putin
 
-## Institutional Core
-Cards (15):
-- Horst Köhler
-- Karl Carstens
-- Hans Eichel
-- Walter Scheel
-- Werner Maihofer
-- John Snow
-- Alternative Fakten
-- Napoleon Komplex
-- "Unabhängige" Untersuchung
-- Soft Power-Kollaps
-- Berater-Affäre
-- Interne Fraktionskämpfe
-- Vladimir Putin
-- Xi Jinping
-- Recep Tayyip Erdoğan
+## Institutional Core (15 cards)
+Horst Köhler, Karl Carstens, Hans Eichel, Walter Scheel, Werner Maihofer, John Snow, Alternative Fakten, Napoleon Komplex, "Unabhängige" Untersuchung, Soft Power-Kollaps, Berater-Affäre, Interne Fraktionskämpfe, Vladimir Putin, Xi Jinping, Recep Tayyip Erdoğan
 
-## Shadow Cabinet
-Cards (12):
-- Colin Powell
-- Condoleezza Rice
-- Donald Rumsfeld
-- Christine Lagarde
-- Justin Trudeau
-- King Charles III
-- Satire-Show
-- Strategische Enthüllung
-- Jeff Bezos
-- Alisher Usmanov
-- Shadow Lobbying
-- Whataboutism
+## Shadow Cabinet (12 cards)
+Colin Powell, Condoleezza Rice, Donald Rumsfeld, Christine Lagarde, Justin Trudeau, King Charles III, Satire-Show, Strategische Enthüllung, Jeff Bezos, Alisher Usmanov, Shadow Lobbying, Whataboutism

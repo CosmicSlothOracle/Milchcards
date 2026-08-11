@@ -213,4 +213,17 @@
   --radius-md: 10px;
   --radius-lg: 14px;
   --radius-pill: 999px;
+
+  /* ── Leadership style accents (identity surfaces only; ownership stays sage/mauve) ── */
+  --style-accent: var(--teal-600);
+  --style-accent-subtle: var(--teal-400);
+  --style-p1-accent: var(--teal-600);
+  --style-p1-subtle: var(--teal-400);
+  --style-p2-accent: var(--mauve-600);
+  --style-p2-subtle: var(--mauve-400);
+
+  /* Audit exposure (pass button underline length driven in UI) */
+  --audit-underline: var(--amber-500);
+  --audit-underline-muted: var(--amber-300);
+  --audit-scandal: var(--rose-500);
 }

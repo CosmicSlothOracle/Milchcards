@@ -2,6 +2,7 @@ import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { BuilderEntry, BasePolitician, BaseSpecial } from '../types/game';
 import { Pols, Specials } from '../data/gameData';
 import { PRESET_DECKS } from '../data/presetDecks';
+import { getChampionForPreset, getStyleForPreset } from '../data/leadershipStyles';
 import { currentBuilderBudget, currentBuilderCount, drawCardImage } from '../utils/gameUtils';
 import { getCardDetails, formatWealth, formatSources } from '../data/cardDetails';
 import { Icon } from '../ui/Icon';
@@ -864,8 +865,8 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
             />
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--content-muted)' }}>PRESET-DECKS:</span>
+          <div style={{ display: 'flex', alignItems: 'stretch', gap: '12px', flex: 1, minWidth: 0 }}>
+            <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--content-muted)', alignSelf: 'center' }}>DOSSIERS:</span>
             <select
               value={presetIndex}
               onChange={(e) => setPresetIndex(Number(e.target.value))}
@@ -881,12 +882,53 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                 outline: 'none',
               }}
             >
-              {PRESETS.map((p, i) => (
-                <option key={p.name} value={i}>
-                  {p.name}
-                </option>
-              ))}
+              {PRESETS.map((p, i) => {
+                const champ = getChampionForPreset(p.name);
+                const style = getStyleForPreset(p.name);
+                return (
+                  <option key={p.name} value={i}>
+                    {p.name}{champ ? ` — ${champ.cardName}` : ''}{style ? ` · ${style.name}` : ''}
+                  </option>
+                );
+              })}
             </select>
+            {(() => {
+              const preset = PRESETS[presetIndex];
+              const champ = preset ? getChampionForPreset(preset.name) : null;
+              const style = preset ? getStyleForPreset(preset.name) : null;
+              if (!champ || !style) return null;
+              return (
+                <div
+                  className="deckbuilder__dossier"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    flex: 1,
+                    minWidth: 180,
+                    maxWidth: 420,
+                    padding: '6px 12px',
+                    borderRadius: '8px',
+                    border: '1px solid color-mix(in srgb, var(--border-default) 70%, transparent)',
+                    borderLeft: `3px solid ${style.accent}`,
+                    background: `color-mix(in srgb, ${style.accent} 8%, var(--surface-panel))`,
+                  }}
+                  title={`${style.doctrine} · ${champ.activeName}: ${champ.activeDescription}`}
+                >
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--content-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {champ.cardName}
+                    </div>
+                    <div style={{ fontSize: '11px', color: 'var(--content-muted)', fontStyle: 'italic' }}>
+                      {style.doctrine}
+                    </div>
+                    <div style={{ fontSize: '11px', color: 'var(--content-secondary)' }}>
+                      {style.passiveSentence}
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
             <button
               onClick={() => applyPreset(presetIndex)}
               style={{
@@ -899,6 +941,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                 fontWeight: 600,
                 cursor: 'pointer',
                 transition: 'all 0.2s',
+                whiteSpace: 'nowrap',
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.background = 'color-mix(in srgb, var(--sage-500) 28%, transparent)';
@@ -907,7 +950,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                 e.currentTarget.style.background = 'color-mix(in srgb, var(--sage-500) 20%, transparent)';
               }}
             >
-              Preset Laden
+              Dossier laden
             </button>
           </div>
         </div>

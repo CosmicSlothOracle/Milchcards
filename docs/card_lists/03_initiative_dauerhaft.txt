@@ -1,14 +1,15 @@
 Dauerhaft-Initiativen
 =====================
 
-Count: 9
+Count: 10
 
-- Koalitionszwang: Beim Ausspielen: +1 Einfluss pro eigener Regierung mit gleichem Einfluss wie eine gegnerische, plus +1 pro Aktivist/Denker in der Öffentlichkeit (gesamter Bonus max. +2, auf stärkste Regierung). Aura: Bei ≥2 Tier-2-Regierungen erhalten alle deine Tier-2-Regierungen +1 Einfluss.
-- Algorithmischer Diskurs: Beim Ausspielen: Reduziert Einfluss basierend auf Plattform/KI-Karten in der Öffentlichkeit. Für jede Plattform/KI-Karte: -1 Einfluss auf stärkste Regierungskarte.
+- Koalitionszwang: Beim Ausspielen: +1 Einfluss pro eigener Regierung mit gleichem Einfluss wie eine gegnerische, plus +1 pro Aktivist/Denker in der Öffentlichkeit (gesamter Bonus max. +2, auf stärkste Regierung). Aura: Bei ≥2 Tier-2-Regierungen +1 je Tier-2 — pausiert im Zug nach On-Play (kein Double-Dip).
+- Algorithmischer Diskurs: Beim Ausspielen: −1 Einfluss auf gegnerische stärkste Regierung pro deren Plattform/KI-Karte (max −3) und +1 Korruption auf diese Regierung.
 - Wirtschaftlicher Druck: Wenn du eine Oligarchen-Karte spielst: +1 Einfluss auf eine Regierungskarte
-- Zivilgesellschaft: Movement cards +1 influence, NGOs give +1 AP on next initiative
-- Milchglas Transparenz: +1 Einfluss wenn keine NGO/Bewegung liegt
-- Alternative Fakten: Gegner-Interventionen -1 Wirkung (mindestens 0)
-- Napoleon Komplex: Deine stärkste Tier-1-Regierungskarte erhält +1 Einfluss. Einfluss verschieben ist nicht erlaubt.
-- Konzernfreundlicher Algorithmus: Bei Plattform-Karten: ziehe 1 Karte, Oligarchen +1 Einfluss
-- Tunnelvision: Solange aktiv: nur der Gegner muss bei Regierungskarten eine Probe bestehen (W6 ≥4, ≥5 bei Einfluss 9+). Bei Misserfolg bleibt die Karte in der Hand. 1 AP wird immer abgezogen.
+- Zivilgesellschaft: Pro aktiver Bewegung +1 Einfluss auf stärkste Regierung (max +2). NGO → +1 AP bei nächster Initiative (1×/Zug). Bei Korruption ≥3 auf stärkster Regierung zusätzlich +1 Korruption (Scrutiny). Säuberungswurf +1 wenn Korruption ≤1.
+- Milchglas Transparenz: +1 Einfluss auf stärkste Regierung wenn du keine NGO/Bewegung hast. Eigene Korruptionsgewinne und -abbau jeweils −1. Säuberungsziel −1.
+- Alternative Fakten: Gegnerische Interventionen −1 Wirkung (min 0). Gegnerische Korruptionsgewinne −1. Wenn eine Intervention dadurch wirkungslos wird: ziehe 1 Karte.
+- Napoleon Komplex: Stärkste Tier-1-Regierung +1 Einfluss. Einfluss-Transfer blockiert. Hybris: dieselbe Karte hat Säuberungsziel +1.
+- Konzernfreundlicher Algorithmus: Plattform gespielt → ziehe 1. Oligarch gespielt während du eine Plattform kontrollierst → stärkste Regierung +1 Einfluss und +1 Korruption.
+- Tunnelvision: Solange aktiv: wenn der Gegner eine Regierung spielt, wählt er deterministisch +1 AP oder +1 Korruption auf dieser Karte. Kein Würfel.
+- Straßenmandat: Bewegung gespielt → stärkste Regierung +1 (max +2/Zug); mit NGO zusätzlich +1 AP (1×/Zug). Slot: Regierung.

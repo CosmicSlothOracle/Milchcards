@@ -4,6 +4,7 @@ export type PvpAction =
   | { t: 'pass' }
   | { t: 'end_turn' }
   | { t: 'activate_instant' }
+  | { t: 'activate_leader'; targetUid?: number }
   | { t: 'event'; name: string; detail?: any };
 
 /** Window events the guest is allowed to forward to the host engine. */
@@ -14,7 +15,11 @@ export const RELAYED_ENGINE_EVENTS = [
   'pc:maulwurf_request_roll',
   'pc:maulwurf_cancel',
   'pc:tunnelvision_request_roll',
+  'pc:tunnelvision_choice',
   'pc:purge_request_roll',
+  'pc:start_duel_request_roll',
+  'pc:audit_applied',
+  'pc:audit_preview_changed',
 ] as const;
 
 /** Visual/feedback events the host mirrors to the guest. */
@@ -26,6 +31,7 @@ export const RELAYED_FX_EVENTS = [
   'pc:purge_await_roll',
   'pc:purge_sequence_start',
   'pc:purge_sequence_done',
+  'pc:start_duel_sync',
 ] as const;
 
 export type PvpPhase = 'lobby' | 'started' | 'closed';

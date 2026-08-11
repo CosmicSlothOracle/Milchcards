@@ -73,10 +73,18 @@ export function getZone(id: string): UiZone {
   return z;
 }
 
-export function getUiTransform(canvasW: number, canvasH: number) {
-  const sx = canvasW / UI_BASE.width;
+export function getUiTransform(
+  canvasW: number,
+  canvasH: number,
+  opts?: { sideGutter?: number }
+) {
+  const sideGutter = Math.max(0, opts?.sideGutter ?? 0);
+  const usableW = Math.max(320, canvasW - sideGutter * 2);
+  const sx = usableW / UI_BASE.width;
   const sy = canvasH / UI_BASE.height;
-  const scale = Math.min(sx, sy, 1);
+  // Allow upscaling on large displays (was capped at 1, which left the board
+  // floating tiny in empty space). 1.6 keeps 256px card art acceptably sharp.
+  const scale = Math.min(sx, sy, 1.6);
   const offsetX = Math.floor((canvasW - UI_BASE.width * scale) / 2);
   const offsetY = Math.floor((canvasH - UI_BASE.height * scale) / 2);
   return { scale, offsetX, offsetY };

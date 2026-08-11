@@ -4,6 +4,7 @@ import { getCardDetails } from '../data/cardDetails';
 import { makePolInstance, makeSpecInstance } from './cardUtils';
 import { makeUid } from './id';
 import { getLaneCapacity } from '../ui/layout';
+import { isMovementCard, isNgoCard } from './cardClassification';
 
 // Re-export helpers from effectUtils
 export { EffectQueueManager, ActiveAbilitiesManager, tryApplyNegativeEffect, hasDiplomatCard } from './effectUtils';
@@ -64,71 +65,79 @@ export function sumGovernmentInfluenceWithAuras(state: GameState, player: Player
   const govSlot = state.permanentSlots[player].government;
   const pubSlot = state.permanentSlots[player].public;
 
+  const scoreOf = (c: PoliticianCard) =>
+    (c.influence || 0) + ((c as any).tempBuffs || 0) - ((c as any).tempDebuffs || 0);
+
   // Napoleon Komplex: +1 only on the strongest active Tier-1 government card
   let napoleonStrongestUid: number | null = null;
   if (govSlot?.kind === 'spec' && (govSlot as SpecialCard).name === 'Napoleon Komplex') {
     const t1 = govCards.filter(c => c.T === 1 && !(c as any).deactivated);
     if (t1.length > 0) {
-      const strongest = t1.reduce((best, c) => {
-        const score = (c.influence || 0) + ((c as any).tempBuffs || 0) - ((c as any).tempDebuffs || 0);
-        const bestScore = (best.influence || 0) + ((best as any).tempBuffs || 0) - ((best as any).tempDebuffs || 0);
-        return score > bestScore ? c : best;
-      });
-      napoleonStrongestUid = (strongest as any).uid ?? null;
+      napoleonStrongestUid = (t1.reduce((best, c) => (scoreOf(c) > scoreOf(best) ? c : best)) as any).uid ?? null;
+    }
+  }
+
+  // Zivilgesellschaft: +1 per active Movement on strongest gov (cap +2) — not every gov
+  let zivilStrongestUid: number | null = null;
+  let zivilBonus = 0;
+  if (pubSlot?.kind === 'spec' && (pubSlot as SpecialCard).name === 'Zivilgesellschaft') {
+    const movements = (state.board[player].innen || []).filter(c => isMovementCard(c) && !(c as any).deactivated);
+    zivilBonus = Math.min(2, movements.length);
+    const active = govCards.filter(c => !(c as any).deactivated);
+    if (zivilBonus > 0 && active.length > 0) {
+      zivilStrongestUid = (active.reduce((best, c) => (scoreOf(c) > scoreOf(best) ? c : best)) as any).uid ?? null;
+    }
+  }
+
+  // Milchglas Transparenz: +1 on strongest gov when YOU have no NGO/Movement watchdogs
+  let milchglasStrongestUid: number | null = null;
+  if (govSlot?.kind === 'spec' && (govSlot as SpecialCard).name === 'Milchglas Transparenz') {
+    const hasWatchdog = (state.board[player].innen || []).some(
+      c => !(c as any).deactivated && (isNgoCard(c) || isMovementCard(c))
+    );
+    if (!hasWatchdog) {
+      const active = govCards.filter(c => !(c as any).deactivated);
+      if (active.length > 0) {
+        milchglasStrongestUid = (active.reduce((best, c) => (scoreOf(c) > scoreOf(best) ? c : best)) as any).uid ?? null;
+      }
     }
   }
 
   govCards.forEach(card => {
-    // Deaktivierte Karten zählen nicht zur Einflusswertung
     if ((card as any).deactivated) return;
 
     let influence = card.influence;
+    influence += ((card as any).tempBuffs || 0) - ((card as any).tempDebuffs || 0);
 
-    // 🔥 CRITICAL FIX: Add temporary buffs and debuffs from effects
-    const tempBuffs = (card as any).tempBuffs || 0;
-    const tempDebuffs = (card as any).tempDebuffs || 0;
-    influence += tempBuffs - tempDebuffs;
-
-    // Koalitionszwang: Coalition bonus if at least two Tier-2 government cards are present
-    if (govSlot?.kind === 'spec' && (govSlot as SpecialCard).name === 'Koalitionszwang') {
+    // Koalitionszwang: all Tier-2 govs +1 when ≥2 Tier-2 present
+    // Anti double-dip: skip aura on the turn on-play bonus already fired
+    if (
+      govSlot?.kind === 'spec' &&
+      (govSlot as SpecialCard).name === 'Koalitionszwang' &&
+      !state.effectFlags?.[player]?.koalitionOnPlayFiredThisTurn
+    ) {
       const tier2GovCount = govCards.filter(c => c.T === 2 && !c.deactivated).length;
       if (tier2GovCount >= 2 && card.T === 2) {
         influence += 1;
       }
     }
 
-    // Napoleon Komplex: +1 Einfluss nur auf stärkste Tier-1-Regierung
     if (napoleonStrongestUid != null && (card as any).uid === napoleonStrongestUid) {
       influence += 1;
     }
 
-    // Zivilgesellschaft: Bewegung-Karten +1 Einfluss (wenn eine Bewegung in Öffentlichkeit liegt)
-    if (pubSlot?.kind === 'spec' && (pubSlot as SpecialCard).name === 'Zivilgesellschaft') {
-      const bewegungNames = ['Greta Thunberg', 'Malala Yousafzai', 'Ai Weiwei', 'Alexei Navalny'];
-      const hasBewegung = state.board[player].innen.some(c => c.kind === 'spec' && (c as SpecialCard).type === 'Öffentlichkeitskarte' && bewegungNames.includes(c.name));
-      if (hasBewegung) influence += 1;
+    if (zivilStrongestUid != null && (card as any).uid === zivilStrongestUid) {
+      influence += zivilBonus;
     }
 
-    // Joschka Fischer NGO-Boost: +1 Einfluss, wenn eine NGO-Öffentlichkeitskarte liegt
+    if (milchglasStrongestUid != null && (card as any).uid === milchglasStrongestUid) {
+      influence += 1;
+    }
+
     if (card.name === 'Joschka Fischer' && (card as any).effect === 'ngo_boost') {
-      const hasNgoCard = state.board[player].innen.some(c => c.kind === 'spec' && (c as SpecialCard).type === 'Öffentlichkeitskarte' && (c as any).tag === 'NGO');
-      if (hasNgoCard) influence += 1;
+      const hasNgo = state.board[player].innen.some(c => isNgoCard(c) && !(c as any).deactivated);
+      if (hasNgo) influence += 1;
     }
-
-    // Milchglas Transparenz: +1 Einfluss wenn keine NGO/Bewegung liegt
-    if (govSlot?.kind === 'spec' && (govSlot as SpecialCard).name === 'Milchglas Transparenz') {
-      const ngoMovementNames = ['Jennifer Doudna', 'Noam Chomsky', 'Bill Gates', 'Greta Thunberg', 'Malala Yousafzai', 'Ai Weiwei', 'Alexei Navalny'];
-      const hasNgoMovement = state.board[player].innen.some(c => c.kind === 'spec' && (c as SpecialCard).type === 'Öffentlichkeitskarte' && ngoMovementNames.includes(c.name));
-      if (!hasNgoMovement) influence += 1;
-    }
-
-        // 🔥 CLUSTER 3: Aura-Effekte (on-demand Board-Check)
-        // Legacy flag-based aura checks removed - auras are now calculated on-demand
-
-        // Aura effects are now handled via Board-Check in the respective resolvers
-        // No more flag-based aura calculations - everything is event-driven
-
-    // Alternative Fakten is applied within interventions; no direct change here
 
     total += influence;
   });
