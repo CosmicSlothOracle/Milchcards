@@ -131,7 +131,7 @@ npx serve -s build
 
 ---
 
-## Human Development Notes
+## Development Notes
 
 ### What I built
 
