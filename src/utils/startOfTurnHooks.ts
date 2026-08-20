@@ -43,7 +43,7 @@ export function startOfTurn(state: GameState, p: Player) {
   // Opportunist is a Sofort buff for the turn it was activated — never leave it sticky
   f.opportunistActive = false;
   // Corruption: reset per-turn pass/ability context for this player
-  (f as any).hushMoneySpent = 0;
+  (f as any).passHandSize = undefined;
   (f as any).passHandSize = undefined;
   (f as any).auraTaxThisTurn = 0;
   (f as any).technocracyNumericBonus = 0;

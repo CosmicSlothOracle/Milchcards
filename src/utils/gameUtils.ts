@@ -139,6 +139,14 @@ export function sumGovernmentInfluenceWithAuras(state: GameState, player: Player
       if (hasNgo) influence += 1;
     }
 
+    // Der Unbestechliche: +2 while global KP ≥ 4
+    if (
+      (card.effectKey === 'gov.unbestechlicher.kp_bonus' || card.name === 'Der Unbestechliche') &&
+      Number(state.korruptionsPegel ?? 1) >= 4
+    ) {
+      influence += 2;
+    }
+
     total += influence;
   });
 

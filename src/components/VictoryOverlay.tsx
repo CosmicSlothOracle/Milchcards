@@ -15,17 +15,21 @@ interface RoundResult {
   roundsWon: { 1: number; 2: number };
   round: number;
   matchOver: boolean;
+  korruptionsPegel?: number;
   purge?: {
-    removed: { player: number; name: string; roll: number | null; target: number; outcome?: 'safe' | 'scandal' | 'remove' }[];
-    survived: { player: number; name: string; roll: number | null; target: number; outcome?: 'safe' | 'scandal' | 'remove' }[];
+    removed: { player: number; name: string; roll: number | null; target: number; outcome?: string }[];
+    survived: { player: number; name: string; roll: number | null; target: number; outcome?: string }[];
+    sacrificed?: { player: number; name: string; roll: number | null; target: number; outcome?: string }[];
     lines: string[];
   };
 }
 
-function auditLineLabel(outcome?: 'safe' | 'scandal' | 'remove'): string {
-  if (outcome === 'remove') return 'ENTFERNT';
+function auditLineLabel(outcome?: string): string {
+  if (outcome === 'remove' || outcome === 'removed') return 'ENTFERNT';
+  if (outcome === 'sacrificed') return 'GEOPFERT';
+  if (outcome === 'kronzeuge') return 'KRONZEUGE';
   if (outcome === 'scandal') return 'SKANDAL';
-  return 'GEPRÜFT';
+  return 'SICHER';
 }
 
 export const VictoryOverlay: React.FC<VictoryOverlayProps> = ({
@@ -103,17 +107,24 @@ export const VictoryOverlay: React.FC<VictoryOverlayProps> = ({
         <div className="round-banner__sub">
           Spielstand {roundResult.roundsWon[1]} : {roundResult.roundsWon[2]}
         </div>
-        {roundResult.purge && (roundResult.purge.removed.length + roundResult.purge.survived.length) > 0 && (
+        {roundResult.purge && (roundResult.purge.removed.length + roundResult.purge.survived.length + (roundResult.purge.sacrificed?.length || 0)) > 0 && (
           <div className="round-banner__sub" style={{ marginTop: 8, textAlign: 'left', fontSize: 12, lineHeight: 1.35 }}>
-            <div style={{ fontWeight: 700, marginBottom: 4 }}>Audit</div>
+            <div style={{ fontWeight: 700, marginBottom: 4 }}>
+              Untersuchung{roundResult.korruptionsPegel != null ? ` · KP ${roundResult.korruptionsPegel}` : ''}
+            </div>
+            {(roundResult.purge.sacrificed || []).map((r, i) => (
+              <div key={`sac-${i}`} style={{ color: '#fb923c' }}>
+                💣 {r.name} — {auditLineLabel(r.outcome)}
+              </div>
+            ))}
             {roundResult.purge.removed.map((r, i) => (
               <div key={`rm-${i}`} style={{ color: '#f87171' }}>
-                ✗ {r.name} — Stufe {r.target} · {auditLineLabel(r.outcome ?? 'remove')}
+                ✗ {r.name} — R {r.target} · W10 {r.roll ?? '—'} · {auditLineLabel(r.outcome ?? 'remove')}
               </div>
             ))}
             {roundResult.purge.survived.map((r, i) => (
-              <div key={`ok-${i}`} style={{ color: r.outcome === 'scandal' ? '#fbbf24' : '#86efac' }}>
-                {r.outcome === 'scandal' ? '⚠' : '✓'} {r.name} — Stufe {r.target} · {auditLineLabel(r.outcome)}
+              <div key={`ok-${i}`} style={{ color: '#86efac' }}>
+                ✓ {r.name} — R {r.target} · {auditLineLabel(r.outcome)}
               </div>
             ))}
           </div>

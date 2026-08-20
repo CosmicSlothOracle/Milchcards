@@ -1,12 +1,14 @@
 import { Card, PoliticianCard, SpecialCard, BasePolitician, BaseSpecial, GameState, Lane, Player } from '../types/game';
 import { getCardDetails } from '../data/cardDetails';
 import { getCorruptionStart } from './corruption';
+import { getDefaultKl } from './weighing';
 
 // Card instance creation
 let NEXT_UID = 1;
 
 export function makePolInstance(base: BasePolitician): PoliticianCard {
   const corruptionStart = getCorruptionStart(base.name, base.T);
+  const kl = base.kl ?? getDefaultKl(base.name, base.T, base.influence);
   return {
     id: base.id,
     key: base.key,
@@ -16,8 +18,9 @@ export function makePolInstance(base: BasePolitician): PoliticianCard {
     tag: base.tag,
     T: base.T,
     BP: base.BP ?? 0,
-    influence: base.influence, // 🔥 VEREINFACHT: Direkt von base.influence, kein M mehr!
-    ...(base.effect && { effect: base.effect }), // 🔥 EFFEKT ÜBERTRAGUNG FÜR JOSCHKA FISCHER NGO-BOOST!
+    influence: base.influence,
+    kl,
+    ...(base.effect && { effect: base.effect }),
     ...(base.effectKey && { effectKey: base.effectKey }),
     protected: false,
     protectedUntil: null,

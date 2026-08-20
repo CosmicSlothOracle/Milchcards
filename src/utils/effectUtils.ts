@@ -135,7 +135,7 @@ export class ActiveAbilitiesManager {
           cooldown: 1,
           usedThisRound: card._activeUsed,
           type: 'hardliner',
-          cost: 1
+          cost: 0
         });
       }
 
@@ -150,7 +150,7 @@ export class ActiveAbilitiesManager {
           cooldown: 1,
           usedThisRound: card._activeUsed,
           type: 'oligarch_influence',
-          cost: 1
+          cost: 0
         });
       }
 
@@ -164,7 +164,7 @@ export class ActiveAbilitiesManager {
           cooldown: 1,
           usedThisRound: card._activeUsed,
           type: 'putin_double_intervention',
-          cost: 2
+          cost: 0
         });
       }
 
@@ -187,8 +187,7 @@ export class ActiveAbilitiesManager {
   }
 
   static canUseAbility(ability: ActiveAbility, player: Player, state: GameState): boolean {
-    // Check if player has enough AP
-    if ((ability.cost || 0) > state.actionPoints[player]) return false;
+    // Activations never cost AP — only playing cards does.
 
     // Check if ability was already used this round
     if (ability.usedThisRound) return false;
@@ -260,11 +259,8 @@ export class ActiveAbilitiesManager {
       return state;
     }
 
-    // Mark ability as used
+    // Mark ability as used (no AP — only playing cards costs AP)
     select.actorCard._activeUsed = true;
-
-    // Deduct AP cost
-    newState.actionPoints[select.actorPlayer] = Math.max(0, newState.actionPoints[select.actorPlayer] - (ability.cost || 0));
 
     return newState;
   }
@@ -282,11 +278,7 @@ export class ActiveAbilitiesManager {
     const allCards = [...board.innen, ...board.aussen].filter(c => c.kind === 'pol') as PoliticianCard[];
     const putin = allCards.find(c => c.name === 'Vladimir Putin');
 
-    if (!putin || putin.deactivated || putin._activeUsed || newState.actionPoints[player] < 2) {
-      return state;
-    }
-
-    if (newState.actionPoints[player] < 2) {
+    if (!putin || putin.deactivated || putin._activeUsed) {
       return state;
     }
 
@@ -307,9 +299,8 @@ export class ActiveAbilitiesManager {
     newState.hands[player] = newHand;
     newState.traps[player] = newTraps;
 
-    // Mark Putin as used and deduct AP
+    // Mark Putin as used (no AP)
     putin._activeUsed = true;
-    newState.actionPoints[player] = Math.max(0, newState.actionPoints[player] - 2);
 
     log(`Putin setzt doppelte Intervention: ${interventions.map(i => i.name).join(' & ')}`);
 

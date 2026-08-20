@@ -22,6 +22,32 @@ export const EFFECTS: Record<string, EffectHandler> = {
     // Joschka Fischer provides NGO synergy - handled by aura system
     log('🟢 gov.ngo_boost');
   },
+
+  // Der Unbestechliche — passive +2 influence while KP ≥ 4 (scored in sumGovernmentInfluenceWithAuras)
+  'gov.unbestechlicher.kp_bonus': ({ enqueue, player, log }) => {
+    enqueue({ type: 'LOG', msg: 'Der Unbestechliche: Passiv +2 Einfluss, solange der Korruptionspegel ≥ 4 ist.' });
+    log('🟢 gov.unbestechlicher.kp_bonus');
+  },
+
+  // Skandal-Enthüller — on play: KP +2
+  'gov.skandal_enthueller.kp_plus2': ({ enqueue, player, log }) => {
+    enqueue({ type: 'CHANGE_KP', amount: 2, source: 'Skandal-Enthüller' });
+    enqueue({ type: 'LOG', msg: 'Skandal-Enthüller: Korruptionspegel +2.' });
+    log('🟢 gov.skandal_enthueller.kp_plus2');
+  },
+
+  // Kronzeuge — reaction handled in resolveWeighing
+  'gov.kronzeuge.reaction': ({ enqueue, player, log }) => {
+    enqueue({ type: 'LOG', msg: 'Kronzeuge: Bei Entfernung in der Untersuchung abwerfen und KP −3.' });
+    log('🟢 gov.kronzeuge.reaction');
+  },
+
+  // Lobbyist — PK max +1 while on board (checked in getPkMax)
+  'gov.lobbyist.pk_max': ({ enqueue, player, log }) => {
+    enqueue({ type: 'LOG', msg: 'Lobbyist: Maximales Politisches Kapital +1.' });
+    log('🟢 gov.lobbyist.pk_max');
+  },
+
   // Bill Gates — draw 1; aura steals AP when opponent plays NGO/Think-Tank
   'public.bill_gates.next_initiative_ap1': ({ enqueue, player, log }) => {
     enqueue({ type: 'DRAW_CARDS', player, amount: 1 });

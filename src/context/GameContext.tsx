@@ -30,6 +30,8 @@ const createInitialState = (): GameState => ({
   traps: { 1: [], 2: [] },
   activeRefresh: { 1: 0, 2: 0 },
   roundsWon: { 1: 0, 2: 0 },
+  korruptionsPegel: 1,
+  politicalCapital: { 1: 0, 2: 0 },
   effectFlags: {
     1: { opportunistActive: false, markZuckerbergUsed: false },
     2: { opportunistActive: false, markZuckerbergUsed: false }

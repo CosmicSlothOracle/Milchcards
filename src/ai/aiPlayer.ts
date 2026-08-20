@@ -1,6 +1,8 @@
 import { GameState, Card, Player } from '../types/game';
 import { sumRow, getCardActionPointCost } from '../utils/gameUtils';
 
+export { chooseAiWeighingDecisions } from '../utils/weighing';
+
 export type Difficulty = 'easy' | 'medium' | 'hard';
 
 export type AIAction =
@@ -15,6 +17,9 @@ export interface AIActionHandlers {
 /**
  * Execute one AI decision through the real playCard/passTurn pipeline so all
  * card effects, traps and auras fire exactly as they do for a human player.
+ *
+ * Abwiegephase decisions are handled separately via chooseAiWeighingDecisions
+ * in utils/weighing.ts (auto-run from useGameActions when pendingWeighing is open).
  */
 export function takeTurn(
   state: GameState,

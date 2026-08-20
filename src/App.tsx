@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import './App.css';
 import { logger } from './debug/logger';
 import GameBoard from './components/GameBoard';
+import WeighingOverlay from './components/WeighingOverlay';
 import { DeckBuilder } from './components/DeckBuilder';
 import { HandCardModal } from './components/HandCardModal';
 import { useGameState } from './hooks/useGameState';
@@ -90,6 +91,9 @@ function AppContent() {
     nextTurn,
     setAiEnabled,
     applyRemoteGameState,
+    setWeighingDecision,
+    confirmWeighing,
+    rollWeighingCard,
   } = useGameState();
 
   // ----- PvP (1v1 online) -----
@@ -115,13 +119,22 @@ function AppContent() {
       case 'activate_leader':
         activateLeader(2, action.targetUid);
         break;
+      case 'weighing_decision':
+        setWeighingDecision(2, action.uid, action.decision);
+        break;
+      case 'weighing_confirm':
+        confirmWeighing(2);
+        break;
+      case 'weighing_roll':
+        rollWeighingCard(2, action.uid);
+        break;
       case 'event':
         if ((RELAYED_ENGINE_EVENTS as readonly string[]).includes(action.name)) {
           window.dispatchEvent(new CustomEvent(action.name, { detail: action.detail ?? undefined }));
         }
         break;
     }
-  }, [playCard, passTurn, nextTurn, activateInstantInitiative, activateLeader]);
+  }, [playCard, passTurn, nextTurn, activateInstantInitiative, activateLeader, setWeighingDecision, confirmWeighing, rollWeighingCard]);
 
   const pvp = usePvpSession({
     onRemoteAction: handleRemoteAction,
@@ -317,14 +330,14 @@ function AppContent() {
   const corruptionActive = pendingAbility === 'corruption_steal';
   const maulwurfActive = pendingAbility === 'maulwurf_steal';
   const tunnelvisionActive = pendingAbility === 'tunnelvision_choice' || pendingAbility === 'tunnelvision_probe';
-  const purgeActive = Boolean(gameState.pendingPurge?.awaitingRoll);
+  const purgeActive = Boolean(gameState.pendingWeighing);
   const startDuelNeedsRoll = Boolean(
     startDuel && (
       (startDuel.phase === 'await_p1' && localPlayer === 1) ||
       (startDuel.phase === 'await_p2' && startDuel.mode === 'pvp' && localPlayer === 2)
     )
   );
-  // Tunnelvision is a choice modal (no dice). Purge/audit is deterministic stamps.
+  // Tunnelvision is a choice modal (no dice). Abwiegephase uses overlay + engine W10.
   const diceInteractive = startDuelNeedsRoll || (
     !startDuel && (corruptionActive || maulwurfActive)
   );
@@ -342,13 +355,6 @@ function AppContent() {
         }));
         return;
       }
-      return;
-    }
-    if (gameState.pendingPurge?.awaitingRoll) {
-      const entry = gameState.pendingPurge.queue[gameState.pendingPurge.index];
-      window.dispatchEvent(new CustomEvent('pc:purge_request_roll', {
-        detail: { player: entry?.player, targetUid: entry?.uid },
-      }));
       return;
     }
     const sel = pendingAbilitySelect;
@@ -372,7 +378,7 @@ function AppContent() {
         },
       }));
     }
-  }, [pendingAbilitySelect, gameState.pendingPurge, localPlayer, applyDuelP1Roll]);
+  }, [pendingAbilitySelect, gameState.actionPoints, localPlayer, applyDuelP1Roll]);
 
   useEffect(() => {
     const handleCorruptionResolved = (event: Event) => {
@@ -434,10 +440,13 @@ function AppContent() {
           : 'Warte auf den Würfelwurf…',
       };
     }
-    if (purgeActive || gameState.pendingPurge) {
+    if (purgeActive || gameState.pendingWeighing) {
+      const phase = gameState.pendingWeighing?.phase;
       return {
-        title: 'Audit',
-        body: 'Audit läuft — jede belastete Regierungskarte wird nach ihrer Audit-Stufe geprüft.',
+        title: phase === 'rolling' ? 'Untersuchung — W10' : 'Abwiegephase',
+        body: phase === 'rolling'
+          ? 'Würfle den W10 für die markierte Karte — Entfernungsschwelle steht unter dem Namen.'
+          : 'Wähle pro Karte Akzeptieren, Vertuschen oder Opfern — dann Untersuchung einleiten.',
       };
     }
     if (leaderAbilityPick) {
@@ -476,7 +485,7 @@ function AppContent() {
       title: 'Handkarte auswählen',
       body: 'Wähle eine Karte aus deiner Hand, um eine Aktion zu starten.',
     };
-  }, [appState, corruptionActive, maulwurfActive, tunnelvisionActive, selectedHandIndex, purgeActive, gameState.pendingPurge, startDuel, startDuelNeedsRoll, leaderAbilityPick]);
+  }, [appState, corruptionActive, maulwurfActive, tunnelvisionActive, selectedHandIndex, purgeActive, gameState.pendingWeighing, startDuel, startDuelNeedsRoll, leaderAbilityPick]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -573,7 +582,7 @@ function AppContent() {
     if (data.type === 'board_card' && data.lane === 'aussen' && data.player === gameState.current && data.card?.kind === 'pol') {
       const card = data.card;
       const corr = Number(card.corruption ?? 0);
-      if (corr >= 3 && !card.deactivated && (gameState.actionPoints[gameState.current] || 0) >= 1) {
+      if (corr >= 3 && !card.deactivated) {
         try {
           const { getGovAbility, canActivateGovAbility } = require('./utils/govAbilities');
           const gate = canActivateGovAbility(gameState, gameState.current, card);
@@ -900,9 +909,8 @@ function AppContent() {
       return () => clearTimeout(t);
     }
 
-    // Do not force nextTurn while the timer-driven Audit sequence is running —
-    // that would re-enter resolveRound and wipe pendingPurge.
-    if (gameState.pendingPurge) return;
+    // Do not force nextTurn while Abwiegephase is open
+    if (gameState.pendingWeighing) return;
 
     if (gameState.current === 2 && gameState.passed?.[2]) {
       const t2 = setTimeout(() => {
@@ -1039,13 +1047,39 @@ function AppContent() {
                   setAppState('menu');
                 }}
                 onPlayAgain={() => {
-                  if (pvpRole) pvp.leaveRoom();
                   setStartDuel(null);
                   setPendingStart(null);
                   startNewGame();
-                  setAppState('menu');
                 }}
               />
+
+              {gameState.pendingWeighing && (gameState.pendingWeighing.phase === 'decide' || gameState.pendingWeighing.phase === 'rolling') && (
+                <WeighingOverlay
+                  gameState={gameState}
+                  localPlayer={localPlayer}
+                  onDecision={(uid, decision) => {
+                    if (pvpRole === 'guest') {
+                      pvpSendAction({ t: 'weighing_decision', uid, decision });
+                    } else {
+                      setWeighingDecision(localPlayer, uid, decision);
+                    }
+                  }}
+                  onConfirm={() => {
+                    if (pvpRole === 'guest') {
+                      pvpSendAction({ t: 'weighing_confirm' });
+                    } else {
+                      confirmWeighing(localPlayer);
+                    }
+                  }}
+                  onRollCard={(uid) => {
+                    if (pvpRole === 'guest') {
+                      pvpSendAction({ t: 'weighing_roll', uid });
+                    } else {
+                      rollWeighingCard(localPlayer, uid);
+                    }
+                  }}
+                />
+              )}
 
               {startDuel && (
                 <StartDuelOverlay duel={startDuel} localPlayer={localPlayer} />

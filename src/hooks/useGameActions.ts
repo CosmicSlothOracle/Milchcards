@@ -1,4 +1,4 @@
-import { useCallback, useRef, useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
 import { GameState, Card, Player, BuilderEntry, PoliticianCard } from '../types/game';
 import { createDefaultEffectFlags } from '../types/game';
 import { buildDeckFromEntries, sumGovernmentInfluenceWithAuras, removeCardFromDeck, drawCardsAtRoundEnd } from '../utils/gameUtils';
@@ -32,19 +32,25 @@ import { logger } from '../debug/logger';
 import { useVisualEffects, useVisualEffectsSafe } from '../context/VisualEffectsContext';
 import { feedbackFail, feedbackInfo, feedbackSuccess, emitFeedback } from '../utils/feedback';
 import {
-  beginInteractivePurge,
-  presentPurgeProbe,
-  resolveCurrentPurgeProbe,
-} from '../utils/corruption';
+  beginWeighing,
+  confirmWeighingOnState,
+  setWeighingDecisionOnState,
+  startWeighingRolls,
+  applyWeighingRoll,
+  currentWeighingRollTarget,
+  collectWeighingResult,
+  bothWeighingConfirmed,
+  chooseAiWeighingDecisions,
+  addPoliticalCapital,
+  getPkMax,
+  type WeighingResult,
+} from '../utils/weighing';
+import type { WeighingDecision } from '../types/game';
 import { getGlobalRNG } from '../services/rng';
-import type { PurgeResult } from '../utils/corruption';
 // TS: sometimes asset module resolution fails in some setups — ignore typecheck for this import
 // @ts-ignore
 import slotGovGif from '../ui/layout/slot_gov.webm';
 import { getUiTransform, getGovernmentRects } from '../ui/layout';
-
-/** Timed audit stamp beat (no dice). Plan: ~350ms; slightly longer for readability. */
-const PURGE_AUTO_FAIL_MS = 380;
 
 // Migration Helper für Queue-Vereinheitlichung
 const migrateLegacyQueue = (state: any) => {
@@ -201,53 +207,58 @@ function reallyEndTurn(gameState: GameState, log: (msg: string) => void): GameSt
 
 // Helper function to resolve round and start new one
 function resolveRound(gameState: GameState, log: (msg: string) => void): GameState {
-  // Already mid-purge — do not restart the queue (duplicate pass/nextTurn entries)
-  if (gameState.pendingPurge) {
+  // Already mid-weighing — do not restart
+  if (gameState.pendingWeighing) {
     return gameState;
   }
 
-  // Interactive audit: pause scoring until every corrupt gov is stamped (deterministic, no W6).
-  const needsPlayer = beginInteractivePurge(gameState, log);
-  if (needsPlayer && gameState.pendingPurge) {
+  if (gameState.korruptionsPegel == null) gameState.korruptionsPegel = 1;
+  if (!gameState.politicalCapital) gameState.politicalCapital = { 1: 0, 2: 0 };
+
+  const needsPlayer = beginWeighing(gameState, log);
+  if (needsPlayer && gameState.pendingWeighing) {
     emitFeedback({
       tone: 'warn',
-      title: 'Audit',
-      body: 'Jede korrupte Regierung wird geprüft — Stufe entscheidet, kein Würfel.',
+      title: 'Abwiegephase',
+      body: 'Korruptionspegel steigt — wähle Akzeptieren, Vertuschen oder Opfern.',
       flash: false,
       durationMs: 2800,
     });
     return gameState;
   }
-  return finishRoundAfterPurge(gameState, { removed: [], survived: [] }, log);
+  return finishRoundAfterWeighing(gameState, { removed: [], survived: [], sacrificed: [] }, log);
 }
 
-function finishRoundAfterPurge(gameState: GameState, purgeResult: PurgeResult, log: (msg: string) => void): GameState {
-  gameState.pendingPurge = undefined;
+function finishRoundAfterWeighing(gameState: GameState, weighingResult: WeighingResult, log: (msg: string) => void): GameState {
+  gameState.pendingWeighing = undefined;
 
   try {
-    const removedN = purgeResult.removed.length;
-    const checkedN = removedN + purgeResult.survived.length;
+    const removedN = weighingResult.removed.length;
+    const sacN = weighingResult.sacrificed.length;
+    const checkedN = removedN + weighingResult.survived.length + sacN;
     if (checkedN > 0) {
       emitFeedback({
         tone: removedN > 0 ? 'fail' : 'info',
-        title: `Audit: ${checkedN} Regierung${checkedN === 1 ? '' : 'en'} geprüft`,
+        title: `Untersuchung: ${checkedN} Regierung${checkedN === 1 ? '' : 'en'}`,
         body: removedN > 0
-          ? `${removedN} entfernt — ${purgeResult.removed.map((r) => r.card.name).join(', ')}`
-          : 'Alle geprüften Karten bleiben — Skandale mindern Einfluss.',
+          ? `${removedN} entfernt — ${weighingResult.removed.map((r) => r.name).join(', ')}`
+          : sacN > 0
+            ? `${sacN} geopfert/Kronzeuge — Rest sicher.`
+            : 'Alle geprüften Karten bleiben.',
         flash: true,
         durationMs: 3200,
       });
     } else {
       emitFeedback({
         tone: 'info',
-        title: 'Audit',
-        body: 'Keine korrupten Regierungskarten auf dem Feld.',
+        title: 'Abwiegephase',
+        body: 'Keine Regierungskarten auf dem Feld.',
         flash: false,
         durationMs: 1800,
       });
     }
   } catch (e) {
-    log(`⚠️ Säuberung-Feedback fehlgeschlagen: ${String(e)}`);
+    log(`⚠️ Abwiege-Feedback fehlgeschlagen: ${String(e)}`);
   }
 
   // Style scoring passives (Autokratie / Bewegung) — ≤1 pt character depth
@@ -256,11 +267,11 @@ function finishRoundAfterPurge(gameState: GameState, purgeResult: PurgeResult, l
     applyStyleScoringPassives(gameState, 2);
   } catch { /* best-effort */ }
 
-  // Calculate influence for both players (audited cards already adjusted / removed)
+  // Calculate influence for both players (removed/sacrificed already off board)
   const p1Influence = sumGovernmentInfluenceWithAuras(gameState, 1);
   const p2Influence = sumGovernmentInfluenceWithAuras(gameState, 2);
 
-  log(`📊 Rundenauswertung (nach Audit): P1 ${ p1Influence } Einfluss vs P2 ${ p2Influence } Einfluss`);
+  log(`📊 Rundenauswertung (nach Untersuchung): P1 ${ p1Influence } Einfluss vs P2 ${ p2Influence } Einfluss`);
 
   // Determine winner
   let roundWinner: Player;
@@ -293,12 +304,16 @@ function finishRoundAfterPurge(gameState: GameState, purgeResult: PurgeResult, l
     [roundWinner]: gameState.roundsWon[roundWinner] + 1,
   };
   const matchOver = provisionalRoundsWon[1] >= 2 || provisionalRoundsWon[2] >= 2;
-  const outcomeLabel = (o?: 'safe' | 'scandal' | 'remove') =>
-    o === 'remove' ? 'ENTFERNT' : o === 'scandal' ? 'SKANDAL' : 'GEPRÜFT';
+  const outcomeLabel = (o?: string) => {
+    if (o === 'removed') return 'ENTFERNT';
+    if (o === 'sacrificed') return 'GEOPFERT';
+    if (o === 'kronzeuge') return 'KRONZEUGE';
+    return 'SICHER';
+  };
   const purgeLines = [
-    ...purgeResult.removed.map((r) => `✗ ${r.card.name} (Stufe ${r.target} · ${outcomeLabel(r.outcome)})`),
-    ...purgeResult.survived.map((r) =>
-      `${r.outcome === 'scandal' ? '⚠' : '✓'} ${r.card.name} (Stufe ${r.target} · ${outcomeLabel(r.outcome)})`),
+    ...weighingResult.removed.map((r) => `✗ ${r.name} (R ${r.effectiveR ?? r.baseR} · W10 ${r.roll ?? '—'} · ${outcomeLabel(r.outcome)})`),
+    ...weighingResult.sacrificed.map((r) => `💣 ${r.name} (${outcomeLabel(r.outcome)})`),
+    ...weighingResult.survived.map((r) => `✓ ${r.name} (R ${r.effectiveR ?? r.baseR} · ${outcomeLabel(r.outcome)})`),
   ];
   if (typeof window !== 'undefined') {
     try {
@@ -310,12 +325,16 @@ function finishRoundAfterPurge(gameState: GameState, purgeResult: PurgeResult, l
           roundsWon: provisionalRoundsWon,
           round: gameState.round,
           matchOver,
+          korruptionsPegel: gameState.korruptionsPegel,
           purge: {
-            removed: purgeResult.removed.map((r) => ({
-              player: r.player, name: r.card.name, roll: r.roll, target: r.target, outcome: r.outcome,
+            removed: weighingResult.removed.map((r) => ({
+              player: r.player, name: r.name, roll: r.roll ?? null, target: r.effectiveR ?? r.baseR, outcome: r.outcome === 'removed' ? 'remove' : 'safe',
             })),
-            survived: purgeResult.survived.map((r) => ({
-              player: r.player, name: r.card.name, roll: r.roll, target: r.target, outcome: r.outcome,
+            survived: weighingResult.survived.map((r) => ({
+              player: r.player, name: r.name, roll: r.roll ?? null, target: r.effectiveR ?? r.baseR, outcome: 'safe' as const,
+            })),
+            sacrificed: weighingResult.sacrificed.map((r) => ({
+              player: r.player, name: r.name, roll: r.roll ?? null, target: r.baseR, outcome: r.outcome,
             })),
             lines: purgeLines,
           },
@@ -327,8 +346,8 @@ function finishRoundAfterPurge(gameState: GameState, purgeResult: PurgeResult, l
     emitFeedback({
       tone: 'success',
       title: `Spieler ${roundWinner} gewinnt Runde ${gameState.round}`,
-      body: `${p1Influence} : ${p2Influence} Einfluss` +
-        (purgeLines.length ? ` · Audit: ${purgeLines.slice(0, 3).join(', ')}` : ''),
+      body: `${p1Influence} : ${p2Influence} Einfluss · KP ${gameState.korruptionsPegel}` +
+        (purgeLines.length ? ` · ${purgeLines.slice(0, 3).join(', ')}` : ''),
       flash: true,
       durationMs: 3200,
     });
@@ -375,18 +394,18 @@ function finishRoundAfterPurge(gameState: GameState, purgeResult: PurgeResult, l
     log(`🏆🎉 SPIEL BEENDET! Spieler ${ gameWinner } gewinnt das Match! (${ p1Wins }-${ p2Wins })`);
     log(`🔥 Gesamtergebnis: Player ${ gameWinner } ist der Sieger!`);
 
-    // Return final state with game winner
+    // Return final state with game winner — KP stays for display
     return {
       ...gameState,
       roundsWon: newRoundsWon,
       gameWinner,
-      pendingPurge: undefined,
+      pendingWeighing: undefined,
       // Keep current board state for final display
       passed: { 1: true, 2: true }, // Both passed to indicate game end
     };
   }
 
-  // Create new state for next round
+  // Create new state for next round — KP and PK persist
   const newState: GameState = {
     ...gameState,
     round: gameState.round + 1,
@@ -395,7 +414,12 @@ function finishRoundAfterPurge(gameState: GameState, purgeResult: PurgeResult, l
     actionPoints: { 1: 2, 2: 2 }, // Reset AP
     actionsUsed: { 1: 0, 2: 0 }, // Reset actions (kept for compatibility)
     roundsWon: newRoundsWon,
-    pendingPurge: undefined,
+    pendingWeighing: undefined,
+    korruptionsPegel: gameState.korruptionsPegel ?? 1,
+    politicalCapital: {
+      1: gameState.politicalCapital?.[1] ?? 0,
+      2: gameState.politicalCapital?.[2] ?? 0,
+    },
     effectFlags: {
       1: createDefaultEffectFlags(),
       2: createDefaultEffectFlags()
@@ -407,7 +431,6 @@ function finishRoundAfterPurge(gameState: GameState, purgeResult: PurgeResult, l
       1: { government: null, public: null, initiativePermanent: null },
       2: { government: null, public: null, initiativePermanent: null }
     },
-    // instantSlot wird nicht mehr verwendet - Sofort-Initiativen gehen in board[player].sofort
     // Hands and decks will be updated by drawCardsAtRoundEnd
     hands: gameState.hands,
     decks: gameState.decks,
@@ -420,7 +443,7 @@ function finishRoundAfterPurge(gameState: GameState, purgeResult: PurgeResult, l
   newState.hands = newHands;
   newState.decks = newDecks;
 
-  log(`🆕 Runde ${ newState.round } startet! Spieler ${ roundWinner } beginnt. (Rundenstand: P1 ${ newState.roundsWon[1] } - P2 ${ newState.roundsWon[2] })`);
+  log(`🆕 Runde ${ newState.round } startet! Spieler ${ roundWinner } beginnt. KP=${newState.korruptionsPegel} (Rundenstand: P1 ${ newState.roundsWon[1] } - P2 ${ newState.roundsWon[2] })`);
   log(`🃏 Beide Spieler erhalten 5 neue Handkarten.`);
 
   return newState;
@@ -435,56 +458,117 @@ export function useGameActions(
   // Visual effects context (spawn helpers)
   // Use safe hook variant which returns null when no provider is present
   const visualEffects = useVisualEffectsSafe();
-  const purgeTimerRef = useRef<number | null>(null);
 
-  const advancePurgeStep = useCallback((rawRoll?: number) => {
+  const setWeighingDecision = useCallback((player: Player, uid: number, decision: WeighingDecision) => {
     if (isPvpGuest()) return;
     setGameState((prev) => {
-      if (!prev.pendingPurge) return prev;
-      if (prev.pendingPurge.awaitingRoll && rawRoll == null) return prev;
-
+      if (!prev.pendingWeighing || prev.pendingWeighing.phase !== 'decide') return prev;
       const newState = cloneStateForMutation(prev);
-      if (!newState.pendingPurge) return prev;
-
-      const status = resolveCurrentPurgeProbe(
-        newState,
-        log,
-        rawRoll != null ? { rawRoll } : undefined
-      );
-
-      if (status === 'done') {
-        const result: PurgeResult = {
-          removed: [...(newState.pendingPurge?.removed ?? [])],
-          survived: [...(newState.pendingPurge?.survived ?? [])],
-        };
-        return finishRoundAfterPurge(newState, result, log);
-      }
-
-      presentPurgeProbe(newState, log);
-      return { ...newState };
+      if (!setWeighingDecisionOnState(newState, player, uid, decision, log)) return prev;
+      return newState;
     });
   }, [log, setGameState]);
 
-  // Auto-advance corr-6 / focus beats when not waiting for a player roll
-  useEffect(() => {
-    const pending = gameState.pendingPurge;
-    if (!pending) return;
-    if (pending.awaitingRoll) return;
-    if (purgeTimerRef.current) {
-      window.clearTimeout(purgeTimerRef.current);
-      purgeTimerRef.current = null;
-    }
-    purgeTimerRef.current = window.setTimeout(() => {
-      purgeTimerRef.current = null;
-      advancePurgeStep();
-    }, PURGE_AUTO_FAIL_MS);
-    return () => {
-      if (purgeTimerRef.current) {
-        window.clearTimeout(purgeTimerRef.current);
-        purgeTimerRef.current = null;
+  const confirmWeighing = useCallback((player: Player) => {
+    if (isPvpGuest()) return;
+    setGameState((prev) => {
+      if (!prev.pendingWeighing || prev.pendingWeighing.phase !== 'decide') return prev;
+      const newState = cloneStateForMutation(prev);
+      if (!confirmWeighingOnState(newState, player, log)) return prev;
+      // Solo (no AI): auto-confirm the other seat so the phase can resolve
+      if (!newState.aiEnabled?.[1] && !newState.aiEnabled?.[2] && newState.pendingWeighing) {
+        const other: Player = player === 1 ? 2 : 1;
+        if (!newState.pendingWeighing.confirmed[other]) {
+          confirmWeighingOnState(newState, other, log);
+        }
       }
-    };
-  }, [gameState.pendingPurge?.index, gameState.pendingPurge?.awaitingRoll, gameState.pendingPurge?.queue.length, advancePurgeStep]);
+      if (newState.pendingWeighing && bothWeighingConfirmed(newState.pendingWeighing)) {
+        const needsRolls = startWeighingRolls(newState, log);
+        if (!needsRolls) {
+          return finishRoundAfterWeighing(newState, collectWeighingResult(newState), log);
+        }
+      }
+      return newState;
+    });
+  }, [log, setGameState]);
+
+  const rollWeighingCard = useCallback((player: Player, uid: number, rawRoll?: number) => {
+    if (isPvpGuest()) return;
+    setGameState((prev) => {
+      if (!prev.pendingWeighing || prev.pendingWeighing.phase !== 'rolling') return prev;
+      const target = currentWeighingRollTarget(prev);
+      if (!target || target.uid !== uid) return prev;
+      // Only the card owner (or AI acting for them) may roll
+      if (target.player !== player && !prev.aiEnabled?.[target.player]) return prev;
+
+      const newState = cloneStateForMutation(prev);
+      const roll = rawRoll != null
+        ? Math.max(1, Math.min(10, Math.floor(rawRoll)))
+        : 1 + getGlobalRNG().randomInt(10);
+      const status = applyWeighingRoll(newState, uid, roll, log);
+      if (status === 'done') {
+        return finishRoundAfterWeighing(newState, collectWeighingResult(newState), log);
+      }
+      return newState;
+    });
+  }, [log, setGameState]);
+
+  // AI auto-plays Abwiegephase decisions when enabled
+  useEffect(() => {
+    const pending = gameState.pendingWeighing;
+    if (!pending || pending.phase !== 'decide') return;
+    if (!gameState.aiEnabled?.[2]) return;
+    if (pending.confirmed[2]) return;
+    if (isPvpGuest()) return;
+
+    const t = window.setTimeout(() => {
+      setGameState((prev) => {
+        if (!prev.pendingWeighing || prev.pendingWeighing.phase !== 'decide' || prev.pendingWeighing.confirmed[2]) {
+          return prev;
+        }
+        const newState = cloneStateForMutation(prev);
+        chooseAiWeighingDecisions(newState, 2);
+        confirmWeighingOnState(newState, 2, log);
+        if (newState.pendingWeighing && bothWeighingConfirmed(newState.pendingWeighing)) {
+          const needsRolls = startWeighingRolls(newState, log);
+          if (!needsRolls) {
+            return finishRoundAfterWeighing(newState, collectWeighingResult(newState), log);
+          }
+        }
+        return newState;
+      });
+    }, 600);
+    return () => window.clearTimeout(t);
+  }, [
+    gameState.pendingWeighing?.phase,
+    gameState.pendingWeighing?.confirmed[1],
+    gameState.pendingWeighing?.confirmed[2],
+    gameState.aiEnabled?.[2],
+    log,
+    setGameState,
+  ]);
+
+  // AI auto-rolls when the current weighing target belongs to the AI
+  useEffect(() => {
+    const pending = gameState.pendingWeighing;
+    if (!pending || pending.phase !== 'rolling') return;
+    if (isPvpGuest()) return;
+    const target = currentWeighingRollTarget(gameState);
+    if (!target) return;
+    if (!gameState.aiEnabled?.[target.player]) return;
+
+    const t = window.setTimeout(() => {
+      rollWeighingCard(target.player, target.uid);
+    }, 700);
+    return () => window.clearTimeout(t);
+  }, [
+    gameState.pendingWeighing?.phase,
+    gameState.pendingWeighing?.rollIndex,
+    gameState.pendingWeighing?.rollQueue,
+    gameState.aiEnabled?.[1],
+    gameState.aiEnabled?.[2],
+    rollWeighingCard,
+  ]);
 
   // Helper: spawn lightweight UI visuals via window hooks (prototype only)
   const spawnCardVisual = useCallback((card: any, stateOverride?: GameState) => {
@@ -628,22 +712,6 @@ export function useGameActions(
     const handleRequestRoll = (ev: any) => {
       try {
         setGameState((prev) => {
-          if (prev.pendingPurge?.awaitingRoll) {
-            const raw = 1 + getGlobalRNG().randomInt(6);
-            const newState = cloneStateForMutation(prev);
-            if (!newState.pendingPurge?.awaitingRoll) return prev;
-            const status = resolveCurrentPurgeProbe(newState, log, { rawRoll: raw });
-            if (status === 'done') {
-              const result: PurgeResult = {
-                removed: [...(newState.pendingPurge?.removed ?? [])],
-                survived: [...(newState.pendingPurge?.survived ?? [])],
-              };
-              return finishRoundAfterPurge(newState, result, log);
-            }
-            presentPurgeProbe(newState, log);
-            return { ...newState };
-          }
-
           const player = ev.detail?.player as Player | undefined;
           const targetUid = ev.detail?.targetUid as number | undefined;
           if (!player || !targetUid) return prev;
@@ -662,22 +730,7 @@ export function useGameActions(
     };
 
     const handlePurgeRequestRoll = (_ev: any) => {
-      setGameState((prev) => {
-        if (!prev.pendingPurge?.awaitingRoll) return prev;
-        const raw = 1 + getGlobalRNG().randomInt(6);
-        const newState = cloneStateForMutation(prev);
-        if (!newState.pendingPurge?.awaitingRoll) return prev;
-        const status = resolveCurrentPurgeProbe(newState, log, { rawRoll: raw });
-        if (status === 'done') {
-          const result: PurgeResult = {
-            removed: [...(newState.pendingPurge?.removed ?? [])],
-            survived: [...(newState.pendingPurge?.survived ?? [])],
-          };
-          return finishRoundAfterPurge(newState, result, log);
-        }
-        presentPurgeProbe(newState, log);
-        return { ...newState };
-      });
+      // Legacy purge roll — no longer used (Abwiegephase uses engine W10)
     };
     // Listener: when UI/modal requests a maulwurf roll, perform RNG and trigger visual dice
     const handleMaulwurfRequestRoll = (ev: any) => {
@@ -768,7 +821,7 @@ export function useGameActions(
       window.removeEventListener('pc:tunnelvision_choice', guardedTunnelvisionChoice as EventListener);
       window.removeEventListener('pc:tunnelvision_request_roll', guardedTunnelvisionChoice as EventListener);
     };
-  }, [setGameState, afterQueueResolved, log, advancePurgeStep]);
+  }, [setGameState, afterQueueResolved, log]);
   const startMatchWithDecks = useCallback((
     p1DeckEntries: BuilderEntry[],
     p2DeckEntries: BuilderEntry[],
@@ -864,7 +917,9 @@ export function useGameActions(
       effectQueue: EffectQueueManager.initializeQueue(), // FIX: Reset effect queue
       activeAbilities: { 1: [], 2: [] }, // FIX: Reset active abilities
       pendingAbilitySelect: undefined, // FIX: Reset pending ability selection
-      pendingPurge: undefined,
+      pendingWeighing: undefined,
+      korruptionsPegel: 1,
+      politicalCapital: { 1: 0, 2: 0 },
       leaders: { 1: leader1, 2: leader2 },
       log: [
         `Match gestartet. Spieler ${startingPlayer} beginnt nach dem Startduell.`,
@@ -1723,30 +1778,33 @@ export function useGameActions(
         return prev;
       }
 
-      const newState = { ...prev, passed: { ...prev.passed, [player]: true } };
+      const newState = cloneStateForMutation(prev);
+      newState.passed = { ...prev.passed, [player]: true };
       logger.dbg(`Pass status updated P1=${ newState.passed[1] } P2=${ newState.passed[2] }`);
       log(`🚫 Spieler ${ player } passt.`);
 
-      // Pass-Kontext für das Audit: Handgröße (gierig +1 / leer −1) + Schweigegeld (ungenutzte AP).
+      // Pass: ungenutzte AP → Politisches Kapital (für Vertuschen in der Abwiegephase)
       try {
         const pf = (newState.effectFlags?.[player] as any);
         if (pf) {
           pf.passHandSize = (newState.hands?.[player] || []).length;
-          const styleId = (newState as any).leaders?.[player]?.styleId as string | undefined;
-          const hushCap = styleId === 'diplomatie' ? 3 : 2;
-          const hushAllowed = styleId !== 'bewegung';
-          const unspentAp = Math.max(0, Number(newState.actionPoints?.[player] || 0));
-          pf.hushMoneySpent = hushAllowed ? Math.min(hushCap, unspentAp) : 0;
-          if (pf.hushMoneySpent > 0) {
-            log(`💵 Schweigegeld: P${player} setzt ${pf.hushMoneySpent} ungenutzte AP ein (Audit-Stufe −${pf.hushMoneySpent}).`);
-          } else if (!hushAllowed && unspentAp > 0) {
-            log(`🚫 Bewegung: Schweigegeld unwirksam — ungenutzte AP helfen nicht beim Audit.`);
+        }
+        if (!newState.politicalCapital) newState.politicalCapital = { 1: 0, 2: 0 };
+        const styleId = (newState as any).leaders?.[player]?.styleId as string | undefined;
+        const pkAllowed = styleId !== 'bewegung';
+        const unspentAp = Math.max(0, Number(newState.actionPoints?.[player] || 0));
+        if (pkAllowed && unspentAp > 0) {
+          const gained = addPoliticalCapital(newState, player, unspentAp, log);
+          if (gained > 0) {
+            log(`💼 Politisches Kapital: P${player} wandelt ${gained} ungenutzte AP um (Vorrat ${newState.politicalCapital[player]}/${getPkMax(newState, player)}).`);
           }
-          const corruptCount = (newState.board[player]?.aussen || [])
-            .filter((c: any) => c.kind === 'pol' && !c.deactivated && Number(c.corruption ?? 0) >= 1).length;
-          if (corruptCount > 0) {
-            log(`📋 Beim Rundenende: ${corruptCount} korrupte Regierungskarte(n) von P${player} werden auditiert.`);
-          }
+        } else if (!pkAllowed && unspentAp > 0) {
+          log(`🚫 Bewegung: ungenutzte AP werden nicht zu Politischem Kapital.`);
+        }
+        const govCount = (newState.board[player]?.aussen || [])
+          .filter((c: any) => c.kind === 'pol' && !c.deactivated).length;
+        if (govCount > 0) {
+          log(`⚖ Beim Rundenende: ${govCount} Regierungskarte(n) von P${player} gehen in die Abwiegephase.`);
         }
       } catch { /* best-effort */ }
 
@@ -1822,5 +1880,8 @@ export function useGameActions(
     passTurn,
     nextTurn,
     endTurn,
+    setWeighingDecision,
+    confirmWeighing,
+    rollWeighingCard,
   };
 }

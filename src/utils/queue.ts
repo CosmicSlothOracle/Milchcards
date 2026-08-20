@@ -26,7 +26,6 @@ import {
   applyCorruptionDelta,
   getCorruption,
   mostCorruptGov,
-  runPurgeSequence,
   strongestOwnGov,
 } from './corruption';
 // Helper to find strongest government uid for new intents
@@ -913,8 +912,21 @@ export function resolveQueue(state: GameState, events: EffectEvent[]) {
         break;
       }
 
+      case 'CHANGE_KP': {
+        const amount = Number((ev as any).amount || 0);
+        if (amount !== 0) {
+          const before = Number((state as any).korruptionsPegel ?? 1);
+          (state as any).korruptionsPegel = Math.max(0, before + amount);
+          const after = (state as any).korruptionsPegel;
+          const src = (ev as any).source || 'Effekt';
+          logPush(state, `🌡️ ${src}: Korruptionspegel ${before} → ${after}`);
+        }
+        break;
+      }
+
       case 'CORRUPTION_PURGE_CHECK': {
-        runPurgeSequence(state, (m) => logPush(state, m));
+        // Legacy: round-end weighing is handled by beginWeighing in resolveRound.
+        logPush(state, 'ℹ️ CORRUPTION_PURGE_CHECK ignoriert — Abwiegephase läuft am Rundenende.');
         break;
       }
 

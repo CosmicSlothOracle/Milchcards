@@ -25,6 +25,8 @@ export interface PoliticianCard extends Card {
   T: number;
   BP: number;
   influence: number;
+  /** Korruptionslast (KL) — fixed per card for KP/W10 weighing at round end */
+  kl?: number;
   effect?: string;
   protected: boolean;
   protectedUntil?: number | null;
@@ -33,14 +35,14 @@ export interface PoliticianCard extends Card {
   _activeUsed: boolean;
   _pledgeDown?: { amount: number; round: number } | null;
   _hypedRoundFlag?: boolean;
-  // === Corruption system ===
+  // === Corruption system (card economy; no longer drives round-end audit) ===
   corruption?: number;         // current corruption (0..6)
   corruptionStart?: number;    // lore floor — corruption never drops below this (except clean-sweep entry bonus)
   corruptionAbilityUsed?: number; // active-ability uses this round (board life = one round)
-  purgeMarked?: boolean;       // Snowden mark: purge target +1 this round
-  _corruptionTainted?: boolean;   // buffed by a corruption-tagged effect this round (purge target +1)
+  purgeMarked?: boolean;       // Snowden mark (legacy / card effects)
+  _corruptionTainted?: boolean;   // buffed by a corruption-tagged effect this round
   _corruptionBuffTaxed?: boolean; // win-more tax (+3 buffs in a round → +1 corruption) applied once
-  _ignoreGreedyPass?: boolean;    // Trump "Alternative Wahrheit": ignore greedy-pass purge modifier
+  _ignoreGreedyPass?: boolean;    // Trump "Alternative Wahrheit"
   _corruptionShielded?: boolean;  // set by Lavrov "Njet": next enemy corruption gain on this board is cancelled
 }
 
@@ -63,6 +65,8 @@ export interface BasePolitician {
   BP?: number;
   effect?: string;
   effectKey?: string;
+  /** Optional override for Korruptionslast; otherwise derived from tier/influence */
+  kl?: number;
 }
 
 export interface BaseSpecial {
@@ -149,11 +153,8 @@ export interface EffectFlags {
   influenceTransferBlocked?: boolean; // Influence transfer is blocked
   // REMOVED: Alle AP-Discount/Free-Flags - alle Karten kosten immer 1 AP
 
-  // === Corruption system flags ===
-  hushMoneySpent?: number;            // AP sacrificed at pass time (purge target −1 each, max 2)
-  passHandSize?: number;              // hand size at pass time (greedy pass +1 / forced pass −1)
-  purgeTargetDelta?: number;          // Verzögerungsverfahren: all own purge targets −1 this round
-  purgeRollBonus?: number;            // Trudeau "Sunny Ways" etc.: bonus on own purge rolls this round
+  // === Corruption system flags (card economy) ===
+  passHandSize?: number;              // hand size at pass time (legacy card modifiers)
   lavrovNjetAvailable?: boolean;      // Lavrov: cancel next enemy corruption gain on own board
   cheneyInterventionCorruption?: boolean; // Cheney: own interventions add +1 corruption on trigger this round
   corruptionReductionBlocked?: boolean;   // Oppositionsblockade: cannot reduce corruption until next turn
@@ -230,8 +231,12 @@ export interface GameState {
     2: ActiveAbility[];
   };
   pendingAbilitySelect?: AbilitySelect;
-  /** Interactive deterministic audit stamp sequence between double-pass and scoring */
-  pendingPurge?: PendingPurge;
+  /** Global Korruptionspegel (KP) — persists across rounds within a match */
+  korruptionsPegel: number;
+  /** Politisches Kapital (PK) per player — spend to Vertuschen in Abwiegephase */
+  politicalCapital: { 1: number; 2: number };
+  /** Interactive Abwiegephase between double-pass and scoring */
+  pendingWeighing?: PendingWeighing;
   /** Champion / Führungsstil slots — never on the board */
   leaders?: {
     1: import('../utils/leadership').LeaderSlot | null;
@@ -240,18 +245,33 @@ export interface GameState {
   isEndingTurn?: boolean;
 }
 
-export interface PurgeProbeEntry {
+export type WeighingDecision = 'accept' | 'cover' | 'sacrifice';
+
+export interface WeighingCardSnapshot {
   player: Player;
   uid: number;
+  name: string;
+  kl: number;
+  /** R frozen at phase start (before Vertuschen) */
+  baseR: number;
+  influence: number;
+  decision: WeighingDecision;
+  /** After Vertuschen applied */
+  effectiveR?: number;
+  roll?: number | null;
+  outcome?: 'safe' | 'removed' | 'sacrificed' | 'kronzeuge';
 }
 
-export interface PendingPurge {
-  queue: PurgeProbeEntry[];
-  index: number;
-  /** Legacy name: always false under deterministic audit (timed stamps advance). */
-  awaitingRoll: boolean;
-  removed: { player: Player; card: PoliticianCard; roll: number | null; target: number; outcome?: 'safe' | 'scandal' | 'remove' }[];
-  survived: { player: Player; card: PoliticianCard; roll: number | null; target: number; outcome?: 'safe' | 'scandal' | 'remove' }[];
+export interface PendingWeighing {
+  kpBefore: number;
+  kpAfterRise: number;
+  cards: WeighingCardSnapshot[];
+  confirmed: { 1: boolean; 2: boolean };
+  phase: 'decide' | 'rolling' | 'done';
+  /** UIDs that still need a player W10 roll (in order) */
+  rollQueue?: number[];
+  rollIndex?: number;
+  results?: WeighingCardSnapshot[];
 }
 
 export interface BuilderState {

@@ -43,6 +43,8 @@ const initialGameState: GameState = {
   activeRefresh: { 1: 0, 2: 0 },
   roundsWon: { 1: 0, 2: 0 },
   gameWinner: null,
+  korruptionsPegel: 1,
+  politicalCapital: { 1: 0, 2: 0 },
   effectFlags: {
     1: createDefaultEffectFlags(),
     2: createDefaultEffectFlags()
@@ -365,12 +367,23 @@ export function useGameState() {
   }, []);
 
   const resolveRound = useCallback((state: GameState): GameState => {
-    // Safety: same W6 purge as useGameActions.resolveRound (legacy path)
+    // Legacy helper used by tests — prefer useGameActions.resolveRound for live play.
+    // Synchronous weighing: accept-all, then resolve.
     try {
-      const { runPurgeSequence } = require('../utils/corruption');
-      runPurgeSequence(state, log);
+      const {
+        beginWeighing,
+        confirmWeighingOnState,
+        resolveWeighing,
+      } = require('../utils/weighing');
+      if (!state.pendingWeighing) beginWeighing(state, log);
+      if (state.pendingWeighing) {
+        confirmWeighingOnState(state, 1, log);
+        confirmWeighingOnState(state, 2, log);
+        resolveWeighing(state, log);
+        state.pendingWeighing = undefined;
+      }
     } catch (e) {
-      log(`⚠️ Säuberung (legacy) fehlgeschlagen: ${String(e)}`);
+      log(`⚠️ Abwiegephase (legacy) fehlgeschlagen: ${String(e)}`);
     }
 
     const [s1, s2] = scores(state);
@@ -385,7 +398,7 @@ export function useGameState() {
       note = ' (Gleichstand – früherer Pass)';
     }
 
-    log(`Runde ${ state.round } endet (nach Säuberung): P1 ${ s1 } : P2 ${ s2 }. Gewinner: P${ winner }${ note }.`);
+    log(`Runde ${ state.round } endet (nach Untersuchung): P1 ${ s1 } : P2 ${ s2 }. Gewinner: P${ winner }${ note }.`);
 
     // Rundensieg zählen
     const newRoundsWon = { ...state.roundsWon };
@@ -920,6 +933,9 @@ export function useGameState() {
 
     // Functions that were migrated to separate hooks
     passTurn: gameActions.passTurn,
+    setWeighingDecision: gameActions.setWeighingDecision,
+    confirmWeighing: gameActions.confirmWeighing,
+    rollWeighingCard: gameActions.rollWeighingCard,
     transferInfluence: gameEffects.transferInfluence,
     getActiveAbilities: gameEffects.getActiveAbilities,
     useActiveAbility: gameEffects.useActiveAbility,

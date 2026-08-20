@@ -1,6 +1,6 @@
 /**
  * Leader slot: champion promoted from deck (never on board).
- * Passive = style passive; active = 1×/match for 1 AP.
+ * Passive = style passive; active = 1×/match (no AP cost).
  */
 
 import {
@@ -104,7 +104,6 @@ export function canActivateLeader(state: GameState, player: Player): { ok: boole
   if (!leader) return { ok: false, reason: 'Kein Anführer.' };
   if (leader.activeUsed) return { ok: false, reason: 'Anführer-Aktiv bereits genutzt.' };
   if (state.current !== player) return { ok: false, reason: 'Nicht am Zug.' };
-  if ((state.actionPoints[player] || 0) < 1) return { ok: false, reason: '1 AP nötig.' };
   if (state.passed[player]) return { ok: false, reason: 'Bereits gepasst.' };
   return { ok: true };
 }
@@ -114,7 +113,7 @@ export type LeaderActiveResult =
   | { ok: false; reason: string };
 
 /**
- * Spend 1 AP and fire champion active. Some actives need a follow-up target
+ * Fire champion active (1×/match, no AP). Some actives need a follow-up target
  * (stored on state.pendingAbilitySelect).
  */
 export function activateLeaderAbility(
@@ -148,7 +147,6 @@ export function activateLeaderAbility(
     }
   }
 
-  state.actionPoints[player] = Math.max(0, (state.actionPoints[player] || 0) - 1);
   leader.activeUsed = true;
 
   switch (leader.activeId) {
@@ -190,9 +188,7 @@ export function activateLeaderAbility(
       const own = mostCorruptGov(state, player, { minCorruption: 1 }) || strongestOwnGov(state, player);
       const enemy = strongestOwnGov(state, other);
       if (!own || !enemy) {
-        // refund
         leader.activeUsed = false;
-        state.actionPoints[player] += 1;
         return { ok: false, reason: 'Beide Seiten brauchen ein Gov.' };
       }
       applyCorruptionDelta(state, own, player, -1, {
@@ -281,11 +277,10 @@ export function activateLeaderAbility(
     }
     default:
       leader.activeUsed = false;
-      state.actionPoints[player] += 1;
       return { ok: false, reason: 'Unbekannte Anführer-Aktiv.' };
   }
 
-  log(`👑 Anführer-Aktiv von ${leader.championName} eingesetzt (1 AP).`);
+  log(`👑 Anführer-Aktiv von ${leader.championName} eingesetzt.`);
   return { ok: true };
 }
 

@@ -430,7 +430,7 @@ export const HandCardModal: React.FC<HandCardModalProps> = ({
                   borderRadius: '6px',
                   padding: '3px 8px',
                 }}>
-                  Korruption {(currentCard as any).corruption ?? (currentCard as any).corruptionStart ?? '—'}
+                  Korruptionslast {(currentCard as any).kl ?? '—'} · Korruption {(currentCard as any).corruption ?? (currentCard as any).corruptionStart ?? '—'}
                   {Number((currentCard as any).corruption ?? 0) >= 3 ? ' · Fähigkeit bereit' : ''}
                 </span>
               </div>

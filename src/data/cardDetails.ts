@@ -35,6 +35,38 @@ export interface DetailedCardInfo {
 
 // Government Cards (Regierung) - from Karten_Regierung.md
 export const GOVERNMENT_CARD_DETAILS: Record<string, DetailedCardInfo> = {
+  'Der Unbestechliche': {
+    name: 'Der Unbestechliche',
+    category: 'Regierung',
+    gameEffect: 'KL 2. Passiv: +2 Einfluss, solange der Korruptionspegel ≥ 4 ist.',
+    deckCost: 6,
+    subcategories: [],
+    synergy: 'Korruptionspegel',
+  },
+  'Skandal-Enthüller': {
+    name: 'Skandal-Enthüller',
+    category: 'Regierung',
+    gameEffect: 'KL 5. Beim Ausspielen: Korruptionspegel +2.',
+    deckCost: 12,
+    subcategories: [],
+    synergy: 'Korruptionspegel',
+  },
+  'Kronzeuge': {
+    name: 'Kronzeuge',
+    category: 'Regierung',
+    gameEffect: 'KL 3. Reaktion: Würde die Karte in der Untersuchung entfernt, abwerfen und KP −3.',
+    deckCost: 7,
+    subcategories: [],
+    synergy: 'Abwiegephase',
+  },
+  'Lobbyist': {
+    name: 'Lobbyist',
+    category: 'Regierung',
+    gameEffect: 'KL 1. Passiv: Maximales Politisches Kapital +1.',
+    deckCost: 5,
+    subcategories: [],
+    synergy: 'Politisches Kapital',
+  },
   'Vladimir Putin': {
     name: 'Vladimir Putin',
     category: 'Regierung',

@@ -163,6 +163,12 @@ export const Pols: BasePolitician[] = [
   {id:62, key:'Donald_Rumsfeld', name:'Donald Rumsfeld', influence:7, T:2, BP:12, effectKey:'gov.standard'},
   {id:63, key:'Christine_Lagarde', name:'Christine Lagarde', influence:8, T:2, BP:13, effectKey:'gov.standard'},
 
+  // KP/KL Abwiegephase synergy cards
+  {id:100, key:'Der_Unbestechliche', name:'Der Unbestechliche', influence:4, T:1, BP:6, kl:2, effectKey:'gov.unbestechlicher.kp_bonus'},
+  {id:101, key:'Skandal_Enthueller', name:'Skandal-Enthüller', influence:7, T:2, BP:12, kl:5, effectKey:'gov.skandal_enthueller.kp_plus2'},
+  {id:102, key:'Kronzeuge', name:'Kronzeuge', influence:5, T:1, BP:7, kl:3, effectKey:'gov.kronzeuge.reaction'},
+  {id:103, key:'Lobbyist', name:'Lobbyist', influence:3, T:1, BP:5, kl:1, effectKey:'gov.lobbyist.pk_max'},
+
   // --- Neue Politiker gemäß Guidelines §9 ---
   // Removed: Angela Merkel, Joe Biden, Shinzo Abe, Larry Page, Sergey Brin
 ];
@@ -233,6 +239,10 @@ export const FILENAME_MAPPING: Record<string, string> = {
   'Condoleezza_Rice': 'Condoleezza_Rice.png',
   'Donald_Rumsfeld': 'Donald_Rumsfeld.png',
   'Christine_Lagarde': 'Christine_Lagarde.png',
+  'Der_Unbestechliche': 'Alexei_Navalny.png',
+  'Skandal_Enthueller': 'Julian_Assange.png',
+  'Kronzeuge': 'Edward_Snowden.png',
+  'Lobbyist': 'Karl_Rove.png',
   'Elon_Musk': 'Elon_Musk.png',
   'Bill_Gates': 'Bill_Gates.png',
   'Mark_Zuckerberg': 'Mark_Zuckerberg.png',

@@ -59,6 +59,7 @@ export type EffectEvent =
   | { type: 'TRAP_SABOTAGE'; player: Player; targetUid: number }
   // Corruption system (pass-purge economy)
   | { type: 'CHANGE_CORRUPTION'; targetUid: number; amount: number; source?: string; enemySourcePlayer?: Player; fromInitiative?: boolean }
+  | { type: 'CHANGE_KP'; amount: number; source?: string }
   | { type: 'CORRUPTION_PURGE_CHECK'; player: Player }
   | { type: 'VISUAL_PURGE_ROLL'; targetUid: number; roll: number; target: number; survived: boolean }
   // Corruption dice-steal mechanic

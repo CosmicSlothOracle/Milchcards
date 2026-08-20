@@ -33,7 +33,7 @@ export const CardHoverInfoPanel: React.FC<CardHoverInfoPanelProps> = ({ hovered 
         <div>Tier: {polCard.T}</div>
         <div>BP: {polCard.BP}</div>
         <div style={{ color: Number(polCard.corruption ?? 0) >= 3 ? '#fb923c' : '#facc15', marginTop: 4 }}>
-          Korruption: {polCard.corruption ?? polCard.corruptionStart ?? '—'}
+          Korruptionslast: {(polCard as any).kl ?? '—'} · Korruption: {polCard.corruption ?? polCard.corruptionStart ?? '—'}
           {Number(polCard.corruption ?? 0) >= 3 ? ' · Fähigkeit bereit (klicken)' : ''}
         </div>
       </div>

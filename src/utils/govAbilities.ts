@@ -1,6 +1,7 @@
 /**
  * Government active abilities — unlock at corruption ≥ 3 (Kompromittiert).
- * Cost 1 AP, once per round (twice at Kleptokrat / with Musk at corr ≥4).
+ * No AP cost (only playing cards costs AP). Once per round
+ * (twice at Kleptokrat / with Musk at corr ≥4).
  * Most abilities self-corrupt (+1) as the price of power.
  */
 
@@ -158,7 +159,6 @@ export function canActivateGovAbility(
   const used = Number(card.corruptionAbilityUsed || 0);
   const max = getMaxAbilityUses(state, player, card);
   if (used >= max) return { ok: false, reason: 'Keine Aktivierungen mehr diese Runde.' };
-  if ((state.actionPoints[player] || 0) < 1) return { ok: false, reason: 'Nicht genug AP.' };
   if (!getGovAbility(card)) return { ok: false, reason: 'Keine Fähigkeit.' };
   return { ok: true };
 }
@@ -186,10 +186,9 @@ export function activateGovAbility(
   };
   const opp = other(player);
 
-  // Pay AP + mark use
-  state.actionPoints[player] = Math.max(0, (state.actionPoints[player] || 0) - 1);
+  // Mark use (no AP — only playing cards costs AP)
   card.corruptionAbilityUsed = Number(card.corruptionAbilityUsed || 0) + 1;
-  log(`⚡ ${card.name} aktiviert „${ability.name}" (−1 AP).`);
+  log(`⚡ ${card.name} aktiviert „${ability.name}".`);
 
   switch (ability.key) {
     case 'putin_vertical': {

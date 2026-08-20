@@ -25,14 +25,24 @@ export function cloneStateForMutation(prev: GameState): GameState {
     discard: [...prev.discard],
     log: [...prev.log],
     traps: { 1: [...prev.traps[1]], 2: [...prev.traps[2]] },
-    pendingPurge: prev.pendingPurge
+    pendingWeighing: prev.pendingWeighing
       ? {
-          ...prev.pendingPurge,
-          queue: [...prev.pendingPurge.queue],
-          removed: [...prev.pendingPurge.removed],
-          survived: [...prev.pendingPurge.survived],
+          ...prev.pendingWeighing,
+          cards: prev.pendingWeighing.cards.map((c) => ({ ...c })),
+          confirmed: { ...prev.pendingWeighing.confirmed },
+          rollQueue: prev.pendingWeighing.rollQueue
+            ? [...prev.pendingWeighing.rollQueue]
+            : undefined,
+          rollIndex: prev.pendingWeighing.rollIndex,
+          results: prev.pendingWeighing.results
+            ? prev.pendingWeighing.results.map((c) => ({ ...c }))
+            : undefined,
         }
       : undefined,
+    korruptionsPegel: prev.korruptionsPegel,
+    politicalCapital: prev.politicalCapital
+      ? { 1: prev.politicalCapital[1], 2: prev.politicalCapital[2] }
+      : { 1: 0, 2: 0 },
     leaders: prev.leaders
       ? {
           1: prev.leaders[1] ? { ...prev.leaders[1] } : null,

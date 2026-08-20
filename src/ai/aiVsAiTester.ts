@@ -117,6 +117,8 @@ export class AIVsAiTester {
       },
       discard: [],
       shields: new Set(),
+      korruptionsPegel: 1,
+      politicalCapital: { 1: 0, 2: 0 },
       effectFlags: {
         1: createDefaultEffectFlags(),
         2: createDefaultEffectFlags()

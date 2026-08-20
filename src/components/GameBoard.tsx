@@ -4,7 +4,8 @@ import { getCardImagePath } from '../data/gameData';
 import { LEADERSHIP_STYLES } from '../data/leadershipStyles';
 import { LAYOUT, UI_BASE, computeSlotRects, getGovernmentRects, getPublicRects, getSofortRect, getUiTransform, getZone } from '../ui/layout';
 import { sortHandCards } from '../utils/gameUtils';
-import { getAuditStage, getCorruption } from '../utils/corruption';
+import { getCorruption } from '../utils/corruption';
+import { getKl, riskColorForR, computeR } from '../utils/weighing';
 import { getLeaderImageSrc } from '../utils/leaderArt';
 import { canActivateLeader } from '../utils/leadership';
 import { MOBILE_HUD_BOTTOM, MOBILE_HUD_TOP, useMobileLayout } from '../hooks/useMobileLayout';
@@ -89,10 +90,11 @@ const GameBoard: React.FC<GameBoardProps> = ({
     : (leaderSelf ? 210 : 70);
 
   const auditExposure = useMemo(() => {
+    const kp = Number(gameState.korruptionsPegel ?? 1);
     const govs = (gameState.board[localPlayer]?.aussen || []).filter(
-      c => c.kind === 'pol' && !(c as any).deactivated && getCorruption(c as PoliticianCard) >= 1
+      c => c.kind === 'pol' && !(c as any).deactivated
     ) as PoliticianCard[];
-    return govs.reduce((sum, g) => sum + getAuditStage(gameState, g, localPlayer).stage, 0);
+    return govs.reduce((sum, g) => sum + Math.max(0, computeR(getKl(g), kp)), 0);
   }, [gameState, localPlayer]);
 
   const styleVars = useMemo(() => ({
@@ -172,10 +174,9 @@ const GameBoard: React.FC<GameBoardProps> = ({
   const [purgeFocusUid, setPurgeFocusUid] = useState<number | null>(null);
 
   const pendingPurgeUid = useMemo(() => {
-    const pp = gameState.pendingPurge;
-    if (!pp || pp.index >= pp.queue.length) return purgeFocusUid;
-    return pp.queue[pp.index]?.uid ?? purgeFocusUid;
-  }, [gameState.pendingPurge, purgeFocusUid]);
+    // Legacy focus uid — weighing uses overlay instead of stamp sequence
+    return purgeFocusUid;
+  }, [purgeFocusUid]);
 
   /** Effective influence of a government card incl. temp buffs/debuffs. */
   const effectiveInfluence = (card: Card): number => {
@@ -390,9 +391,15 @@ const GameBoard: React.FC<GameBoardProps> = ({
       ? LEADERSHIP_STYLES[gameState.leaders[owner]!.styleId]
       : null;
     const corr = card.kind === 'pol' ? getCorruption(card as PoliticianCard) : 0;
-    const audit = card.kind === 'pol' && corr >= 1
-      ? getAuditStage(gameState, card as PoliticianCard, owner)
-      : null;
+    const kl = card.kind === 'pol' ? getKl(card as PoliticianCard) : 0;
+    const kp = Number(gameState.korruptionsPegel ?? 1);
+    const weighingSnap = gameState.pendingWeighing?.cards.find((c) => c.uid === card.uid);
+    const displayR = weighingSnap
+      ? (weighingSnap.decision === 'cover' ? weighingSnap.baseR - 2 : weighingSnap.baseR)
+      : card.kind === 'pol'
+        ? computeR(kl, kp)
+        : 0;
+    const risk = card.kind === 'pol' ? riskColorForR(displayR) : 'green';
     const corrClass =
       card.kind === 'pol'
         ? corr <= 0
@@ -426,8 +433,8 @@ const GameBoard: React.FC<GameBoardProps> = ({
           ...style,
           boxShadow: [
             handAccentShadow,
-            audit && audit.stage >= 3
-              ? `0 6px 16px color-mix(in srgb, var(--audit-scandal) ${Math.min(40, audit.stage * 8)}%, transparent)`
+            card.kind === 'pol' && displayR > 0
+              ? `0 6px 16px color-mix(in srgb, ${risk === 'red' ? '#ef4444' : risk === 'orange' ? '#f97316' : '#eab308'} 35%, transparent)`
               : null,
             style.boxShadow,
           ].filter(Boolean).join(', ') || undefined,
@@ -466,12 +473,19 @@ const GameBoard: React.FC<GameBoardProps> = ({
             </span>
           );
         })()}
-        {audit && (
+        {card.kind === 'pol' && (
           <span
-            className={`game-board__audit-pill game-board__audit-pill--${audit.outcome}`}
-            title={`Audit-Stufe ${audit.stage}: ${audit.details.join(', ')}`}
+            className="game-board__audit-pill"
+            style={{
+              background:
+                risk === 'green' ? 'rgba(34,197,94,0.85)'
+                  : risk === 'yellow' ? 'rgba(234,179,8,0.9)'
+                    : risk === 'orange' ? 'rgba(249,115,22,0.9)'
+                      : 'rgba(239,68,68,0.9)',
+            }}
+            title={`Korruptionslast ${kl} · Risiko R=${displayR} (KP ${kp})`}
           >
-            A{audit.stage}
+            {gameState.pendingWeighing ? `R${displayR}` : `KL${kl}`}
           </span>
         )}
         {options?.showActivate && options.onActivate && (
@@ -746,9 +760,9 @@ const GameBoard: React.FC<GameBoardProps> = ({
     }
   ), []);
 
-  // Audit drama: both players passed → the round is being decided right now.
+  // Abwiegephase / both passed
   const auditDramaActive = !gameState.gameWinner && (
-    gameState.pendingPurge != null
+    gameState.pendingWeighing != null
     || (Boolean(gameState.passed[1]) && Boolean(gameState.passed[2]))
   );
 
@@ -791,7 +805,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
         backdropFilter: 'blur(10px)',
         boxShadow: '0 4px 20px color-mix(in srgb, var(--ink-900) 28%, transparent)',
       }}>
-        {/* Rounds won */}
+        {/* Rounds won + KP / PK */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <span style={{ fontSize: '11px', fontWeight: 800, color: 'var(--content-muted)', letterSpacing: '1px' }}>RUNDENSPEICHER</span>
           <div style={{ display: 'flex', gap: '6px' }}>
@@ -830,6 +844,33 @@ const GameBoard: React.FC<GameBoardProps> = ({
               boxShadow: 'none',
               border: '1px solid var(--border-default)',
             }} />
+          </div>
+          <div
+            title="Korruptionspegel (global)"
+            style={{
+              marginLeft: 10,
+              padding: '4px 10px',
+              borderRadius: 8,
+              background: 'rgba(220,38,38,0.15)',
+              border: '1px solid rgba(220,38,38,0.4)',
+              fontSize: 12,
+              fontWeight: 800,
+            }}
+          >
+            KP {gameState.korruptionsPegel ?? 1}
+          </div>
+          <div
+            title="Politisches Kapital (dein Vorrat)"
+            style={{
+              padding: '4px 10px',
+              borderRadius: 8,
+              background: 'rgba(59,130,246,0.15)',
+              border: '1px solid rgba(59,130,246,0.4)',
+              fontSize: 12,
+              fontWeight: 700,
+            }}
+          >
+            PK {gameState.politicalCapital?.[localPlayer] ?? 0}
           </div>
         </div>
 
@@ -1372,7 +1413,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
           <div className="game-board__audit-drama-vignette" />
           <div className="game-board__audit-drama-flash" />
           <div className="game-board__audit-drama-banner">
-            <span className="game-board__audit-drama-kicker">⚖ AUDIT</span>
+            <span className="game-board__audit-drama-kicker">⚖ ABWIEGEPHASE</span>
             <span className="game-board__audit-drama-title">JETZT ENTSCHEIDET SICH DIE RUNDE</span>
             <div className="game-board__audit-drama-scores">
               <span className={`game-board__audit-drama-score${leadPlayer === 1 ? ' game-board__audit-drama-score--lead' : ''}`} style={{ color: 'var(--player-strong)' }}>
@@ -1384,11 +1425,11 @@ const GameBoard: React.FC<GameBoardProps> = ({
               </span>
             </div>
             <span className="game-board__audit-drama-sub">
-              {gameState.pendingPurge
-                ? 'Belastete Regierungen werden geprüft…'
+              {gameState.pendingWeighing
+                ? `KP ${gameState.pendingWeighing.kpAfterRise} — Akzeptieren, Vertuschen oder Opfern`
                 : leadPlayer === 0
-                  ? 'Gleichstand — jede Prüfung zählt.'
-                  : `Spieler ${leadPlayer} führt — Audits können alles drehen.`}
+                  ? 'Gleichstand — jede Untersuchung zählt.'
+                  : `Spieler ${leadPlayer} führt — die Abwiegephase kann alles drehen.`}
             </span>
           </div>
         </div>
