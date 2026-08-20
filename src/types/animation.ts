@@ -71,6 +71,7 @@ export interface ProjectileState extends CharacterState {
   damage: number;
   knockback: Vector2;
   hitstun: number;
+  hasHit?: boolean;         // Prevent duplicate hit registration
 }
 
 // Animation Event - wird in die bestehende Event-Queue eingereiht

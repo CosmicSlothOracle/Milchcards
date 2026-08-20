@@ -1,9 +1,8 @@
 import React, { useRef, useEffect, useCallback } from 'react';
-import { useVisualEffects, useVisualEffectsSafe } from '../context/VisualEffectsContext';
+import { useVisualEffectsSafe } from '../context/VisualEffectsContext';
 import { GameState, Card, PoliticianCard, Player, Lane } from '../types/game';
 import { LAYOUT, getZone, computeSlotRects, getUiTransform, getLaneCapacity, getPublicRects, getGovernmentRects, getSofortRect } from '../ui/layout';
-import { drawCardImage, sortHandCards } from '../utils/gameUtils';
-import { getNetApCost } from '../utils/ap';
+import { sortHandCards } from '../utils/gameUtils';
 import { getCardImagePath } from '../data/gameData';
 import influenceIconUrl from '../assets/icons/influence.svg';
 import publicSymbolUrl from '../assets/icons/public_symbol.png';
@@ -22,24 +21,6 @@ interface GameCanvasProps {
   onCardClick: (data: any) => void;
   onCardHover: (data: any) => void;
   devMode?: boolean; // 🔧 DEV MODE: Show P2 hand when true
-}
-
-// Helper: is corruption target selection active
-function isCorruptionSelection(state: GameState, player: Player) {
-  const sel: any = (state as any).pendingAbilitySelect;
-  return sel && sel.type === 'corruption_steal' && sel.actorPlayer === player;
-}
-
-// Helper: is maulwurf corruption active
-function isMaulwurfCorruption(state: GameState, player: Player) {
-  const sel: any = (state as any).pendingAbilitySelect;
-  return sel && sel.type === 'maulwurf_steal' && sel.actorPlayer === player;
-}
-
-// Helper: is tunnelvision probe active
-function isTunnelvisionProbe(state: GameState, player: Player) {
-  const sel: any = (state as any).pendingAbilitySelect;
-  return sel && sel.type === 'tunnelvision_probe' && sel.actorPlayer === player;
 }
 
 export const GameCanvas: React.FC<GameCanvasProps> = ({

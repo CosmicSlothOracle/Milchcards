@@ -1,5 +1,6 @@
 # Local toolchain (portable Node etc.)
 .tools/
+.toolchain/
 
 # Dependencies
 node_modules/

@@ -32,12 +32,6 @@
     "dev:all": "node scripts/dev_all.js",
     "ambivalence": "node scripts/compute_ambivalence.js"
   },
-  "eslintConfig": {
-    "extends": [
-      "react-app",
-      "react-app/jest"
-    ]
-  },
   "jest": {
     "moduleNameMapper": {
       "^canvas$": "<rootDir>/src/test/__mocks__/canvas.js"

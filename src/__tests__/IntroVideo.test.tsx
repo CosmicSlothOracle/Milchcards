@@ -3,59 +3,11 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { IntroVideo } from '../components/IntroVideo';
 import { AudioProvider } from '../context/AudioContext';
 
-// Mock HTMLVideoElement
-const mockVideo = {
-  play: jest.fn().mockResolvedValue(undefined),
-  pause: jest.fn(),
-  load: jest.fn(),
-  addEventListener: jest.fn(),
-  removeEventListener: jest.fn(),
-  currentTime: 0,
-  duration: 10,
-  ended: false,
-  muted: false,
-  playsInline: true,
-};
-
-// Mock HTMLAudioElement
-const mockAudio = {
-  play: jest.fn().mockResolvedValue(undefined),
-  pause: jest.fn(),
-  load: jest.fn(),
-  addEventListener: jest.fn(),
-  removeEventListener: jest.fn(),
-  volume: 0.7,
-  currentTime: 0,
-  loop: false,
-};
-
-// Mock Audio constructor
-global.Audio = jest.fn().mockImplementation(() => mockAudio);
-
-// Mock video ref
-const mockVideoRef = {
-  current: mockVideo,
-};
-
-// Mock useRef
-jest.mock('react', () => ({
-  ...jest.requireActual('react'),
-  useRef: jest.fn(() => mockVideoRef),
-}));
-
 describe('IntroVideo', () => {
   const mockOnComplete = jest.fn();
+  let originalPlay: typeof HTMLVideoElement.prototype.play;
 
-  beforeEach(() => {
-    jest.clearAllMocks();
-    jest.useFakeTimers();
-  });
-
-  afterEach(() => {
-    jest.useRealTimers();
-  });
-
-  it('should render video element with correct props', () => {
+  const renderVideo = () =>
     render(
       <AudioProvider>
         <IntroVideo
@@ -66,21 +18,37 @@ describe('IntroVideo', () => {
       </AudioProvider>
     );
 
-    const video = screen.getByRole('video');
+  beforeEach(() => {
+    jest.clearAllMocks();
+    jest.useFakeTimers();
+
+    originalPlay = HTMLVideoElement.prototype.play;
+    Object.defineProperty(HTMLVideoElement.prototype, 'play', {
+      value: jest.fn().mockResolvedValue(undefined),
+      configurable: true,
+    });
+    jest.spyOn(HTMLAudioElement.prototype, 'play').mockResolvedValue(undefined);
+    jest.spyOn(HTMLAudioElement.prototype, 'pause').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+    Object.defineProperty(HTMLVideoElement.prototype, 'play', {
+      value: originalPlay,
+      configurable: true,
+    });
+    jest.restoreAllMocks();
+  });
+
+  it('should render video element with correct props', () => {
+    renderVideo();
+    const video = screen.getByTestId('intro-video');
     expect(video).toHaveAttribute('src', '/test-video.mp4');
     expect(video).toHaveAttribute('playsInline');
   });
 
   it('should show mute button after delay', async () => {
-    render(
-      <AudioProvider>
-        <IntroVideo
-          onComplete={mockOnComplete}
-          videoSrc="/test-video.mp4"
-          musicSrc="/test-music.mp3"
-        />
-      </AudioProvider>
-    );
+    renderVideo();
 
     // Initially, mute button should not be visible
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
@@ -94,56 +62,36 @@ describe('IntroVideo', () => {
   });
 
   it('should call onComplete when video ends and is clicked', () => {
-    render(
-      <AudioProvider>
-        <IntroVideo
-          onComplete={mockOnComplete}
-          videoSrc="/test-video.mp4"
-          musicSrc="/test-music.mp3"
-        />
-      </AudioProvider>
-    );
+    renderVideo();
+    const video = screen.getByTestId('intro-video');
+    const container = screen.getByTestId('intro-video-container');
 
     // Simulate video ending
-    fireEvent.ended(screen.getByRole('video'));
+    fireEvent.ended(video);
 
     // Click on the video container
-    fireEvent.click(screen.getByRole('video').parentElement!);
+    fireEvent.click(container);
 
     expect(mockOnComplete).toHaveBeenCalled();
   });
 
-  it('should not call onComplete when video is still playing', () => {
-    render(
-      <AudioProvider>
-        <IntroVideo
-          onComplete={mockOnComplete}
-          videoSrc="/test-video.mp4"
-          musicSrc="/test-music.mp3"
-        />
-      </AudioProvider>
-    );
+  it('should call onComplete when video container is clicked', () => {
+    renderVideo();
+    const container = screen.getByTestId('intro-video-container');
 
-    // Click on the video container before video ends
-    fireEvent.click(screen.getByRole('video').parentElement!);
+    // Clicking anywhere on the container skips the intro.
+    fireEvent.click(container);
 
-    expect(mockOnComplete).not.toHaveBeenCalled();
+    expect(mockOnComplete).toHaveBeenCalled();
   });
 
-  it('should show click to continue message when video ends', () => {
-    render(
-      <AudioProvider>
-        <IntroVideo
-          onComplete={mockOnComplete}
-          videoSrc="/test-video.mp4"
-          musicSrc="/test-music.mp3"
-        />
-      </AudioProvider>
-    );
+  it('should show skip intro message', () => {
+    renderVideo();
+    const video = screen.getByTestId('intro-video');
 
     // Simulate video ending
-    fireEvent.ended(screen.getByRole('video'));
+    fireEvent.ended(video);
 
-    expect(screen.getByText('Click anywhere to continue to Deck Builder')).toBeInTheDocument();
+    expect(screen.getByText('Click anywhere to skip intro')).toBeInTheDocument();
   });
 });

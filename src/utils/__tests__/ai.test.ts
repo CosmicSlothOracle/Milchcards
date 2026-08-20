@@ -9,6 +9,7 @@ describe('AI decision helper', () => {
       hands: { 1: [], 2: [] },
       board: { 1: { innen: [], aussen: [] }, 2: { innen: [], aussen: [] } },
       aiEnabled: { 1: false, 2: true },
+      passed: { 1: false, 2: false },
     } as unknown as GameState;
     const action = decideBestAction(state, 2, 'easy');
     expect(action.type).toBe('pass');
@@ -22,6 +23,7 @@ describe('AI decision helper', () => {
       hands: { 1: [], 2: [dummyCard] },
       board: { 1: { innen: [], aussen: [] }, 2: { innen: [], aussen: [] } },
       aiEnabled: { 1: false, 2: true },
+      passed: { 1: false, 2: false },
     } as unknown as GameState;
     const action = decideBestAction(state, 2, 'easy');
     expect(action.type).toBe('play');

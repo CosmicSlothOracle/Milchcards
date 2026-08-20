@@ -4,7 +4,11 @@ import DiscardBurn from '../DiscardBurn';
 
 describe('DiscardBurn', () => {
   beforeEach(() => {
+    // The animation appends a canvas layer to document.body; direct DOM access is
+    // intentional here to isolate tests from previous layer state.
+    // eslint-disable-next-line testing-library/no-node-access
     const existing = document.getElementById('ui-anim-layer');
+    // eslint-disable-next-line testing-library/no-node-access
     if (existing) existing.remove();
   });
 

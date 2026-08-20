@@ -12,11 +12,9 @@ export const IntroVideo: React.FC<IntroVideoProps> = ({
   videoSrc,
   musicSrc
 }) => {
-  const [isPlaying, setIsPlaying] = useState(false);
   const [showMuteButton, setShowMuteButton] = useState(false);
-  const [videoEnded, setVideoEnded] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const { isMuted, toggleMute, playMusic, stopMusic } = useAudio();
+  const { isMuted, toggleMute, playMusic } = useAudio();
 
   useEffect(() => {
     // Start playing video and music when component mounts
@@ -43,7 +41,6 @@ export const IntroVideo: React.FC<IntroVideoProps> = ({
   }, [musicSrc, playMusic]);
 
   const handleVideoEnded = () => {
-    setVideoEnded(true);
     // Keep the last frame visible
     if (videoRef.current) {
       videoRef.current.pause();
@@ -55,16 +52,9 @@ export const IntroVideo: React.FC<IntroVideoProps> = ({
     onComplete();
   };
 
-  const handleVideoPlay = () => {
-    setIsPlaying(true);
-  };
-
-  const handleVideoPause = () => {
-    setIsPlaying(false);
-  };
-
   return (
     <div
+      data-testid="intro-video-container"
       style={{
         position: 'fixed',
         top: 0,
@@ -82,6 +72,7 @@ export const IntroVideo: React.FC<IntroVideoProps> = ({
     >
       <video
         ref={videoRef}
+        data-testid="intro-video"
         src={videoSrc}
         style={{
           width: '100%',
@@ -89,8 +80,6 @@ export const IntroVideo: React.FC<IntroVideoProps> = ({
           objectFit: 'cover',
         }}
         onEnded={handleVideoEnded}
-        onPlay={handleVideoPlay}
-        onPause={handleVideoPause}
         muted={true}
         autoPlay
         playsInline

@@ -171,7 +171,8 @@ export class AnimationEngine {
       damage,
       knockback,
       hitstun,
-      owner
+      owner,
+      hasHit: false
     };
 
     this.state.projectiles.set(id, projectile);
@@ -210,6 +211,7 @@ export class AnimationEngine {
     // Check against all characters (except owner)
     this.state.characters.forEach((character, characterId) => {
       if (characterId === projectile.owner) return;
+      if (projectile.hasHit) return;
 
       // Simple collision check (can be expanded with proper hitbox system)
       const distance = Math.sqrt(
@@ -219,16 +221,20 @@ export class AnimationEngine {
 
       if (distance < 50) { // Simple radius collision
         this.hitCharacter(characterId, projectile);
-        this.destroyProjectile(projectile.id);
-        return;
       }
     });
   }
 
   private hitCharacter(characterId: string, projectile: ProjectileState): void {
+    if (projectile.hasHit) return;
+    projectile.hasHit = true;
+
     // Create blast effect at hit position
     const blastId = `blast_${Date.now()}_${Math.random()}`;
     this.createEffect(blastId, projectile.position, 'blast');
+
+    // Destroy the projectile immediately after the first hit
+    this.destroyProjectile(projectile.id);
   }
 
   private destroyProjectile(projectileId: string): void {

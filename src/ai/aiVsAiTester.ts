@@ -1,7 +1,7 @@
 import { GameState, Player, BuilderEntry } from '../types/game';
 import { buildDeckFromEntries } from '../utils/gameUtils';
 import { Pols, Specials } from '../data/gameData';
-import { takeTurn } from './aiPlayer';
+// takeTurn is not used in this runner; the AI decision is inlined below.
 import { resolveQueue } from '../utils/queue';
 import { applyStartOfTurnFlags } from '../utils/startOfTurnHooks';
 import { createDefaultEffectFlags } from '../types/game';

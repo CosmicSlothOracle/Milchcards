@@ -31,6 +31,9 @@ describe('GameCanvas wheel scroll', () => {
   test('wheel does not throw when hand <=5', () => {
     const state = makeState(5);
     const { container } = render(<GameCanvas gameState={state} selectedHandIndex={null} onCardClick={() => {}} onCardHover={() => {}} />);
+    // GameCanvas renders a single canvas element; direct DOM access is the only
+    // practical way to dispatch a wheel event on it in this smoke test.
+    // eslint-disable-next-line testing-library/no-container, testing-library/no-node-access
     const canvas = container.querySelector('canvas')!;
     expect(() => fireEvent.wheel(canvas, { deltaY: 100 })).not.toThrow();
   });
@@ -38,6 +41,7 @@ describe('GameCanvas wheel scroll', () => {
   test('wheel updates target when hand >5', () => {
     const state = makeState(8);
     const { container } = render(<GameCanvas gameState={state} selectedHandIndex={null} onCardClick={() => {}} onCardHover={() => {}} />);
+    // eslint-disable-next-line testing-library/no-container, testing-library/no-node-access
     const canvas = container.querySelector('canvas')!;
     // simulate wheel down
     fireEvent.wheel(canvas, { deltaY: 100 });

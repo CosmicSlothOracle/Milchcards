@@ -1,4 +1,4 @@
-import { GameState, Card, Player, BuilderEntry } from '../types/game';
+import { GameState, Player, BuilderEntry } from '../types/game';
 import { buildDeckFromEntries, sumGovernmentInfluenceWithAuras } from '../utils/gameUtils';
 import { Pols, Specials } from '../data/gameData';
 import { resolveQueue } from '../utils/queue';

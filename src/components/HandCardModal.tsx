@@ -5,7 +5,7 @@ import { drawCardImage, sortHandCards } from '../utils/gameUtils';
 import { getCardDetails, convertHPToUSD } from '../data/cardDetails';
 import { withIcons } from '../ui/withIcons';
 import { makeUid } from '../utils/id';
-import { wouldBeNetZero, getNetApCost } from '../utils/ap';
+import { getNetApCost } from '../utils/ap';
 
 interface HandCardModalProps {
   gameState: GameState;

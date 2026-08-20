@@ -15,11 +15,9 @@ export const SequentialVideoPlayer: React.FC<SequentialVideoPlayerProps> = ({
   musicSrc
 }) => {
   const [currentVideo, setCurrentVideo] = useState<'brand' | 'intro'>('brand');
-  const [isPlaying, setIsPlaying] = useState(false);
   const [showMuteButton, setShowMuteButton] = useState(false);
-  const [videoEnded, setVideoEnded] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const { isMuted, toggleMute, playMusic, stopMusic } = useAudio();
+  const { isMuted, toggleMute, playMusic } = useAudio();
 
   const currentVideoSrc = currentVideo === 'brand' ? brandVideoSrc : introVideoSrc;
 
@@ -51,11 +49,9 @@ export const SequentialVideoPlayer: React.FC<SequentialVideoPlayerProps> = ({
     if (currentVideo === 'brand') {
       // Brand video ended, transition to intro video
       setCurrentVideo('intro');
-      setVideoEnded(false);
       // The video src will change and trigger a new play
     } else {
       // Intro video ended, complete the sequence
-      setVideoEnded(true);
       if (videoRef.current) {
         videoRef.current.pause();
       }
@@ -70,14 +66,6 @@ export const SequentialVideoPlayer: React.FC<SequentialVideoPlayerProps> = ({
       // Skip intro video, complete the sequence
       onComplete();
     }
-  };
-
-  const handleVideoPlay = () => {
-    setIsPlaying(true);
-  };
-
-  const handleVideoPause = () => {
-    setIsPlaying(false);
   };
 
   // Handle video source change
@@ -132,8 +120,6 @@ export const SequentialVideoPlayer: React.FC<SequentialVideoPlayerProps> = ({
           objectFit: 'cover',
         }}
         onEnded={handleVideoEnded}
-        onPlay={handleVideoPlay}
-        onPause={handleVideoPause}
         muted={true}
         autoPlay
         playsInline

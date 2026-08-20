@@ -2,21 +2,6 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { AudioProvider, useAudio } from '../context/AudioContext';
 
-// Mock HTMLAudioElement
-const mockAudio = {
-  play: jest.fn().mockResolvedValue(undefined),
-  pause: jest.fn(),
-  load: jest.fn(),
-  addEventListener: jest.fn(),
-  removeEventListener: jest.fn(),
-  volume: 0.7,
-  currentTime: 0,
-  loop: false,
-};
-
-// Mock Audio constructor
-global.Audio = jest.fn().mockImplementation(() => mockAudio);
-
 // Test component that uses the audio context
 const TestComponent: React.FC = () => {
   const { isMuted, toggleMute, playMusic, stopMusic } = useAudio();
@@ -39,7 +24,13 @@ const TestComponent: React.FC = () => {
 
 describe('AudioContext', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    jest.spyOn(HTMLAudioElement.prototype, 'play').mockResolvedValue(undefined);
+    jest.spyOn(HTMLAudioElement.prototype, 'pause').mockImplementation(() => {});
+    jest.spyOn(HTMLAudioElement.prototype, 'load').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
   });
 
   it('should provide audio context to children', () => {
@@ -81,8 +72,7 @@ describe('AudioContext', () => {
     const playButton = screen.getByTestId('play-music');
     fireEvent.click(playButton);
 
-    expect(global.Audio).toHaveBeenCalledWith('/test.mp3');
-    expect(mockAudio.play).toHaveBeenCalled();
+    expect(HTMLAudioElement.prototype.play).toHaveBeenCalled();
   });
 
   it('should stop music when stopMusic is called', () => {
@@ -92,10 +82,14 @@ describe('AudioContext', () => {
       </AudioProvider>
     );
 
+    // Start music first so there is an audio element to pause.
+    fireEvent.click(screen.getByTestId('play-music'));
+    expect(HTMLAudioElement.prototype.play).toHaveBeenCalled();
+
     const stopButton = screen.getByTestId('stop-music');
     fireEvent.click(stopButton);
 
-    expect(mockAudio.pause).toHaveBeenCalled();
+    expect(HTMLAudioElement.prototype.pause).toHaveBeenCalled();
   });
 
   it('should throw error when useAudio is used outside provider', () => {

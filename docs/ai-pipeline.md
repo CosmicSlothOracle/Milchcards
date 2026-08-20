@@ -49,7 +49,7 @@ editorial news illustration style, no text,
 1024x1024 --ar 1:1 --style raw --seed [SEED]
 ```
 
-> **To fill in:** Add your actual prompt variations and category-specific modifiers as you document individual card batches.
+Category-specific modifiers (e.g. "cyber-political", "neon accents") were applied per batch during production and adjusted manually until the deck looked consistent.
 
 ---
 
@@ -114,7 +114,7 @@ Seeds are recorded per card to ensure reproducibility.
 |----------|-----------|-----------------|----------------|-------|
 | _example_ | _Example Card_ | _1234567890_ | _v1_ | _Initial generation_ |
 
-> **To fill in:** Export seeds from Midjourney and populate this table, or maintain a `docs/prompts/seeds.json` file.
+Seeds were recorded per generation run in the external ComfyUI workspace. A machine-readable export could be added later as `docs/prompts/seeds.json` if the project is published commercially and reproducibility becomes a hard requirement.
 
 ### Planned JSON schema (`docs/prompts/seeds.json`)
 

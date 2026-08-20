@@ -4,8 +4,8 @@ module.exports = {
     'react-app/jest'
   ],
   rules: {
-    '@typescript-eslint/no-unused-vars': 'off',
-    'react-hooks/exhaustive-deps': 'off'
+    // Keep the default rule behaviour from react-app; only add narrowly
+    // scoped exceptions inline when the code genuinely requires them.
   },
   env: {
     node: true,
