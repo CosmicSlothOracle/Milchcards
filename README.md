@@ -180,12 +180,6 @@ ESLint is re-enabled (no global rule disabling). The production build path has n
 
 ---
 
-## Commit History Note
-
-If this repo has not been promoted publicly yet, consider creating a curated portfolio branch or a new public repository with a clean history: `setup → engine → UI → PvP → tests → docs`. Avoid force-pushing to a branch that is already shared.
-
----
-
 ## Architecture
 
 For a high-level view of the game loop, see [`ARCHITECTURE.md`](ARCHITECTURE.md).
