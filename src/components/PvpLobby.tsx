@@ -72,10 +72,10 @@ export const PvpLobby: React.FC<PvpLobbyProps> = ({
             lineHeight: 1.6,
           }}
         >
-          <strong>PvP ist nicht konfiguriert.</strong>
+          <strong>PvP ist nicht verfügbar.</strong>
           <br />
-          Starte den lokalen Relay-Server mit <code>npm run pvp</code>
-          oder setze <code>REACT_APP_WS_URL</code>.
+          Das Online-Spiel läuft über Netlify Functions + Blobs.
+          Lokal funktioniert es mit <code>netlify dev</code>.
         </div>
       )}
 
@@ -122,7 +122,7 @@ export const PvpLobby: React.FC<PvpLobbyProps> = ({
       )}
 
       {configured && inRoom && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 20, alignItems: 'center' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20, alignItems: 'center', width: 'min(360px, 92vw)' }}>
           <div style={{ textAlign: 'center' }}>
             <div style={{ fontSize: 12, color: 'var(--content-muted)', letterSpacing: 2, marginBottom: 8 }}>
               RAUMCODE
@@ -130,9 +130,9 @@ export const PvpLobby: React.FC<PvpLobbyProps> = ({
             <div
               className="mc-panel"
               style={{
-                fontSize: 42,
+                fontSize: 'clamp(28px, 9vw, 42px)',
                 fontWeight: 800,
-                letterSpacing: 10,
+                letterSpacing: '0.22em',
                 color: 'var(--player-strong)',
                 fontFamily: 'var(--font-display)',
                 padding: '12px 28px',
@@ -194,7 +194,7 @@ export const PvpLobby: React.FC<PvpLobbyProps> = ({
             <button
               type="button"
               className="mc-btn mc-btn--primary"
-              style={{ minWidth: 300 }}
+              style={{ width: 'min(300px, 92vw)' }}
               onClick={() => onStartMatch(resolveDeck(p1Deck), resolveDeck(p2Deck))}
               disabled={!isReady}
             >

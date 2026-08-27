@@ -17,7 +17,7 @@ flowchart LR
 2. **Actions** are player inputs (play a card, activate an ability, pass) that are validated against the current state and then translated into one or more queued effects.
 3. **Effect Queue** resolves effects in order: draw, damage, influence, traps, auras, pass turn. This keeps complex card interactions deterministic and easy to test.
 4. **UI and Animations** consume the resolved state and drive React components, canvas animations, and sound effects.
-5. **PvP Sync** sends the same action stream to the remote client over a host-authoritative WebSocket relay, so both players stay in sync.
+5. **PvP Sync** sends the same action stream to the remote client through a host-authoritative polling transport backed by Netlify Functions + Blobs, so both players stay in sync.
 
 ## State Flow
 
@@ -49,18 +49,19 @@ flowchart LR
 | `src/components/` | React UI components: board, hand, deck builder, modals. |
 | `src/components/GameCanvas.tsx` | Canvas-based rendering of the board and hand. |
 | `src/context/` | React contexts for audio, visual effects, and PvP connection. |
-| `src/pvp/` | WebSocket client that talks to the relay in `server/`. |
-| `server/index.js` | Host-authoritative relay that forwards actions to the room peer. |
+| `src/pvp/` | HTTP polling client that talks to the Netlify Blobs room backend. |
+| `netlify/functions/pvp-room.mjs` | Serverless room storage: host/guest mailboxes in Netlify Blobs. |
 
 ## PvP Sync
 
-The PvP relay is intentionally simple: the host (player who created the room) is the authoritative source of truth. Every validated action is broadcast to the guest, who applies the same action locally. This keeps the clients synchronized without running a full game simulation on the server.
+The PvP backend is intentionally simple: the host (player who created the room) is the authoritative source of truth. Rooms live in Netlify Blobs as two single-writer documents — one written only by the host (phase, serialized state, FX events), one written only by the guest (queued actions). Both clients poll a Netlify Function (`/api/pvp`) about once per second; each poll flushes the local outbox and returns the peer's news. No game logic runs on the server.
 
 ```
-Host client ──action──▶ Relay ──action──▶ Guest client
-   │                                          │
-   ▼                                          ▼
-GameState update                      GameState update
+Host client ──state/fx──▶ Blobs (host doc) ──poll──▶ Guest client
+Host client ◀──poll────── Blobs (guest doc) ◀─actions── Guest client
+   │                                                      │
+   ▼                                                      ▼
+GameState update (engine)                    GameState update (synced)
 ```
 
 ## Notes

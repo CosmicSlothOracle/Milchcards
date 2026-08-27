@@ -83,9 +83,11 @@ Original music by **milch** (Laurin):
 
 ---
 
-### 1v1 Online PvP (comeing soon)
+### 1v1 Online PvP
 
-Host-authoritative WebSocket relay in [`server/`](server/). Create/join a room code, pick premade decks, play. Deploy the relay with [`render.yaml`](render.yaml) (binds `0.0.0.0:$PORT`).
+Serverless multiplayer over **Netlify Functions + Netlify Blobs** — no dedicated game server. The host runs the engine locally and publishes serialized game state; the guest polls for state and sends actions ([`netlify/functions/pvp-room.mjs`](netlify/functions/pvp-room.mjs), [`src/hooks/usePvpSession.ts`](src/hooks/usePvpSession.ts)). Create/join a room code, pick premade decks, play.
+
+Locally, run `npx netlify dev` so the functions (PvP + quiz leaderboard) are available; plain `npm start` runs the game without online features.
 
 Production build deploys via [`netlify.toml`](netlify.toml) — push to `main` and Netlify rebuilds automatically.
 
