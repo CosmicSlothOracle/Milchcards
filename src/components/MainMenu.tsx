@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { MusicToggle } from './MusicToggle';
 import { QuizScoreboard } from './QuizScoreboard';
+import { loadLeaderboard, QuizLeaderboardEntry } from '../utils/quiz';
+import { fetchLeaderboardRemote } from '../utils/quizLeaderboardApi';
 
 interface MainMenuProps {
   onStartGame: () => void;
@@ -19,19 +21,53 @@ export const MainMenu: React.FC<MainMenuProps> = ({
   onStartTutorial,
   onStartPvp,
 }) => {
+  const [entries, setEntries] = useState<QuizLeaderboardEntry[]>(() => loadLeaderboard());
+  const [source, setSource] = useState<'blobs' | 'local'>('local');
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchLeaderboardRemote().then((result) => {
+      if (cancelled) return;
+      setEntries(result.entries);
+      setSource(result.source);
+      setLoading(false);
+    });
+    const onFocus = () => {
+      fetchLeaderboardRemote().then((result) => {
+        if (cancelled) return;
+        setEntries(result.entries);
+        setSource(result.source);
+      });
+    };
+    window.addEventListener('focus', onFocus);
+    return () => {
+      cancelled = true;
+      window.removeEventListener('focus', onFocus);
+    };
+  }, []);
+
   return (
     <div className="mc-screen mc-screen--enter mc-screen--menu">
       <div className="mc-top-right">
         <MusicToggle size="medium" />
       </div>
 
-      <div className="mc-menu-layout">
-        <div className="mc-menu-layout__main">
-          <div className="mc-brand">
-            <h1 className="mc-brand__title">MILCHCARDS</h1>
-            <p className="mc-brand__subtitle">The Political Deck-Building Engine</p>
-          </div>
+      <div className="mc-brand">
+        <h1 className="mc-brand__title">MILCHCARDS</h1>
+        <p className="mc-brand__subtitle">The Political Deck-Building Engine</p>
+      </div>
 
+      <div className="mc-menu-layout">
+        <QuizScoreboard
+          variant="menu"
+          side="left"
+          entries={entries}
+          source={source}
+          loading={loading}
+        />
+
+        <div className="mc-menu-layout__main">
           <div className="mc-menu">
             <button type="button" className="mc-btn mc-btn--primary" onClick={onStartGame}>
               Spiel Starten (vs KI)
@@ -61,7 +97,13 @@ export const MainMenu: React.FC<MainMenuProps> = ({
           </div>
         </div>
 
-        <QuizScoreboard variant="menu" />
+        <QuizScoreboard
+          variant="menu"
+          side="right"
+          entries={entries}
+          source={source}
+          loading={loading}
+        />
       </div>
 
       <div className="mc-footer-note">
