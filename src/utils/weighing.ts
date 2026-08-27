@@ -1,17 +1,28 @@
 /**
- * Korruptionspegel (KP) / Korruptionslast (KL) / W10 Abwiegephase
+ * Korruptionspegel (KP) / Korruptionslast (KL) / Abwiegephase
  *
  * At round end (both players pass):
  *  1. KP += 1
  *  2. Freeze R = KL − KP for every government card
- *  3. Players choose Accept / Cover (−2 R, 1 PK) / Sacrifice (remove card, KP −1 next)
- *  4. Simultaneous W10 rolls for cards with effective R > 0
- *  5. Removals, then influence scoring
+ *  3. Players choose Accept / Cover (1 PK → fully safe) / Sacrifice (remove card, KP −1)
+ *  4. Deterministic bands (no W10):
+ *       R ≤ 0  → Sicher (full influence)
+ *       R 1–2  → Skandal (stays, scores with reduced influence)
+ *       R ≥ 3  → Entfernt (does not score)
+ *  5. Influence scoring
+ *
+ * Vertuschen is the control lever: spend leftover AP→PK during the round,
+ * then buy safety instead of gambling the round on a probe.
  */
 
 import { GameState, Player, PoliticianCard, WeighingCardSnapshot, WeighingDecision, PendingWeighing } from '../types/game';
-import { AUTOCRAT_START_3 } from './corruption';
-import { getGlobalRNG, RNG } from '../services/rng';
+import {
+  AUTOCRAT_START_3,
+  applyAuditScandal,
+  getCorruption,
+  getCorruptionInfluenceBonus,
+} from './corruption';
+import type { RNG } from '../services/rng';
 
 export const PK_BASE_MAX = 3;
 export const KP_MIN = 0;
@@ -36,29 +47,45 @@ export function computeR(kl: number, kp: number): number {
   return kl - kp;
 }
 
+export type WeighingBand = 'safe' | 'scandal' | 'remove';
+
+/** Deterministic outcome for an accepted (uncovered) risk value. */
+export function outcomeForR(r: number): WeighingBand {
+  if (r <= 0) return 'safe';
+  if (r <= 2) return 'scandal';
+  return 'remove';
+}
+
+export function bandLabel(band: WeighingBand): string {
+  if (band === 'safe') return 'Sicher';
+  if (band === 'scandal') return 'Skandal';
+  return 'Entfernt';
+}
+
+/** Vertuschen zeros risk — the card is fully protected. */
+export function effectiveRForDecision(baseR: number, decision: WeighingDecision): number {
+  if (decision === 'cover') return 0;
+  return baseR;
+}
+
 /**
- * W10 removal threshold: roll 1..threshold removes the card.
- * R1→2 (20%), R2→4, R3→6, R4→8, R≥5→9 (90%, never 100%).
+ * Kept for UI/legacy callers. Maps bands to a display "chance" so old
+ * percentage widgets don't explode: safe 0, scandal 0 (not removed), remove 1.
  */
 export function removalThreshold(r: number): number {
-  if (r <= 0) return 0;
-  if (r === 1) return 2;
-  if (r === 2) return 4;
-  if (r === 3) return 6;
-  if (r === 4) return 8;
-  return 9;
+  return outcomeForR(r) === 'remove' ? 10 : 0;
 }
 
 export function removalProbability(r: number): number {
-  return removalThreshold(r) / 10;
+  return outcomeForR(r) === 'remove' ? 1 : 0;
 }
 
 export type RiskColor = 'green' | 'yellow' | 'orange' | 'red';
 
 export function riskColorForR(r: number): RiskColor {
-  if (r <= 0) return 'green';
-  if (r <= 2) return 'yellow';
-  if (r === 3) return 'orange';
+  const band = outcomeForR(r);
+  if (band === 'safe') return 'green';
+  if (band === 'scandal') return 'yellow';
   return 'red';
 }
 
@@ -101,6 +128,12 @@ function cardInfluence(card: PoliticianCard): number {
   return (card.influence || 0) + (card.tempBuffs || 0) - (card.tempDebuffs || 0);
 }
 
+function scandalScoreOf(card: PoliticianCard): number {
+  const inf = cardInfluence(card);
+  const bonus = getCorruptionInfluenceBonus(getCorruption(card));
+  return Math.max(0, inf - bonus - 1);
+}
+
 function activeGovCards(state: GameState, p: Player): PoliticianCard[] {
   return (state.board[p]?.aussen || []).filter(
     (c) => c.kind === 'pol' && !(c as any).deactivated
@@ -126,8 +159,7 @@ function isKronzeuge(card: PoliticianCard): boolean {
 
 /**
  * Start Abwiegephase: KP +1, snapshot all gov cards with frozen base R.
- * Returns true if the UI must wait for player decisions (always when any gov is out,
- * or always pause so KP rise is shown — we pause whenever there is at least one card OR always).
+ * Returns true so the UI can collect Accept / Cover / Sacrifice choices.
  */
 export function beginWeighing(state: GameState, log: (msg: string) => void): boolean {
   if (state.pendingWeighing) return true;
@@ -144,13 +176,15 @@ export function beginWeighing(state: GameState, log: (msg: string) => void): boo
     for (const card of activeGovCards(state, p)) {
       const kl = getKl(card);
       const baseR = computeR(kl, kpAfterRise);
+      const influence = cardInfluence(card);
       cards.push({
         player: p,
         uid: card.uid,
         name: card.name,
         kl,
         baseR,
-        influence: cardInfluence(card),
+        influence,
+        scandalScore: scandalScoreOf(card),
         decision: 'accept',
         effectiveR: baseR,
       });
@@ -158,7 +192,7 @@ export function beginWeighing(state: GameState, log: (msg: string) => void): boo
   }
 
   log(
-    `⚖ Abwiegephase: KP ${kpBefore} → ${kpAfterRise}. ${cards.length} Regierungskarte(n) werden geprüft.`
+    `⚖ Abwiegephase: KP ${kpBefore} → ${kpAfterRise}. ${cards.length} Regierungskarte(n) — R≤0 sicher, R1–2 Skandal, R≥3 entfernt. Vertuschen (1 PK) schützt vollständig.`
   );
 
   state.pendingWeighing = {
@@ -181,7 +215,6 @@ export function beginWeighing(state: GameState, log: (msg: string) => void): boo
     }
   }
 
-  // Always pause so players see KP rise / can confirm even with empty boards
   return true;
 }
 
@@ -205,6 +238,10 @@ export function setWeighingDecisionOnState(
   ).length;
 
   if (decision === 'cover') {
+    if (outcomeForR(snap.baseR) === 'safe') {
+      log(`ℹ️ Vertuschen: ${snap.name} ist bereits sicher (R≤0).`);
+      return false;
+    }
     if (coverCount + 1 > pk) {
       log(`⚠️ Vertuschen: P${player} hat nicht genug Politisches Kapital (${pk}).`);
       return false;
@@ -212,13 +249,15 @@ export function setWeighingDecisionOnState(
   }
 
   snap.decision = decision;
-  if (decision === 'cover') snap.effectiveR = snap.baseR - 2;
-  else snap.effectiveR = snap.baseR;
+  snap.effectiveR = effectiveRForDecision(snap.baseR, decision);
 
+  const preview = decision === 'sacrifice'
+    ? 'Opfern'
+    : bandLabel(outcomeForR(snap.effectiveR ?? snap.baseR));
   log(
     `⚖ P${player}: ${snap.name} → ${
       decision === 'accept' ? 'Akzeptieren' : decision === 'cover' ? 'Vertuschen' : 'Opfern'
-    } (R ${snap.baseR}${decision === 'cover' ? ` → ${snap.effectiveR}` : ''})`
+    } (R ${snap.baseR}${decision === 'cover' ? ' → 0' : ''} · ${preview})`
   );
   return true;
 }
@@ -228,7 +267,6 @@ export function confirmWeighingOnState(state: GameState, player: Player, log: (m
   if (!pending || pending.phase !== 'decide') return false;
   if (pending.confirmed[player]) return true;
 
-  // Validate PK for cover decisions
   const covers = pending.cards.filter((c) => c.player === player && c.decision === 'cover').length;
   const pk = Number(state.politicalCapital?.[player] || 0);
   if (covers > pk) {
@@ -257,27 +295,19 @@ export function collectWeighingResult(state: GameState): WeighingResult {
   for (const snap of pending.cards) {
     if (snap.outcome === 'removed') removed.push(snap);
     else if (snap.outcome === 'sacrificed' || snap.outcome === 'kronzeuge') sacrificed.push(snap);
-    else if (snap.outcome === 'safe') survived.push(snap);
+    else if (snap.outcome === 'safe' || snap.outcome === 'scandal') survived.push(snap);
   }
   return { removed, survived, sacrificed };
 }
 
-export function currentWeighingRollTarget(state: GameState): WeighingCardSnapshot | null {
-  const pending = state.pendingWeighing;
-  if (!pending || pending.phase !== 'rolling') return null;
-  const queue = pending.rollQueue || [];
-  const idx = pending.rollIndex ?? 0;
-  if (idx >= queue.length) return null;
-  return pending.cards.find((c) => c.uid === queue[idx]) ?? null;
+export function currentWeighingRollTarget(_state: GameState): WeighingCardSnapshot | null {
+  return null;
 }
 
 export function isWeighingRollsComplete(state: GameState): boolean {
   const pending = state.pendingWeighing;
   if (!pending) return true;
-  if (pending.phase === 'done') return true;
-  if (pending.phase !== 'rolling') return false;
-  const queue = pending.rollQueue || [];
-  return (pending.rollIndex ?? 0) >= queue.length;
+  return pending.phase === 'done';
 }
 
 function finalizeWeighingPhase(state: GameState, log: (msg: string) => void): WeighingResult {
@@ -303,25 +333,74 @@ function finalizeWeighingPhase(state: GameState, log: (msg: string) => void): We
       /* UI only */
     }
   }
+  const scandalN = result.survived.filter((s) => s.outcome === 'scandal').length;
   log(
-    `⚖ Untersuchung abgeschlossen: ${result.removed.length} entfernt, ${result.sacrificed.length} geopfert/Kronzeuge, ${result.survived.length} sicher.`
+    `⚖ Untersuchung abgeschlossen: ${result.removed.length} entfernt, ${result.sacrificed.length} geopfert/Kronzeuge, ${scandalN} Skandal, ${result.survived.length - scandalN} sicher.`
   );
   return result;
 }
 
+function applyBandToCard(
+  state: GameState,
+  snap: WeighingCardSnapshot,
+  log: (msg: string) => void
+): void {
+  const card = findGov(state, snap.player, snap.uid);
+  const effectiveR = snap.effectiveR ?? effectiveRForDecision(snap.baseR, snap.decision);
+  snap.effectiveR = effectiveR;
+  snap.roll = null;
+
+  if (!card) {
+    snap.outcome = 'safe';
+    return;
+  }
+
+  const band = outcomeForR(effectiveR);
+
+  if (band === 'safe') {
+    snap.outcome = 'safe';
+    dispatchWeighingVisual(snap.player, snap.uid, snap.name, null, effectiveR, 'safe');
+    log(`✅ ${snap.name}: ${snap.decision === 'cover' ? 'vertuscht — ' : ''}R≤0 — sicher.`);
+    return;
+  }
+
+  if (band === 'scandal') {
+    applyAuditScandal(card, log);
+    snap.outcome = 'scandal';
+    dispatchWeighingVisual(snap.player, snap.uid, snap.name, null, effectiveR, 'scandal');
+    log(
+      `📰 Skandal: ${snap.name} (R=${effectiveR}) bleibt, wertet aber mit reduziertem Einfluss (${snap.scandalScore ?? '?'}).`
+    );
+    return;
+  }
+
+  if (isKronzeuge(card)) {
+    removeGovFromBoard(state, snap.player, card);
+    changeKp(state, -3, log);
+    snap.outcome = 'kronzeuge';
+    log(`🎤 Kronzeuge: ${snap.name} fliegt auf (R=${effectiveR}) — abgeworfen, KP −3.`);
+    dispatchWeighingVisual(snap.player, snap.uid, snap.name, null, effectiveR, 'kronzeuge');
+    return;
+  }
+
+  removeGovFromBoard(state, snap.player, card);
+  snap.outcome = 'removed';
+  log(`❌ Untersuchung: ${snap.name} (R=${effectiveR}) — ENTFERNT (kein Wurf).`);
+  dispatchWeighingVisual(snap.player, snap.uid, snap.name, null, effectiveR, 'removed');
+}
+
 /**
- * After both players confirm: spend PK, apply sacrifices, auto-safe R≤0,
- * build player roll queue for R>0 cards. Returns true if waiting for player rolls.
+ * After both players confirm: spend PK, apply sacrifices, resolve bands.
+ * Always finishes immediately (no dice queue). Returns false = not waiting.
  */
-export function startWeighingRolls(state: GameState, log: (msg: string) => void): boolean {
+export function resolveWeighingDecisions(state: GameState, log: (msg: string) => void): WeighingResult {
   const pending = state.pendingWeighing;
-  if (!pending) return false;
-  if (pending.phase === 'rolling') return !isWeighingRollsComplete(state);
-  if (pending.phase === 'done') return false;
+  const empty: WeighingResult = { removed: [], survived: [], sacrificed: [] };
+  if (!pending) return empty;
+  if (pending.phase === 'done') return collectWeighingResult(state);
 
   pending.phase = 'rolling';
 
-  // Spend PK for Vertuschen
   for (const p of [1, 2] as const) {
     const covers = pending.cards.filter((c) => c.player === p && c.decision === 'cover').length;
     if (covers > 0) {
@@ -329,7 +408,6 @@ export function startWeighingRolls(state: GameState, log: (msg: string) => void)
     }
   }
 
-  // Sacrifices first
   for (const snap of pending.cards) {
     if (snap.decision !== 'sacrifice') continue;
     const card = findGov(state, snap.player, snap.uid);
@@ -344,176 +422,35 @@ export function startWeighingRolls(state: GameState, log: (msg: string) => void)
     }
   }
 
-  const rollQueue: number[] = [];
   for (const snap of pending.cards) {
     if (snap.decision === 'sacrifice') continue;
-    const card = findGov(state, snap.player, snap.uid);
-    if (!card) continue;
-
-    const effectiveR = snap.decision === 'cover' ? snap.baseR - 2 : snap.baseR;
-    snap.effectiveR = effectiveR;
-
-    if (effectiveR <= 0) {
-      snap.outcome = 'safe';
-      snap.roll = null;
-      dispatchWeighingVisual(snap.player, snap.uid, snap.name, null, effectiveR, 'safe');
-      log(`✅ ${snap.name}: R≤0 — sicher (kein Wurf).`);
-      continue;
-    }
-
-    rollQueue.push(snap.uid);
+    applyBandToCard(state, snap, log);
   }
 
-  pending.rollQueue = rollQueue;
-  pending.rollIndex = 0;
-
-  if (rollQueue.length === 0) {
-    finalizeWeighingPhase(state, log);
-    return false;
-  }
-
-  const first = pending.cards.find((c) => c.uid === rollQueue[0]);
-  if (first) {
-    const thr = removalThreshold(first.effectiveR ?? first.baseR);
-    log(
-      `🎲 Untersuchung: ${first.name} (P${first.player}) — W10 würfeln (Entfernung bei 1–${thr}).`
-    );
-    if (typeof window !== 'undefined') {
-      try {
-        window.dispatchEvent(
-          new CustomEvent('pc:weighing_await_roll', {
-            detail: {
-              uid: first.uid,
-              player: first.player,
-              name: first.name,
-              r: first.effectiveR ?? first.baseR,
-              threshold: thr,
-            },
-          })
-        );
-      } catch {
-        /* UI only */
-      }
-    }
-  }
-  return true;
+  return finalizeWeighingPhase(state, log);
 }
 
-/**
- * Apply a player W10 roll for the current queue card (or matching uid).
- * Returns 'await_next' | 'done'.
- */
+/** Alias used by live play after both confirms. Never waits for a roll. */
+export function startWeighingRolls(state: GameState, log: (msg: string) => void): boolean {
+  resolveWeighingDecisions(state, log);
+  return false;
+}
+
+/** Dice queue removed — leftover PvP `weighing_roll` actions are ignored. */
 export function applyWeighingRoll(
-  state: GameState,
-  uid: number,
-  roll: number,
-  log: (msg: string) => void
+  _state: GameState,
+  _uid: number,
+  _roll: number,
+  _log: (msg: string) => void
 ): 'await_next' | 'done' | 'ignored' {
-  const pending = state.pendingWeighing;
-  if (!pending || pending.phase !== 'rolling') return 'ignored';
-
-  const queue = pending.rollQueue || [];
-  const idx = pending.rollIndex ?? 0;
-  if (idx >= queue.length) return 'done';
-  if (queue[idx] !== uid) return 'ignored';
-
-  const snap = pending.cards.find((c) => c.uid === uid);
-  if (!snap) {
-    pending.rollIndex = idx + 1;
-    return isWeighingRollsComplete(state) ? 'done' : 'await_next';
-  }
-
-  const card = findGov(state, snap.player, snap.uid);
-  const effectiveR = snap.effectiveR ?? (snap.decision === 'cover' ? snap.baseR - 2 : snap.baseR);
-  snap.effectiveR = effectiveR;
-  const clampedRoll = Math.max(1, Math.min(10, Math.floor(roll)));
-  snap.roll = clampedRoll;
-
-  if (!card) {
-    snap.outcome = 'safe';
-    pending.rollIndex = idx + 1;
-    return advanceOrFinish(state, log);
-  }
-
-  const threshold = removalThreshold(effectiveR);
-  const fails = clampedRoll <= threshold;
-
-  if (fails) {
-    if (isKronzeuge(card)) {
-      removeGovFromBoard(state, snap.player, card);
-      changeKp(state, -3, log);
-      snap.outcome = 'kronzeuge';
-      log(`🎤 Kronzeuge: ${snap.name} fällt durch (W10=${clampedRoll}≤${threshold}) — abgeworfen, KP −3.`);
-      dispatchWeighingVisual(snap.player, snap.uid, snap.name, clampedRoll, effectiveR, 'kronzeuge');
-    } else {
-      removeGovFromBoard(state, snap.player, card);
-      snap.outcome = 'removed';
-      log(`❌ Untersuchung: ${snap.name} (R=${effectiveR}) W10=${clampedRoll} ≤ ${threshold} — ENTFERNT.`);
-      dispatchWeighingVisual(snap.player, snap.uid, snap.name, clampedRoll, effectiveR, 'removed');
-    }
-  } else {
-    snap.outcome = 'safe';
-    log(`✅ Untersuchung: ${snap.name} (R=${effectiveR}) W10=${clampedRoll} > ${threshold} — sicher.`);
-    dispatchWeighingVisual(snap.player, snap.uid, snap.name, clampedRoll, effectiveR, 'safe');
-  }
-
-  pending.rollIndex = idx + 1;
-  return advanceOrFinish(state, log);
-}
-
-function advanceOrFinish(state: GameState, log: (msg: string) => void): 'await_next' | 'done' {
-  if (isWeighingRollsComplete(state)) {
-    finalizeWeighingPhase(state, log);
-    return 'done';
-  }
-  const next = currentWeighingRollTarget(state);
-  if (next) {
-    const thr = removalThreshold(next.effectiveR ?? next.baseR);
-    log(`🎲 Als Nächstes: ${next.name} (P${next.player}) — W10 (1–${thr} entfernt).`);
-    if (typeof window !== 'undefined') {
-      try {
-        window.dispatchEvent(
-          new CustomEvent('pc:weighing_await_roll', {
-            detail: {
-              uid: next.uid,
-              player: next.player,
-              name: next.name,
-              r: next.effectiveR ?? next.baseR,
-              threshold: thr,
-            },
-          })
-        );
-      } catch {
-        /* UI only */
-      }
-    }
-  }
-  return 'await_next';
+  return 'ignored';
 }
 
 /**
- * Apply decisions + auto W10 rolls (tests / sync helpers).
- * Live play uses startWeighingRolls + applyWeighingRoll per card.
+ * Apply decisions and resolve bands (tests / sync helpers).
  */
-export function resolveWeighing(state: GameState, log: (msg: string) => void, rng?: RNG): WeighingResult {
-  const pending = state.pendingWeighing;
-  const empty: WeighingResult = { removed: [], survived: [], sacrificed: [] };
-  if (!pending) return empty;
-
-  const dice = rng ?? getGlobalRNG();
-  const needsRolls = startWeighingRolls(state, log);
-  if (!needsRolls) {
-    return collectWeighingResult(state);
-  }
-
-  while (!isWeighingRollsComplete(state)) {
-    const target = currentWeighingRollTarget(state);
-    if (!target) break;
-    const roll = 1 + dice.randomInt(10);
-    applyWeighingRoll(state, target.uid, roll, log);
-  }
-
-  return collectWeighingResult(state);
+export function resolveWeighing(state: GameState, log: (msg: string) => void, _rng?: RNG): WeighingResult {
+  return resolveWeighingDecisions(state, log);
 }
 
 function summarizeSnap(s: WeighingCardSnapshot) {
@@ -542,63 +479,56 @@ function dispatchWeighingVisual(
         detail: { player, uid, name, roll, r, outcome },
       })
     );
-    if (roll != null) {
-      window.dispatchEvent(
-        new CustomEvent('pc:engine_dice_result', {
-          detail: { roll, sides: 10, player, targetUid: uid },
-        })
-      );
-    }
   } catch {
     /* UI only */
   }
 }
 
-/** Heuristic AI decisions for Abwiegephase. */
+function expectedScore(snap: WeighingCardSnapshot, decision: WeighingDecision): number {
+  if (decision === 'sacrifice') return 0;
+  const r = effectiveRForDecision(snap.baseR, decision);
+  const band = outcomeForR(r);
+  if (band === 'safe') return snap.influence;
+  if (band === 'scandal') return snap.scandalScore ?? Math.max(0, snap.influence - 2);
+  return 0;
+}
+
+/** Heuristic AI decisions for Abwiegephase — deterministic, PK-first. */
 export function chooseAiWeighingDecisions(state: GameState, player: Player): void {
   const pending = state.pendingWeighing;
   if (!pending || pending.phase !== 'decide') return;
 
   const own = pending.cards.filter((c) => c.player === player);
-  const opp = player === 1 ? 2 : 1;
-  const oppCards = pending.cards.filter((c) => c.player === opp);
-
   let pk = Number(state.politicalCapital?.[player] || 0);
 
-  // Expected influence loss if accepted
-  const scored = own
-    .map((c) => {
-      const r = c.baseR;
-      const pRemove = removalProbability(r);
-      return { snap: c, expectedLoss: c.influence * pRemove, r };
-    })
-    .sort((a, b) => b.expectedLoss - a.expectedLoss);
+  const coverIfWorth = (snap: WeighingCardSnapshot) => {
+    if (pk <= 0) return;
+    if (outcomeForR(snap.baseR) === 'safe') return;
+    const gain = expectedScore(snap, 'cover') - expectedScore(snap, 'accept');
+    if (gain <= 0) return;
+    snap.decision = 'cover';
+    snap.effectiveR = 0;
+    pk -= 1;
+  };
 
-  for (const { snap, r } of scored) {
-    if (pk <= 0) break;
-    if (r <= 0) continue;
-    // Cover high-EV cards
-    if (snap.influence * removalProbability(r) >= 2) {
-      snap.decision = 'cover';
-      snap.effectiveR = snap.baseR - 2;
-      pk -= 1;
-    }
-  }
+  // Protect removals first (highest influence), then expensive scandals.
+  [...own]
+    .filter((c) => outcomeForR(c.baseR) === 'remove')
+    .sort((a, b) => b.influence - a.influence)
+    .forEach(coverIfWorth);
 
-  // Sacrifice a weak card if opponent has much more at-risk influence
-  const ownAtRisk = own
-    .filter((c) => c.decision !== 'sacrifice')
-    .reduce((a, c) => a + c.influence * removalProbability(c.decision === 'cover' ? c.baseR - 2 : c.baseR), 0);
-  const oppAtRisk = oppCards.reduce((a, c) => a + c.influence * removalProbability(c.baseR), 0);
+  [...own]
+    .filter((c) => c.decision === 'accept' && outcomeForR(c.baseR) === 'scandal')
+    .sort((a, b) => (b.influence - (b.scandalScore ?? b.influence)) - (a.influence - (a.scandalScore ?? a.influence)))
+    .forEach(coverIfWorth);
 
-  if (oppAtRisk > ownAtRisk + 4) {
-    const weak = own
-      .filter((c) => c.decision === 'accept' && c.influence <= 5)
-      .sort((a, b) => a.influence - b.influence)[0];
-    if (weak && weak.baseR <= 2) {
-      weak.decision = 'sacrifice';
-      weak.effectiveR = weak.baseR;
-    }
+  // Uncovered removal on a weak card → sacrifice for next-round KP instead of a free loss.
+  const doomedWeak = own
+    .filter((c) => c.decision === 'accept' && outcomeForR(c.baseR) === 'remove' && c.influence <= 5)
+    .sort((a, b) => a.influence - b.influence)[0];
+  if (doomedWeak) {
+    doomedWeak.decision = 'sacrifice';
+    doomedWeak.effectiveR = doomedWeak.baseR;
   }
 }
 

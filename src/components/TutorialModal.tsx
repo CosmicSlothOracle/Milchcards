@@ -25,6 +25,14 @@ const tutorialSteps = [
     title: 'Zug & Handkarten',
     body: 'Wähle eine Handkarte aus, spiele sie in einen passenden Slot und beende deinen Zug. Mit dem Info-Panel behältst du Einfluss und AP im Blick.',
   },
+  {
+    title: 'Korruptionspegel & Untersuchung',
+    body: 'Am Ende jeder Runde steigt der Korruptionspegel um 1 und es kommt zur Untersuchung: Jede Regierungskarte trägt eine Korruptionslast. Liegt die Last 1–2 über dem Pegel, gibt es einen Skandal (Karte bleibt, zählt weniger Einfluss). Liegt sie 3 oder mehr drüber, wird die Karte entfernt. Die farbige Plakette auf jeder Regierungskarte zeigt dir das aktuelle Risiko jederzeit an.',
+  },
+  {
+    title: 'Politisches Kapital: Vertuschen & Opfern',
+    body: 'Beim Passen werden deine übrigen Aktionspunkte zu Politischem Kapital (PK). In der Untersuchung kannst du pro Karte entscheiden: Akzeptieren (Ergebnis hinnehmen), Vertuschen (1 PK — die Karte ist komplett sicher) oder Opfern (Karte abwerfen, der Pegel sinkt um 1 und künftige Untersuchungen werden für beide Seiten schärfer).',
+  },
 ];
 
 interface TutorialModalProps {

@@ -278,7 +278,7 @@ export const FILENAME_MAPPING: Record<string, string> = {
   'Verzoegerungsverfahren': 'Sofort-Initiative_T1_Verzögerungsverfahren.png',
   'Opportunist': 'Sofort-Initiative_T3_Opportunist.png',
   'Think_Tank': 'Sofort-Initiative_T2_Think-Tank.png',
-  'Whataboutism': 'Sofort-Initiative_T2_whatabouttism.png',
+  'Whataboutism': 'Sofort-Initiative_T2_whataboutism.png',
   'Influencer_Kampagne': 'Sofort-Initiative_T2_Influencer_Kampagne.png',
   'Systemrelevant': 'Sofort-Initiative_T2_Systemrelevant.png',
   'Symbolpolitik': 'Sofort-Initiative_T1_Symbolpolitik.png',
@@ -313,32 +313,42 @@ export const FILENAME_MAPPING: Record<string, string> = {
   'Skandalspirale': 'Intervention_T2_Skandalspirale.png',
   'Tunnelvision': 'Intervention_T2_Tunnelvision.png',
   'Satire_Show': 'Intervention_T2_Satire_Show.png',
+  'Scandal_Spiral': 'Intervention_T2_Skandalspirale.png',
 };
+
+function resolveCardKey(card: { kind: 'pol' | 'spec'; baseId: number; key?: string }): string | undefined {
+  if (card.key && FILENAME_MAPPING[card.key]) return card.key;
+  if (card.kind === 'pol') return Pols.find((p) => p.id === card.baseId)?.key;
+  return Specials.find((s) => s.id === card.baseId)?.key;
+}
+
+function isPublicSpecialKey(key: string | undefined): boolean {
+  if (!key) return false;
+  const spec = Specials.find((s) => s.key === key);
+  return Boolean(spec && spec.type === 'Öffentlichkeitskarte');
+}
+
+/** Build a browser-safe relative asset URL (spaces / unicode in filenames). */
+function assetUrl(dir: string, filename: string): string {
+  // Encode each path segment; keep `/` as separators for relative CRA/homepage: "."
+  return `${dir}/${encodeURIComponent(filename)}`;
+}
 
 // Helper function to get card image path
 export function getCardImagePath(
-  card: { kind: 'pol' | 'spec'; baseId: number },
+  card: { kind: 'pol' | 'spec'; baseId: number; key?: string },
   size: 'ui' | 'modal' = 'ui'
 ): string {
-  if (card.kind === 'pol') {
-    const pol = Pols.find(p => p.id === card.baseId);
-    const filename = pol ? FILENAME_MAPPING[pol.key] : 'default.png';
+  const key = resolveCardKey(card);
+  const filename = (key && FILENAME_MAPPING[key]) || 'default.png';
+
+  if (card.kind === 'pol' || isPublicSpecialKey(key)) {
     const assetPath = size === 'ui' ? ASSETS.politicians_256 : ASSETS.politicians;
-    return `${assetPath}/${filename}`;
-  } else {
-    const spec = Specials.find(s => s.id === card.baseId);
-    const filename = spec ? FILENAME_MAPPING[spec.key] : 'default.png';
-
-    // Public cards (Öffentlichkeitskarten) use politician images
-    if (spec && spec.type === 'Öffentlichkeitskarte') {
-      const assetPath = size === 'ui' ? ASSETS.politicians_256 : ASSETS.politicians;
-      return `${assetPath}/${filename}`;
-    }
-
-    // Other special cards use special images
-    const assetPath = size === 'ui' ? ASSETS.specials_256 : ASSETS.specials;
-    return `${assetPath}/${filename}`;
+    return assetUrl(assetPath, filename);
   }
+
+  const assetPath = size === 'ui' ? ASSETS.specials_256 : ASSETS.specials;
+  return assetUrl(assetPath, filename);
 }
 
 // UI Configuration

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { GameState, Card, PoliticianCard, SpecialCard } from '../types/game';
-import { Specials } from '../data/gameData';
-import { drawCardImage, sortHandCards } from '../utils/gameUtils';
+import { Specials, getCardImagePath } from '../data/gameData';
+import { sortHandCards } from '../utils/gameUtils';
 import { getCardDetails, convertHPToUSD } from '../data/cardDetails';
 import { withIcons } from '../ui/withIcons';
 import { makeUid } from '../utils/id';
@@ -293,22 +293,18 @@ export const HandCardModal: React.FC<HandCardModalProps> = ({
             ›
           </button>
 
-          <canvas
+          <img
+            key={`${currentCard.kind}-${currentCard.baseId}-${currentCard.key}`}
+            src={getCardImagePath(currentCard, 'modal')}
+            alt={currentCard.name}
             width={512}
             height={512}
             style={{
               display: 'block',
               width: '512px',
               height: '512px',
+              objectFit: 'cover',
               clipPath: 'polygon(50px 0, calc(100% - 50px) 0, 100% 50px, 100% 100%, 0 100%, 0 50px)',
-            }}
-            ref={(canvas) => {
-              if (canvas && currentCard) {
-                const ctx = canvas.getContext('2d');
-                if (ctx) {
-                  drawCardImage(ctx, currentCard, 0, 0, 512, 'modal');
-                }
-              }
             }}
           />
         </div>

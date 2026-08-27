@@ -35,9 +35,7 @@ import {
   beginWeighing,
   confirmWeighingOnState,
   setWeighingDecisionOnState,
-  startWeighingRolls,
-  applyWeighingRoll,
-  currentWeighingRollTarget,
+  resolveWeighingDecisions,
   collectWeighingResult,
   bothWeighingConfirmed,
   chooseAiWeighingDecisions,
@@ -46,7 +44,6 @@ import {
   type WeighingResult,
 } from '../utils/weighing';
 import type { WeighingDecision } from '../types/game';
-import { getGlobalRNG } from '../services/rng';
 // TS: sometimes asset module resolution fails in some setups — ignore typecheck for this import
 // @ts-ignore
 import slotGovGif from '../ui/layout/slot_gov.webm';
@@ -220,7 +217,7 @@ function resolveRound(gameState: GameState, log: (msg: string) => void): GameSta
     emitFeedback({
       tone: 'warn',
       title: 'Abwiegephase',
-      body: 'Korruptionspegel steigt — wähle Akzeptieren, Vertuschen oder Opfern.',
+      body: 'Korruptionspegel steigt — Vertuschen schützt vollständig, Akzeptieren folgt dem R-Band.',
       flash: false,
       durationMs: 2800,
     });
@@ -235,6 +232,7 @@ function finishRoundAfterWeighing(gameState: GameState, weighingResult: Weighing
   try {
     const removedN = weighingResult.removed.length;
     const sacN = weighingResult.sacrificed.length;
+    const scandalN = weighingResult.survived.filter((s) => s.outcome === 'scandal').length;
     const checkedN = removedN + weighingResult.survived.length + sacN;
     if (checkedN > 0) {
       emitFeedback({
@@ -243,8 +241,10 @@ function finishRoundAfterWeighing(gameState: GameState, weighingResult: Weighing
         body: removedN > 0
           ? `${removedN} entfernt — ${weighingResult.removed.map((r) => r.name).join(', ')}`
           : sacN > 0
-            ? `${sacN} geopfert/Kronzeuge — Rest sicher.`
-            : 'Alle geprüften Karten bleiben.',
+            ? `${sacN} geopfert/Kronzeuge — Rest bleibt.`
+            : scandalN > 0
+              ? `${scandalN} Skandal — Karten bleiben mit weniger Einfluss.`
+              : 'Alle geprüften Karten bleiben.',
         flash: true,
         durationMs: 3200,
       });
@@ -308,10 +308,11 @@ function finishRoundAfterWeighing(gameState: GameState, weighingResult: Weighing
     if (o === 'removed') return 'ENTFERNT';
     if (o === 'sacrificed') return 'GEOPFERT';
     if (o === 'kronzeuge') return 'KRONZEUGE';
+    if (o === 'scandal') return 'SKANDAL';
     return 'SICHER';
   };
   const purgeLines = [
-    ...weighingResult.removed.map((r) => `✗ ${r.name} (R ${r.effectiveR ?? r.baseR} · W10 ${r.roll ?? '—'} · ${outcomeLabel(r.outcome)})`),
+    ...weighingResult.removed.map((r) => `✗ ${r.name} (R ${r.effectiveR ?? r.baseR} · ${outcomeLabel(r.outcome)})`),
     ...weighingResult.sacrificed.map((r) => `💣 ${r.name} (${outcomeLabel(r.outcome)})`),
     ...weighingResult.survived.map((r) => `✓ ${r.name} (R ${r.effectiveR ?? r.baseR} · ${outcomeLabel(r.outcome)})`),
   ];
@@ -331,7 +332,7 @@ function finishRoundAfterWeighing(gameState: GameState, weighingResult: Weighing
               player: r.player, name: r.name, roll: r.roll ?? null, target: r.effectiveR ?? r.baseR, outcome: r.outcome === 'removed' ? 'remove' : 'safe',
             })),
             survived: weighingResult.survived.map((r) => ({
-              player: r.player, name: r.name, roll: r.roll ?? null, target: r.effectiveR ?? r.baseR, outcome: 'safe' as const,
+              player: r.player, name: r.name, roll: r.roll ?? null, target: r.effectiveR ?? r.baseR, outcome: r.outcome === 'scandal' ? 'scandal' : 'safe',
             })),
             sacrificed: weighingResult.sacrificed.map((r) => ({
               player: r.player, name: r.name, roll: r.roll ?? null, target: r.baseR, outcome: r.outcome,
@@ -483,35 +484,16 @@ export function useGameActions(
         }
       }
       if (newState.pendingWeighing && bothWeighingConfirmed(newState.pendingWeighing)) {
-        const needsRolls = startWeighingRolls(newState, log);
-        if (!needsRolls) {
-          return finishRoundAfterWeighing(newState, collectWeighingResult(newState), log);
-        }
-      }
-      return newState;
-    });
-  }, [log, setGameState]);
-
-  const rollWeighingCard = useCallback((player: Player, uid: number, rawRoll?: number) => {
-    if (isPvpGuest()) return;
-    setGameState((prev) => {
-      if (!prev.pendingWeighing || prev.pendingWeighing.phase !== 'rolling') return prev;
-      const target = currentWeighingRollTarget(prev);
-      if (!target || target.uid !== uid) return prev;
-      // Only the card owner (or AI acting for them) may roll
-      if (target.player !== player && !prev.aiEnabled?.[target.player]) return prev;
-
-      const newState = cloneStateForMutation(prev);
-      const roll = rawRoll != null
-        ? Math.max(1, Math.min(10, Math.floor(rawRoll)))
-        : 1 + getGlobalRNG().randomInt(10);
-      const status = applyWeighingRoll(newState, uid, roll, log);
-      if (status === 'done') {
+        resolveWeighingDecisions(newState, log);
         return finishRoundAfterWeighing(newState, collectWeighingResult(newState), log);
       }
       return newState;
     });
   }, [log, setGameState]);
+
+  const rollWeighingCard = useCallback((_player: Player, _uid: number, _rawRoll?: number) => {
+    // W10 queue removed — PvP weighing_roll is a no-op.
+  }, []);
 
   // AI auto-plays Abwiegephase decisions when enabled
   useEffect(() => {
@@ -530,10 +512,8 @@ export function useGameActions(
         chooseAiWeighingDecisions(newState, 2);
         confirmWeighingOnState(newState, 2, log);
         if (newState.pendingWeighing && bothWeighingConfirmed(newState.pendingWeighing)) {
-          const needsRolls = startWeighingRolls(newState, log);
-          if (!needsRolls) {
-            return finishRoundAfterWeighing(newState, collectWeighingResult(newState), log);
-          }
+          resolveWeighingDecisions(newState, log);
+          return finishRoundAfterWeighing(newState, collectWeighingResult(newState), log);
         }
         return newState;
       });
@@ -546,28 +526,6 @@ export function useGameActions(
     gameState.aiEnabled?.[2],
     log,
     setGameState,
-  ]);
-
-  // AI auto-rolls when the current weighing target belongs to the AI
-  useEffect(() => {
-    const pending = gameState.pendingWeighing;
-    if (!pending || pending.phase !== 'rolling') return;
-    if (isPvpGuest()) return;
-    const target = currentWeighingRollTarget(gameState);
-    if (!target) return;
-    if (!gameState.aiEnabled?.[target.player]) return;
-
-    const t = window.setTimeout(() => {
-      rollWeighingCard(target.player, target.uid);
-    }, 700);
-    return () => window.clearTimeout(t);
-  }, [
-    gameState.pendingWeighing?.phase,
-    gameState.pendingWeighing?.rollIndex,
-    gameState.pendingWeighing?.rollQueue,
-    gameState.aiEnabled?.[1],
-    gameState.aiEnabled?.[2],
-    rollWeighingCard,
   ]);
 
   // Helper: spawn lightweight UI visuals via window hooks (prototype only)
@@ -730,7 +688,7 @@ export function useGameActions(
     };
 
     const handlePurgeRequestRoll = (_ev: any) => {
-      // Legacy purge roll — no longer used (Abwiegephase uses engine W10)
+      // Legacy purge roll — Abwiegephase is deterministic (no W10)
     };
     // Listener: when UI/modal requests a maulwurf roll, perform RNG and trigger visual dice
     const handleMaulwurfRequestRoll = (ev: any) => {

@@ -119,7 +119,7 @@ export const VictoryOverlay: React.FC<VictoryOverlayProps> = ({
             ))}
             {roundResult.purge.removed.map((r, i) => (
               <div key={`rm-${i}`} style={{ color: '#f87171' }}>
-                ✗ {r.name} — R {r.target} · W10 {r.roll ?? '—'} · {auditLineLabel(r.outcome ?? 'remove')}
+                ✗ {r.name} — R {r.target} · {auditLineLabel(r.outcome ?? 'remove')}
               </div>
             ))}
             {roundResult.purge.survived.map((r, i) => (

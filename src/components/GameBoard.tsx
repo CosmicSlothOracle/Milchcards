@@ -5,7 +5,7 @@ import { LEADERSHIP_STYLES } from '../data/leadershipStyles';
 import { LAYOUT, UI_BASE, computeSlotRects, getGovernmentRects, getPublicRects, getSofortRect, getUiTransform, getZone } from '../ui/layout';
 import { sortHandCards } from '../utils/gameUtils';
 import { getCorruption } from '../utils/corruption';
-import { getKl, riskColorForR, computeR } from '../utils/weighing';
+import { getKl, riskColorForR, computeR, effectiveRForDecision, outcomeForR } from '../utils/weighing';
 import { getLeaderImageSrc } from '../utils/leaderArt';
 import { canActivateLeader } from '../utils/leadership';
 import { MOBILE_HUD_BOTTOM, MOBILE_HUD_TOP, useMobileLayout } from '../hooks/useMobileLayout';
@@ -395,7 +395,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
     const kp = Number(gameState.korruptionsPegel ?? 1);
     const weighingSnap = gameState.pendingWeighing?.cards.find((c) => c.uid === card.uid);
     const displayR = weighingSnap
-      ? (weighingSnap.decision === 'cover' ? weighingSnap.baseR - 2 : weighingSnap.baseR)
+      ? effectiveRForDecision(weighingSnap.baseR, weighingSnap.decision)
       : card.kind === 'pol'
         ? computeR(kl, kp)
         : 0;
@@ -483,7 +483,16 @@ const GameBoard: React.FC<GameBoardProps> = ({
                     : risk === 'orange' ? 'rgba(249,115,22,0.9)'
                       : 'rgba(239,68,68,0.9)',
             }}
-            title={`Korruptionslast ${kl} · Risiko R=${displayR} (KP ${kp})`}
+            title={(() => {
+              const band = outcomeForR(displayR);
+              const verdict =
+                band === 'safe'
+                  ? 'aktuell sicher'
+                  : band === 'scandal'
+                    ? 'Skandal-Risiko: bleibt, zählt aber weniger Einfluss'
+                    : 'wird bei der Untersuchung entfernt';
+              return `${card.name}: Korruptionslast ${kl}, Pegel ${kp} → ${verdict}. Geprüft wird am Ende jeder Runde.`;
+            })()}
           >
             {gameState.pendingWeighing ? `R${displayR}` : `KL${kl}`}
           </span>
@@ -846,7 +855,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
             }} />
           </div>
           <div
-            title="Korruptionspegel (global)"
+            title={`Korruptionspegel (für beide Spieler): steigt am Ende jeder Runde um 1. Karten, deren Korruptionslast über dem Pegel liegt, riskieren bei der Untersuchung einen Skandal (1–2 drüber) oder werden entfernt (3+ drüber).`}
             style={{
               marginLeft: 10,
               padding: '4px 10px',
@@ -860,7 +869,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
             KP {gameState.korruptionsPegel ?? 1}
           </div>
           <div
-            title="Politisches Kapital (dein Vorrat)"
+            title="Politisches Kapital: bekommst du für übrige Aktionspunkte beim Passen. In der Untersuchung am Rundenende macht 1 PK eine Karte per Vertuschen komplett sicher."
             style={{
               padding: '4px 10px',
               borderRadius: 8,
@@ -1426,10 +1435,10 @@ const GameBoard: React.FC<GameBoardProps> = ({
             </div>
             <span className="game-board__audit-drama-sub">
               {gameState.pendingWeighing
-                ? `KP ${gameState.pendingWeighing.kpAfterRise} — Akzeptieren, Vertuschen oder Opfern`
+                ? `KP ${gameState.pendingWeighing.kpAfterRise} — Vertuschen schützt vollständig`
                 : leadPlayer === 0
                   ? 'Gleichstand — jede Untersuchung zählt.'
-                  : `Spieler ${leadPlayer} führt — die Abwiegephase kann alles drehen.`}
+                  : `Spieler ${leadPlayer} führt — Vertuschen und Opfern entscheiden, nicht der Würfel.`}
             </span>
           </div>
         </div>

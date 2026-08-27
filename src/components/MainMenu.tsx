@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { MusicToggle } from './MusicToggle';
+import { QuizScoreboard } from './QuizScoreboard';
 
 interface MainMenuProps {
   onStartGame: () => void;
+  onStartQuiz: () => void;
   onOpenDeckBuilder: () => void;
   onShowCredits: () => void;
   onStartTutorial: () => void;
@@ -11,44 +13,55 @@ interface MainMenuProps {
 
 export const MainMenu: React.FC<MainMenuProps> = ({
   onStartGame,
+  onStartQuiz,
   onOpenDeckBuilder,
   onShowCredits,
   onStartTutorial,
   onStartPvp,
 }) => {
   return (
-    <div className="mc-screen mc-screen--enter">
+    <div className="mc-screen mc-screen--enter mc-screen--menu">
       <div className="mc-top-right">
         <MusicToggle size="medium" />
       </div>
 
-      <div className="mc-brand">
-        <h1 className="mc-brand__title">MILCHCARDS</h1>
-        <p className="mc-brand__subtitle">The Political Deck-Building Engine</p>
-      </div>
+      <div className="mc-menu-layout">
+        <div className="mc-menu-layout__main">
+          <div className="mc-brand">
+            <h1 className="mc-brand__title">MILCHCARDS</h1>
+            <p className="mc-brand__subtitle">The Political Deck-Building Engine</p>
+          </div>
 
-      <div className="mc-menu">
-        <button type="button" className="mc-btn mc-btn--primary" onClick={onStartGame}>
-          Spiel Starten (vs KI)
-        </button>
+          <div className="mc-menu">
+            <button type="button" className="mc-btn mc-btn--primary" onClick={onStartGame}>
+              Spiel Starten (vs KI)
+            </button>
 
-        {onStartPvp && (
-          <button type="button" className="mc-btn mc-btn--secondary" onClick={onStartPvp}>
-            1v1 Online (PvP)
-          </button>
-        )}
+            <button type="button" className="mc-btn mc-btn--secondary" onClick={onStartQuiz}>
+              Zitat-Quiz
+            </button>
 
-        <button type="button" className="mc-btn mc-btn--outline" onClick={onOpenDeckBuilder}>
-          Deck-Manager
-        </button>
+            {onStartPvp && (
+              <button type="button" className="mc-btn mc-btn--secondary" onClick={onStartPvp}>
+                1v1 Online (PvP)
+              </button>
+            )}
 
-        <button type="button" className="mc-btn mc-btn--outline" onClick={onStartTutorial}>
-          Tutorial
-        </button>
+            <button type="button" className="mc-btn mc-btn--outline" onClick={onOpenDeckBuilder}>
+              Deck-Manager
+            </button>
 
-        <button type="button" className="mc-btn mc-btn--ghost" onClick={onShowCredits}>
-          Credits & Portfolio
-        </button>
+            <button type="button" className="mc-btn mc-btn--outline" onClick={onStartTutorial}>
+              Tutorial
+            </button>
+
+            <button type="button" className="mc-btn mc-btn--ghost" onClick={onShowCredits}>
+              Credits & Portfolio
+            </button>
+          </div>
+        </div>
+
+        <QuizScoreboard variant="menu" />
       </div>
 
       <div className="mc-footer-note">

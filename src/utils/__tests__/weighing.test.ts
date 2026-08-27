@@ -1,4 +1,3 @@
-import { makeRNG } from '../../services/rng';
 import { GameState, PoliticianCard, createDefaultEffectFlags } from '../../types/game';
 import { emptyBoard } from '../../state/board';
 import { makePolInstance } from '../cardUtils';
@@ -8,6 +7,7 @@ import {
   computeR,
   getDefaultKl,
   getKl,
+  outcomeForR,
   removalThreshold,
   removalProbability,
   resolveWeighing,
@@ -18,9 +18,8 @@ import {
   getPkMax,
   changeKp,
   startWeighingRolls,
-  applyWeighingRoll,
-  currentWeighingRollTarget,
   collectWeighingResult,
+  effectiveRForDecision,
 } from '../weighing';
 
 function blankState(): GameState {
@@ -56,7 +55,7 @@ function polByName(name: string): PoliticianCard {
   return makePolInstance(base);
 }
 
-describe('weighing KP/KL/W10', () => {
+describe('weighing KP/KL deterministic bands', () => {
   test('default KL ladder', () => {
     expect(getDefaultKl('Vladimir Putin', 2, 10)).toBe(6);
     expect(getDefaultKl('Emmanuel Macron', 2, 9)).toBe(5);
@@ -69,16 +68,17 @@ describe('weighing KP/KL/W10', () => {
     expect(computeR(5, 6)).toBe(-1);
   });
 
-  test('W10 removal thresholds', () => {
-    expect(removalThreshold(0)).toBe(0);
-    expect(removalThreshold(1)).toBe(2);
-    expect(removalThreshold(2)).toBe(4);
-    expect(removalThreshold(3)).toBe(6);
-    expect(removalThreshold(4)).toBe(8);
-    expect(removalThreshold(5)).toBe(9);
-    expect(removalThreshold(9)).toBe(9);
-    expect(removalProbability(1)).toBeCloseTo(0.2);
-    expect(removalProbability(4)).toBeCloseTo(0.8);
+  test('deterministic R bands', () => {
+    expect(outcomeForR(0)).toBe('safe');
+    expect(outcomeForR(-1)).toBe('safe');
+    expect(outcomeForR(1)).toBe('scandal');
+    expect(outcomeForR(2)).toBe('scandal');
+    expect(outcomeForR(3)).toBe('remove');
+    expect(outcomeForR(6)).toBe('remove');
+    expect(removalThreshold(2)).toBe(0);
+    expect(removalThreshold(3)).toBe(10);
+    expect(removalProbability(1)).toBe(0);
+    expect(removalProbability(4)).toBe(1);
   });
 
   test('beginWeighing raises KP and freezes R', () => {
@@ -95,7 +95,7 @@ describe('weighing KP/KL/W10', () => {
     expect(snap.baseR).toBe(computeR(snap.kl, 2));
   });
 
-  test('Vertuschen costs PK and lowers effective R by 2', () => {
+  test('Vertuschen costs PK and zeros effective R (full protection)', () => {
     const state = blankState();
     state.korruptionsPegel = 1;
     state.politicalCapital = { 1: 2, 2: 0 };
@@ -106,11 +106,21 @@ describe('weighing KP/KL/W10', () => {
     expect(setWeighingDecisionOnState(state, 1, uid, 'cover', () => {})).toBe(true);
     const snap = state.pendingWeighing!.cards[0];
     expect(snap.decision).toBe('cover');
-    expect(snap.effectiveR).toBe(snap.baseR - 2);
+    expect(snap.effectiveR).toBe(0);
+    expect(effectiveRForDecision(snap.baseR, 'cover')).toBe(0);
+  });
+
+  test('Vertuschen on already-safe card is rejected', () => {
+    const state = blankState();
+    state.korruptionsPegel = 5;
+    state.politicalCapital = { 1: 2, 2: 0 };
+    const weak = polByName('Werner Maihofer');
+    state.board[1].aussen = [weak];
+    beginWeighing(state, () => {});
+    expect(setWeighingDecisionOnState(state, 1, weak.uid, 'cover', () => {})).toBe(false);
   });
 
   test('Opfern removes card and lowers KP (does not change frozen R of others this round)', () => {
-    const rng = makeRNG(42);
     const state = blankState();
     state.korruptionsPegel = 1;
     const weak = polByName('Werner Maihofer');
@@ -122,67 +132,85 @@ describe('weighing KP/KL/W10', () => {
     confirmWeighingOnState(state, 1, () => {});
     confirmWeighingOnState(state, 2, () => {});
     expect(bothWeighingConfirmed(state.pendingWeighing!)).toBe(true);
-    const result = resolveWeighing(state, () => {}, rng);
+    const result = resolveWeighing(state, () => {});
     expect(result.sacrificed.some((s) => s.uid === weak.uid)).toBe(true);
     expect(state.board[1].aussen.find((c) => c.uid === weak.uid)).toBeUndefined();
-    // KP rose +1 at start, then −1 for sacrifice
     expect(state.korruptionsPegel).toBe(kpAtProbe - 1);
   });
 
-  test('W10 remove when roll <= threshold', () => {
-    // Seeded RNG: force rolls by wrapping
-    let forced = 1;
-    const rng = {
-      random: () => 0,
-      randomInt: (_max: number) => forced - 1, // 1 + randomInt(10) => forced
-      pick: <T,>(a: T[]) => a[0],
-    };
+  test('Accept at R≥3 removes the card (no dice)', () => {
     const state = blankState();
-    state.korruptionsPegel = 1; // after rise KP=2; Putin KL6 → R=4 → threshold 8
+    state.korruptionsPegel = 1; // after rise KP=2; Putin KL6 → R=4 → remove
     const putin = polByName('Vladimir Putin');
     state.board[1].aussen = [putin];
     beginWeighing(state, () => {});
     confirmWeighingOnState(state, 1, () => {});
     confirmWeighingOnState(state, 2, () => {});
-    forced = 3; // <= 8 → remove
-    const result = resolveWeighing(state, () => {}, rng as any);
+    const result = resolveWeighing(state, () => {});
     expect(result.removed.length).toBe(1);
     expect(state.board[1].aussen.length).toBe(0);
   });
 
-  test('W10 survive when roll > threshold', () => {
-    const rng = {
-      random: () => 0,
-      randomInt: () => 9, // roll 10
-      pick: <T,>(a: T[]) => a[0],
-    };
+  test('Cover saves a high-R card that would otherwise be removed', () => {
     const state = blankState();
     state.korruptionsPegel = 1;
+    state.politicalCapital = { 1: 1, 2: 0 };
     const putin = polByName('Vladimir Putin');
     state.board[1].aussen = [putin];
     beginWeighing(state, () => {});
+    setWeighingDecisionOnState(state, 1, putin.uid, 'cover', () => {});
     confirmWeighingOnState(state, 1, () => {});
     confirmWeighingOnState(state, 2, () => {});
-    const result = resolveWeighing(state, () => {}, rng as any);
+    const result = resolveWeighing(state, () => {});
+    expect(result.removed.length).toBe(0);
+    expect(result.survived.some((s) => s.uid === putin.uid && s.outcome === 'safe')).toBe(true);
+    expect(state.board[1].aussen.length).toBe(1);
+    expect(state.politicalCapital[1]).toBe(0);
+  });
+
+  test('Accept at R 1–2 applies scandal and keeps the card', () => {
+    const state = blankState();
+    state.korruptionsPegel = 1; // → 2; Scholz KL3 → R=1 → scandal
+    const scholz = polByName('Olaf Scholz');
+    scholz.tempBuffs = 1; // corruption bonus at 2
+    state.board[1].aussen = [scholz];
+    const influenceBefore = (scholz.influence || 0) + (scholz.tempBuffs || 0) - (scholz.tempDebuffs || 0);
+    beginWeighing(state, () => {});
+    confirmWeighingOnState(state, 1, () => {});
+    confirmWeighingOnState(state, 2, () => {});
+    const result = resolveWeighing(state, () => {});
+    expect(result.removed.length).toBe(0);
+    expect(result.survived.some((s) => s.uid === scholz.uid && s.outcome === 'scandal')).toBe(true);
+    expect(state.board[1].aussen.length).toBe(1);
+    const after = (scholz.influence || 0) + (scholz.tempBuffs || 0) - (scholz.tempDebuffs || 0);
+    expect(after).toBeLessThan(influenceBefore);
+  });
+
+  test('R≤0 is safe without Cover', () => {
+    const state = blankState();
+    state.korruptionsPegel = 5; // → 6; Maihofer KL1 → R=-5
+    const weak = polByName('Werner Maihofer');
+    state.board[1].aussen = [weak];
+    beginWeighing(state, () => {});
+    confirmWeighingOnState(state, 1, () => {});
+    confirmWeighingOnState(state, 2, () => {});
+    const result = resolveWeighing(state, () => {});
     expect(result.survived.length).toBe(1);
+    expect(result.survived[0].outcome).toBe('safe');
     expect(state.board[1].aussen.length).toBe(1);
   });
 
   test('Kronzeuge converts removal into KP −3 discard', () => {
-    const rng = {
-      random: () => 0,
-      randomInt: () => 0, // roll 1 — always fails if R>0
-      pick: <T,>(a: T[]) => a[0],
-    };
     const state = blankState();
-    state.korruptionsPegel = 1; // → 2; Kronzeuge KL3 → R=1
+    state.korruptionsPegel = 0; // → 1; force high R by using a high-KL stand-in name if needed
     const kron = makePolInstance(Pols.find((p) => p.name === 'Kronzeuge')!);
+    kron.kl = 6;
     state.board[1].aussen = [kron];
     beginWeighing(state, () => {});
     confirmWeighingOnState(state, 1, () => {});
     confirmWeighingOnState(state, 2, () => {});
     const kpBeforeResolve = state.korruptionsPegel;
-    const result = resolveWeighing(state, () => {}, rng as any);
+    const result = resolveWeighing(state, () => {});
     expect(result.removed.length).toBe(0);
     expect(result.sacrificed.some((s) => s.outcome === 'kronzeuge')).toBe(true);
     expect(state.korruptionsPegel).toBe(Math.max(0, kpBeforeResolve - 3));
@@ -199,7 +227,7 @@ describe('weighing KP/KL/W10', () => {
     expect(state.politicalCapital[1]).toBe(4);
   });
 
-  test('interactive per-card W10 roll', () => {
+  test('confirm resolves immediately (no roll queue)', () => {
     const state = blankState();
     state.korruptionsPegel = 1;
     const putin = polByName('Vladimir Putin');
@@ -207,13 +235,9 @@ describe('weighing KP/KL/W10', () => {
     beginWeighing(state, () => {});
     confirmWeighingOnState(state, 1, () => {});
     confirmWeighingOnState(state, 2, () => {});
-    expect(startWeighingRolls(state, () => {})).toBe(true);
-    expect(state.pendingWeighing?.phase).toBe('rolling');
-    const target = currentWeighingRollTarget(state);
-    expect(target?.uid).toBe(putin.uid);
-    applyWeighingRoll(state, putin.uid, 10, () => {}); // survive
-    expect(collectWeighingResult(state).survived.length).toBe(1);
+    expect(startWeighingRolls(state, () => {})).toBe(false);
     expect(state.pendingWeighing?.phase).toBe('done');
+    expect(collectWeighingResult(state).removed.length).toBe(1);
   });
 
   test('CHANGE_KP via changeKp clamps at 0', () => {

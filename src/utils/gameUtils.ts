@@ -297,6 +297,8 @@ export function buildDeckFromEntries(entries: any[]): Card[] {
 }
 
 // Image loading utilities (Legacy function for backwards compatibility)
+// Uses a per-canvas generation token so stale onload handlers cannot paint
+// the wrong card when the modal/list rapidly switches art.
 export function drawCardImage(
   ctx: CanvasRenderingContext2D,
   card: Card,
@@ -305,11 +307,19 @@ export function drawCardImage(
   size: number,
   imageSize: 'ui' | 'modal' = 'ui'
 ): void {
+  const canvas = ctx.canvas as HTMLCanvasElement & { __cardArtToken?: number };
+  const token = (canvas.__cardArtToken || 0) + 1;
+  canvas.__cardArtToken = token;
+  ctx.clearRect(dx, dy, size, size);
+
+  const src = getCardImagePath(card, imageSize);
   const img = new Image();
   img.onload = () => {
+    if (canvas.__cardArtToken !== token) return;
+    ctx.clearRect(dx, dy, size, size);
     ctx.drawImage(img, dx, dy, size, size);
   };
-  img.src = getCardImagePath(card, imageSize);
+  img.src = src;
 }
 
 // Kapazitätsprüfung für Reihen (verhindert zu viele Karten in kleinen Rows)

@@ -3,6 +3,7 @@ import { Card, PoliticianCard } from '../types/game';
 import { Specials, Pols } from '../data/gameData';
 import { getCardDetails } from '../data/cardDetails';
 import { withIcons } from '../ui/withIcons';
+import { getKl, computeR, outcomeForR } from '../utils/weighing';
 
 interface HoverData {
   card?: Card;
@@ -12,10 +13,12 @@ interface HoverData {
 
 interface CardHoverInfoPanelProps {
   hovered: HoverData | null;
+  /** Aktueller Korruptionspegel — für die Klartext-Risikoanzeige. */
+  korruptionsPegel?: number;
 }
 
 // Bigger hover info panel replacing old tooltip.
-export const CardHoverInfoPanel: React.FC<CardHoverInfoPanelProps> = ({ hovered }) => {
+export const CardHoverInfoPanel: React.FC<CardHoverInfoPanelProps> = ({ hovered, korruptionsPegel }) => {
   if (!hovered || !hovered.card) return null;
 
   const { card, x, y } = hovered;
@@ -26,14 +29,27 @@ export const CardHoverInfoPanel: React.FC<CardHoverInfoPanelProps> = ({ hovered 
     const base = Pols.find(p => p.name === polCard.name || p.key === polCard.key);
     const baseInf = base ? base.influence : polCard.influence;
     const delta = polCard.influence - baseInf;
+    const kl = getKl(polCard);
+    const kp = Number(korruptionsPegel ?? 1);
+    const band = outcomeForR(computeR(kl, kp));
+    const riskText =
+      band === 'safe'
+        ? `✅ Sicher — Last ${kl} liegt nicht über dem Pegel ${kp}.`
+        : band === 'scandal'
+          ? `📰 Skandal-Risiko — Last ${kl} liegt ${kl - kp} über dem Pegel ${kp}: bleibt liegen, zählt aber weniger Einfluss.`
+          : `❌ Fliegt auf — Last ${kl} liegt ${kl - kp} über dem Pegel ${kp}: wird bei der Untersuchung am Rundenende entfernt.`;
+    const riskColor = band === 'safe' ? '#22c55e' : band === 'scandal' ? '#eab308' : '#ef4444';
     return (
       <div style={panelStyle(x, y)}>
         <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 6 }}>{polCard.name}</div>
         <div>Einfluss: {polCard.influence}{delta !== 0 ? ` (${baseInf} ${delta > 0 ? '+' : ''}${delta})` : ''}</div>
         <div>Tier: {polCard.T}</div>
         <div>BP: {polCard.BP}</div>
+        <div style={{ color: riskColor, marginTop: 4, maxWidth: 320 }}>
+          {riskText}
+        </div>
         <div style={{ color: Number(polCard.corruption ?? 0) >= 3 ? '#fb923c' : '#facc15', marginTop: 4 }}>
-          Korruptionslast: {(polCard as any).kl ?? '—'} · Korruption: {polCard.corruption ?? polCard.corruptionStart ?? '—'}
+          Korruption: {polCard.corruption ?? polCard.corruptionStart ?? '—'}
           {Number(polCard.corruption ?? 0) >= 3 ? ' · Fähigkeit bereit (klicken)' : ''}
         </div>
       </div>

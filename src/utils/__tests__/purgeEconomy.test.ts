@@ -1,6 +1,6 @@
 /**
  * Tests for the card-corruption graft economy (still used by card effects).
- * Round-end removal is covered by weighing.test.ts (KP/KL/W10).
+ * Round-end removal is covered by weighing.test.ts (KP/KL bands).
  */
 import { createDefaultEffectFlags, GameState, Player, PoliticianCard } from '../../types/game';
 import { makePolInstance } from '../cardUtils';

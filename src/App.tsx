@@ -18,6 +18,7 @@ import { MusicToggle } from './components/MusicToggle';
 import { TutorialModal } from './components/TutorialModal';
 import SimpleDice from './components/SimpleDice';
 import { MainMenu } from './components/MainMenu';
+import { QuizScreen } from './components/QuizScreen';
 import { Credits } from './components/Credits';
 import { RotateDeviceOverlay } from './components/RotateDeviceOverlay';
 import { PvpLobby } from './components/PvpLobby';
@@ -29,7 +30,7 @@ import { usePvpSession } from './hooks/usePvpSession';
 import { PvpAction, RELAYED_ENGINE_EVENTS } from './pvp/types';
 import { presetToBuilderEntries, PRESET_DECKS, randomPresetDeck } from './data/presetDecks';
 
-type AppState = 'intro' | 'menu' | 'deckbuilder' | 'vs-ai-select' | 'game' | 'credits' | 'pvp-lobby';
+type AppState = 'intro' | 'menu' | 'deckbuilder' | 'vs-ai-select' | 'game' | 'credits' | 'pvp-lobby' | 'quiz';
 
 type PendingStart =
   | { mode: 'ai'; p1Deck: BuilderEntry[]; deckName?: string }
@@ -337,7 +338,7 @@ function AppContent() {
       (startDuel.phase === 'await_p2' && startDuel.mode === 'pvp' && localPlayer === 2)
     )
   );
-  // Tunnelvision is a choice modal (no dice). Abwiegephase uses overlay + engine W10.
+  // Tunnelvision is a choice modal (no dice). Abwiegephase is a choice overlay (no W10).
   const diceInteractive = startDuelNeedsRoll || (
     !startDuel && (corruptionActive || maulwurfActive)
   );
@@ -441,12 +442,9 @@ function AppContent() {
       };
     }
     if (purgeActive || gameState.pendingWeighing) {
-      const phase = gameState.pendingWeighing?.phase;
       return {
-        title: phase === 'rolling' ? 'Untersuchung — W10' : 'Abwiegephase',
-        body: phase === 'rolling'
-          ? 'Würfle den W10 für die markierte Karte — Entfernungsschwelle steht unter dem Namen.'
-          : 'Wähle pro Karte Akzeptieren, Vertuschen oder Opfern — dann Untersuchung einleiten.',
+        title: 'Abwiegephase',
+        body: 'Wähle pro Karte: Akzeptieren (R-Band gilt), Vertuschen (1 PK, sicher) oder Opfern (KP −1). Kein Würfel.',
       };
     }
     if (leaderAbilityPick) {
@@ -944,6 +942,7 @@ function AppContent() {
       {appState === 'menu' && (
         <MainMenu
           onStartGame={() => setAppState('vs-ai-select')}
+          onStartQuiz={() => setAppState('quiz')}
           onOpenDeckBuilder={() => setAppState('deckbuilder')}
           onShowCredits={() => setAppState('credits')}
           onStartTutorial={() => setTutorialOpen(true)}
@@ -977,6 +976,10 @@ function AppContent() {
             setAppState('menu');
           }}
         />
+      )}
+
+      {appState === 'quiz' && (
+        <QuizScreen onBack={() => setAppState('menu')} />
       )}
 
       {/* Credits State */}
@@ -1085,7 +1088,12 @@ function AppContent() {
                 <StartDuelOverlay duel={startDuel} localPlayer={localPlayer} />
               )}
 
-              {!mobile.isTouch && <CardHoverInfoPanel hovered={hoveredCard} />}
+              {!mobile.isTouch && (
+                <CardHoverInfoPanel
+                  hovered={hoveredCard}
+                  korruptionsPegel={Number(gameState.korruptionsPegel ?? 1)}
+                />
+              )}
 
               {/* Dice Roller centered for events */}
               <div className={`game-dice${ diceInteractive ? ' game-dice--highlight' : '' }${ startDuelNeedsRoll ? ' game-dice--start-duel' : '' }${ diceOutcome === 'success' ? ' game-dice--success' : '' }${ diceOutcome === 'fail' ? ' game-dice--fail' : '' }${ diceRolling ? ' game-dice--rolling' : '' }${ mobile.isMobile ? ' game-dice--mobile' : '' }`}>

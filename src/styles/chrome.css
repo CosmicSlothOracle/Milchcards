@@ -225,3 +225,40 @@
   right: 24px;
   z-index: 10;
 }
+
+.mc-screen--menu {
+  justify-content: flex-start;
+  padding-top: clamp(48px, 10vh, 88px);
+  padding-bottom: 64px;
+}
+
+.mc-menu-layout {
+  width: min(920px, 100%);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 280px);
+  gap: clamp(20px, 4vw, 40px);
+  align-items: start;
+  z-index: 2;
+}
+
+.mc-menu-layout__main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.mc-menu-layout__main .mc-brand {
+  margin-bottom: clamp(20px, 4vh, 36px);
+}
+
+@media (max-width: 720px) {
+  .mc-menu-layout {
+    grid-template-columns: 1fr;
+    justify-items: center;
+  }
+
+  .mc-menu-layout .quiz-scoreboard {
+    width: min(360px, 100%);
+    order: -1;
+  }
+}

@@ -1,47 +1,57 @@
-Korruptionssystem (deterministisches Pass-Audit)
-=================================================
+Korruptionssystem (KP / KL / deterministische Abwiegephase)
+===========================================================
 
 Überblick
 ---------
+Zwei Schichten, klar getrennt:
+
+1. Karten-Korruption (0–6) — Einflussbonus und aktive Fähigkeiten.
+2. Abwiegephase am Rundenende — globales Risiko (KP vs. KL), das der
+   Spieler mit Politischem Kapital steuert. Kein W10, kein Rundenglück.
+
+Karten-Korruption
+-----------------
 Jede Regierungskarte trägt Korruption (0–6) mit Lore-Startwert (1–3).
-Korruption gibt Einfluss und schaltet ab 3 aktive Fähigkeiten frei, erhöht
-aber die Audit-Stufe bei der Prüfung vor der Rundenwertung.
+Korruption gibt Einfluss (Temp-Buff zu Zugbeginn) und schaltet ab 3
+aktive Fähigkeiten frei. Sie treibt die Rundenwertung nicht mehr direkt.
 
-Pass-Ablauf
------------
-1. Spieler passt → Handgröße + Schweigegeld (ungenutzte AP → Audit-Stufe −1 je, Cap 2;
-   Diplomatie Cap 3; Bewegung: Schweigegeld unwirksam)
-2. Beide gepasst → Audit für jede aktive Regierung mit Korruption ≥1
-3. Audit-Stufe = Korruption + Tier ± Modifikatoren, Clamp 0–6
-4. Deterministisch (kein W6):
-   - Stufe 0–2: sicher (GEPRÜFT)
-   - Stufe 3–4: Skandal — Korruptions-Einflussbonus weg, −1 Einfluss für die Wertung
-   - Stufe 5: Entfernung, abwendbar durch Schutz oder Schweigegeld → Skandal
-   - Stufe 6 / Absolut korrupt: Entfernung, abwendbar durch Schutz → Skandal
-5. Danach Stil-Passive (Autokratie/Bewegung) und Einflusswertung
+Einflussbonus: 0–1:+0 | 2:+1 | 3:+2 | 4–5:+3 | 6:+4
+Schwellen: 0 Sauber | 1–2 Verstrickt | 3–4 Kompromittiert (Fähigkeit)
+           | 5 Kleptokrat | 6 Absolut korrupt
 
-Einflussbonus (Temp-Buff zu Zugbeginn)
--------------------------------------
-0–1: +0 | 2: +1 | 3: +2 | 4–5: +3 | 6: +4
+Startwerte: 3 Autokraten (Putin, Xi, Trump, Erdoğan, MBS, Netanyahu,
+Raisi, Meloni) · 2 übrige Tier-2 · 1 Tier-1
 
-Schwellen
----------
-0 Sauber | 1–2 Verstrickt | 3–4 Kompromittiert (Fähigkeit) | 5 Kleptokrat | 6 Absolut korrupt
+Korruptionspegel (KP) und Korruptionslast (KL)
+----------------------------------------------
+KP startet bei 1, steigt +1 wenn beide Spieler passen (vor der Prüfung),
+persistiert übers Match. Minimum 0.
+KL ist fest pro Gov-Karte (1–6). Risiko R = KL − KP (eingefroren).
 
-Startwerte
-----------
-3: Putin, Xi, Trump, Erdoğan, MBS, Netanyahu, Raisi, Meloni
-2: übrige Tier-2
-1: Tier-1
+Je höher der KP, desto eher „geht eine Karte unter“ (niedrigeres R).
 
-Wichtige Audit-Modifikatoren (± Stufe)
---------------------------------------
-+1: gieriger Pass, Snowden-Markierung, Napoleon-Hybris, Oligarchen-Trio,
-    Navalny (Gegner), Autokratie-Schwäche (stärkstes Gov)
-−1: leere Hand, Milchglas, Verzögerungsverfahren, Koalitionszwang (T2≥2),
-    Fauci, Zivilgesellschaft (K≤1), Schweigegeld, Trudeau-Bonus
+Abwiegephase (beide gepasst)
+----------------------------
+1. KP += 1, R einfrieren
+2. Pro Karte wählen:
+   - Akzeptieren — Band gilt
+   - Vertuschen (1 PK) — Karte ist vollständig sicher (R → 0)
+   - Opfern — Karte wertet nicht, KP −1 (wirkt ab der nächsten Runde)
+3. Deterministische Bänder (kein Würfel):
+   - R ≤ 0: Sicher — voller Einfluss
+   - R 1–2: Skandal — bleibt, verliert Korruptionsbonus und −1 Einfluss
+   - R ≥ 3: Entfernt — wertet nicht
+4. Einflusswertung, Brett wird geleert (Best of 3)
 
-Opt-in-Würfel (nicht im Audit)
-------------------------------
+Politisches Kapital
+-------------------
+Ungenutzte AP beim Passen werden zu PK (Cap 3, Lobbyist +1).
+Bewegung wandelt AP nicht um. PK ist der Hebel: plane den Pass so,
+dass du die Karten schützt, die die Runde tragen sollen.
+
+Kronzeuge: würde die Karte entfernt, fliegt sie stattdessen mit KP −3.
+
+Opt-in-Würfel (nicht in der Abwiegephase)
+-----------------------------------------
 Maulwurf, Bestechungsskandal 2.0, Raisi Schauprozess, Startduell — bleiben W6.
 Tunnelvision und Skandalspirale sind deterministisch (siehe Kartenlisten).

@@ -1,9 +1,9 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { BuilderEntry, BasePolitician, BaseSpecial } from '../types/game';
-import { Pols, Specials } from '../data/gameData';
+import { Pols, Specials, getCardImagePath } from '../data/gameData';
 import { PRESET_DECKS } from '../data/presetDecks';
 import { getChampionForPreset, getStyleForPreset } from '../data/leadershipStyles';
-import { currentBuilderBudget, currentBuilderCount, drawCardImage } from '../utils/gameUtils';
+import { currentBuilderBudget, currentBuilderCount } from '../utils/gameUtils';
 import { getCardDetails, formatWealth, formatSources } from '../data/cardDetails';
 import { Icon } from '../ui/Icon';
 import { withIcons } from '../ui/withIcons';
@@ -644,7 +644,9 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
         e.currentTarget.style.borderColor = categoryColors.main;
       }}
     >
-      <canvas
+      <img
+        src={getCardImagePath({ kind, baseId: base.id, key: base.key }, 'ui')}
+        alt={base.name}
         width={120}
         height={120}
         style={{
@@ -655,22 +657,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
           background: isDisabled ? 'var(--surface-sunken)' : 'var(--surface-panel)',
           border: `1px solid ${isDisabled ? 'var(--border-subtle)' : 'var(--border-default)'}`,
           opacity: isDisabled ? 0.6 : 1,
-        }}
-        ref={(canvas) => {
-          if (canvas) {
-            const ctx = canvas.getContext('2d');
-            if (ctx) {
-              const mockCard = {
-                kind,
-                baseId: base.id,
-                name: base.name,
-                uid: base.id,
-                id: base.id,
-                key: base.key,
-              } as any;
-              drawCardImage(ctx, mockCard, 0, 0, 120, 'ui');
-            }
-          }
+          objectFit: 'cover',
         }}
       />
       <h4 style={{
@@ -1564,30 +1551,20 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                 ›
               </button>
 
-              <canvas
+              <img
+                key={`${selectedCard.kind}-${selectedCard.base.id}-${selectedCard.base.key}`}
+                src={getCardImagePath(
+                  { kind: selectedCard.kind, baseId: selectedCard.base.id, key: selectedCard.base.key },
+                  'modal'
+                )}
+                alt={selectedCard.base.name}
                 width={1024}
                 height={1024}
                 style={{
                   display: 'block',
-                    width: '1024px',
-                    height: '1024px',
-                }}
-                ref={(canvas) => {
-                  if (canvas) {
-                    const ctx = canvas.getContext('2d');
-                    if (ctx) {
-                      // Create a mock card object for drawing
-                      const mockCard = {
-                        kind: selectedCard.kind,
-                        baseId: selectedCard.base.id,
-                        name: selectedCard.base.name,
-                        uid: selectedCard.base.id,
-                        id: selectedCard.base.id,
-                        key: selectedCard.base.key,
-                      } as any;
-                      drawCardImage(ctx, mockCard, 0, 0, 1024, 'modal');
-                    }
-                  }
+                  width: '1024px',
+                  height: '1024px',
+                  objectFit: 'cover',
                 }}
               />
             </div>

@@ -3,8 +3,8 @@
  *
  * - Every government card carries `corruption` (0–6) with a lore floor (`corruptionStart`).
  * - Corruption grants influence (turn-start temp buff) and unlocks active abilities (≥3).
- * - Round-end removal is handled by the KP/KL/W10 Abwiegephase in `weighing.ts`
- *   (replaces the former deterministic audit / W6 purge).
+ * - Round-end impact is handled by the KP/KL Abwiegephase in `weighing.ts`
+ *   (deterministic bands + Vertuschen as full protection; no W10).
  * - Unspent AP at pass converts to Politisches Kapital (PK) for Vertuschen.
  */
 
@@ -300,7 +300,7 @@ export function applyCorruptionDelta(
 }
 
 // ============================================================
-// Legacy audit API (replaced by KP/KL W10 Abwiegephase in weighing.ts)
+// Legacy audit API (replaced by KP/KL Abwiegephase in weighing.ts)
 // Kept as thin stubs so older card-effect imports still compile.
 // ============================================================
 
@@ -344,7 +344,7 @@ export function applyAuditScandal(card: PoliticianCard, log: (msg: string) => vo
   const bonus = getCorruptionInfluenceBonus(corr);
   if (bonus > 0) card.tempBuffs = Math.max(0, (card.tempBuffs || 0) - bonus);
   card.tempDebuffs = (card.tempDebuffs || 0) + 1;
-  log(`📰 Skandal (legacy): ${card.name}`);
+  log(`📰 Skandal: ${card.name} verliert den Korruptionsbonus${bonus > 0 ? ` (−${bonus})` : ''} und −1 Einfluss.`);
 }
 
 export function applyPurgeGretaBonus(state: GameState, log: (msg: string) => void): void {

@@ -25,7 +25,7 @@ export interface PoliticianCard extends Card {
   T: number;
   BP: number;
   influence: number;
-  /** Korruptionslast (KL) — fixed per card for KP/W10 weighing at round end */
+  /** Korruptionslast (KL) — fixed per card for KP/R weighing at round end */
   kl?: number;
   effect?: string;
   protected: boolean;
@@ -233,7 +233,7 @@ export interface GameState {
   pendingAbilitySelect?: AbilitySelect;
   /** Global Korruptionspegel (KP) — persists across rounds within a match */
   korruptionsPegel: number;
-  /** Politisches Kapital (PK) per player — spend to Vertuschen in Abwiegephase */
+  /** Politisches Kapital (PK) per player — spend to fully protect a card in Abwiegephase */
   politicalCapital: { 1: number; 2: number };
   /** Interactive Abwiegephase between double-pass and scoring */
   pendingWeighing?: PendingWeighing;
@@ -255,11 +255,13 @@ export interface WeighingCardSnapshot {
   /** R frozen at phase start (before Vertuschen) */
   baseR: number;
   influence: number;
+  /** Influence after a Skandal (corruption bonus stripped + 1 debuff) */
+  scandalScore?: number;
   decision: WeighingDecision;
-  /** After Vertuschen applied */
+  /** After Vertuschen (cover → 0) */
   effectiveR?: number;
   roll?: number | null;
-  outcome?: 'safe' | 'removed' | 'sacrificed' | 'kronzeuge';
+  outcome?: 'safe' | 'removed' | 'sacrificed' | 'kronzeuge' | 'scandal';
 }
 
 export interface PendingWeighing {
@@ -268,7 +270,7 @@ export interface PendingWeighing {
   cards: WeighingCardSnapshot[];
   confirmed: { 1: boolean; 2: boolean };
   phase: 'decide' | 'rolling' | 'done';
-  /** UIDs that still need a player W10 roll (in order) */
+  /** Unused — bands resolve instantly after confirm */
   rollQueue?: number[];
   rollIndex?: number;
   results?: WeighingCardSnapshot[];

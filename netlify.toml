@@ -1,7 +1,13 @@
 [build]
   command = "npm run build"
   publish = "build"
+  functions = "netlify/functions"
 
+[functions]
+  node_bundler = "esbuild"
+  directory = "netlify/functions"
+
+# SPA fallback — keep AFTER API routes (function config.path also registers /api/quiz-leaderboard)
 [[redirects]]
   from = "/*"
   to = "/index.html"
